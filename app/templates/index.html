@@ -1,119 +1,573 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en" class="dark max-h-screen overflow-hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }} - {{ app_description }}</title>
-    <link rel="stylesheet" href="/static/css/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="icon" href="/static/img/favicon/favicon.ico" type="image/x-icon" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Switching to Inter for an ultra-modern, crisp feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" href="/static/img/favicon/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon/favicon-16x16.png">
     <link rel="manifest" href="/static/img/favicon/site.webmanifest">
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <div class="logo">{{ app_name }}</div>
-        <nav>
-          <a href="/docs" class="nav-link" target="_blank">Swagger UI</a>
-          <a href="{{ repository_url }}" class="nav-link" target="_blank">GitHub</a>
+
+    <!-- Tailwind CSS (CDN for simple landing page) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        quoin: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                            950: '#082f49',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'led-pulse': 'ledPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        },
+                        ledPulse: {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: .5 },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: 0, transform: 'translateY(30px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' }
+                        },
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+    <style>
+        /* Hide scrollbars since user requested no scroll bar */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .glass-panel {
+            background: rgba(8, 15, 25, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        body { margin: 0; overflow: hidden; height: 100vh; }
+        canvas { display: block; }
+    </style>
+</head>
+<body class="bg-gray-950 text-slate-200 font-sans antialiased h-screen w-screen overflow-hidden flex flex-col relative selection:bg-quoin-500 selection:text-white">
+
+    <!-- 3D Background Canvas -->
+    <canvas id="bg-canvas" class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none"></canvas>
+
+    <!-- Floating Header -->
+    <header class="w-full max-w-5xl mx-auto flex justify-between items-center px-8 py-0 h-14 mt-6 z-50 glass-panel rounded-2xl relative">
+        <!-- Left: Branding -->
+        <div class="flex items-center">
+            <span class="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-quoin-400">QuoinAPI</span>
+        </div>
+
+        <!-- Right: Links -->
+        <nav class="flex items-center gap-8 text-[14px] font-semibold tracking-wide">
+            <a href="https://balakmran.github.io/quoin-api/" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Docs</a>
+            <a href="https://balakmran.github.io/quoin-api/project/changelog/" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Changelog</a>
+            <a href="/docs" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Swagger UI</a>
+            <a href="{{ repository_url }}" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">GitHub</a>
         </nav>
-      </header>
+    </header>
 
-      <main>
-        <div class="hero">
-          <h1>{{ app_name }}</h1>
-          <p class="subtitle">{{ app_description }}</p>
+    <!-- Main Content Container -->
+    <div class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 pt-6 pb-20 h-full flex flex-col justify-center items-center z-10 box-border">
 
-          <div class="code-snippet">
-            <code>curl -X GET <span class="url">http://127.0.0.1:8000/ready</span></code>
-            <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -X GET http://127.0.0.1:8000/ready')" aria-label="Copy command">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-          </div>
+        <main class="flex flex-col items-center text-center w-full">
 
-          <div class="status-card">
-            <div class="status-indicator online">🟢</div>
-            <span class="status-text">{{ message }}</span>
-          </div>
+            <!-- Message Pill -->
+            <div id="global-status-pill" class="opacity-0 animate-fade-in-up [animation-delay:0ms] inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-emerald-400 uppercase bg-emerald-900/30 border border-emerald-500/20 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                <span id="global-status-text">INITIALIZING...</span>
+            </div>
 
-          <div class="actions">
-            <a href="/docs" class="btn primary">Explore API</a>
-            <a href="{{ repository_url }}/blob/main/CONTRIBUTING.md" class="btn secondary" target="_blank">Contribute</a>
-          </div>
-        </div>
+            <!-- Main Title -->
+            <h1 class="opacity-0 animate-fade-in-up [animation-delay:150ms] text-5xl md:text-6xl lg:text-[5.5rem] font-bold mb-4 tracking-[-0.04em] text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-500 py-1">
+                {{ app_name }}
+            </h1>
 
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">⚡</div>
-                <h3>High Performance</h3>
+            <!-- Green Pill Version -->
+            <div class="opacity-0 animate-fade-in-up [animation-delay:300ms] inline-flex items-center justify-center mb-6 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20">
+                v{{ app_version }}
             </div>
-            <p>Built on FastAPI and Pydantic for blazing fast execution and async I/O.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🛡️</div>
-                <h3>Type Safe</h3>
-            </div>
-            <p>100% type-annotated codebase verified by Ty and SQLModel.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🔭</div>
-                <h3>Observable</h3>
-            </div>
-            <p>Integrated OpenTelemetry for distributed tracing and monitoring.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🐳</div>
-                <h3>Docker Ready</h3>
-            </div>
-            <p>Production-ready Docker and Docker Compose setup for easy deployment.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🗄️</div>
-                <h3>Database Batteries</h3>
-            </div>
-            <p>PostgreSQL with async SQLModel and ready-to-go Alembic migrations.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🧰</div>
-                <h3>Modern Tooling</h3>
-            </div>
-            <p>Powered by `uv` for fast package management and `just` for automation.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">🔒</div>
-                <h3>Secure Defaults</h3>
-            </div>
-            <p>Built-in security best practices, structured config, and environment management.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-header">
-                <div class="feature-icon">📚</div>
-                <h3>Documented</h3>
-            </div>
-            <p>Beautiful documentation via Zensical and auto-generated OpenAPI specs.</p>
-          </div>
-        </div>
-      </main>
 
-      <footer>
-        <p>Copyright &copy; {{ copyright_year }} {{ copyright_owner }}. <span class="version">v{{ app_version }}</span></p>
-        <p class="license">Licensed under the MIT License.</p>
-      </footer>
+            <!-- Description -->
+            <p class="opacity-0 animate-fade-in-up [animation-delay:450ms] text-base md:text-lg text-slate-400 mb-8 max-w-2xl font-light leading-relaxed">
+                {{ app_description }}
+            </p>
+
+            <!-- Quick Start Terminal Snippet -->
+            <div class="opacity-0 animate-fade-in-up [animation-delay:600ms] relative flex items-center justify-between bg-black/40 border border-slate-700/50 rounded-xl px-5 py-3.5 mb-10 w-auto max-w-full shadow-2xl backdrop-blur-md group hover:border-quoin-500/40 transition-colors">
+                <div class="flex items-center gap-3 overflow-hidden w-full">
+                    <span class="text-quoin-500 font-mono text-sm select-none shrink-0">$</span>
+                    <code class="text-slate-300 font-mono text-[13px] whitespace-nowrap overflow-x-auto scrollbar-hide tracking-tight">git clone https://github.com/balakmran/quoin-api.git</code>
+                </div>
+                <button onclick="copyQuickStart()" class="ml-4 p-1.5 rounded-md bg-white/5 hover:bg-quoin-500/20 text-slate-400 hover:text-quoin-300 transition-all border border-transparent hover:border-quoin-500/50 focus:outline-none shrink-0 cursor-pointer" title="Copy to clipboard">
+                    <svg id="copy-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    <svg id="check-icon" class="w-4 h-4 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Unified System Status Console (Alternate Design replacing cards) -->
+            <div class="opacity-0 animate-fade-in-up [animation-delay:750ms] flex items-center gap-8 glass-panel px-8 py-3 rounded-2xl mb-12 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-500 cursor-default shadow-lg">
+                <div class="flex items-center gap-4">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Health</span>
+                    <div class="relative flex items-center justify-center scale-90">
+                        <div id="health-glow" class="absolute w-4 h-4 rounded-full hidden"></div>
+                        <div id="health-dot" class="w-2.5 h-2.5 rounded-full bg-slate-600 border border-slate-500 shadow-inner"></div>
+                    </div>
+                    <span id="health-status" class="text-xs font-mono font-medium text-slate-400 w-28 text-left">WAIT</span>
+                </div>
+
+                <div class="h-5 w-px bg-white/10 rounded"></div>
+
+                <div class="flex items-center gap-4">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Ready</span>
+                    <div class="relative flex items-center justify-center scale-90">
+                        <div id="ready-glow" class="absolute w-4 h-4 rounded-full hidden"></div>
+                        <div id="ready-dot" class="w-2.5 h-2.5 rounded-full bg-slate-600 border border-slate-500 shadow-inner"></div>
+                    </div>
+                    <span id="ready-status" class="text-xs font-mono font-medium text-slate-400 w-28 text-left">WAIT</span>
+                </div>
+            </div>
+
+            <!-- Features Grid Section -->
+            <div class="opacity-0 animate-fade-in-up [animation-delay:900ms] w-full text-center mb-6 mt-16">
+                <h2 class="text-lg md:text-xl font-semibold text-white tracking-wide">Core Features</h2>
+                <div class="w-12 h-1 bg-gradient-to-r from-quoin-500 to-transparent mx-auto mt-2 rounded"></div>
+            </div>
+
+            <!-- Features Grid (Compact 2x4 with 1 size bigger text) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full text-left max-w-6xl">
+                <!-- Feature 1: The Engine -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1050ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">⚡</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">High Performance</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">FastAPI and Pydantic async I/O.</p>
+                    </div>
+                </div>
+                <!-- Feature 2: The Data -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1150ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🗄️</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Database Batteries</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">PostgreSQL & Alembic migrations.</p>
+                    </div>
+                </div>
+                <!-- Feature 3: The Code Reliability -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1250ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🛡️</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Strict Quality</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Types by Ty, linted by Ruff, tested via Pytest.</p>
+                    </div>
+                </div>
+                <!-- Feature 4: The Architecture Security -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1350ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🔒</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Secure Defaults</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Structured secure config maps.</p>
+                    </div>
+                </div>
+                <!-- Feature 5: The Operability -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1450ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🔭</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Observable</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">OpenTelemetry tracing built-in.</p>
+                    </div>
+                </div>
+                <!-- Feature 6: The DevEx -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1550ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🧰</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Modern Tooling</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Powered by `uv` and `just` runner.</p>
+                    </div>
+                </div>
+                <!-- Feature 7: The Deployment -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1650ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🐳</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Docker Ready</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Compose setup for deployment.</p>
+                    </div>
+                </div>
+                <!-- Feature 8: The Conclusion -->
+                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1750ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
+                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
+                    <!-- Permanent glow on top-left corner -->
+                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
+                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">📚</div>
+                    <div class="relative pt-0.5">
+                        <h3 class="text-base font-semibold text-white mb-1">Documented</h3>
+                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Zensical & auto-gen OpenAPI specs.</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
     </div>
-  </body>
+
+    <!-- Floating Footer Centered -->
+    <footer class="w-full max-w-5xl mx-auto h-12 px-8 flex justify-between items-center text-slate-400 text-xs z-50 glass-panel rounded-t-2xl absolute bottom-0 left-1/2 -translate-x-1/2 bg-gray-950/40 border-b-0">
+        <div class="text-left font-medium">
+            <p>&copy; {{ copyright_year }} {{ copyright_owner }}</p>
+        </div>
+        <div class="text-right">
+            <p class="license font-medium">MIT License</p>
+        </div>
+    </footer>
+
+    <!-- Logic -->
+    <script>
+        const copyQuickStart = () => {
+            navigator.clipboard.writeText("git clone https://github.com/balakmran/quoin-api.git");
+            const copyIcon = document.getElementById('copy-icon');
+            const checkIcon = document.getElementById('check-icon');
+            copyIcon.classList.add('hidden');
+            checkIcon.classList.remove('hidden');
+            setTimeout(() => {
+                checkIcon.classList.add('hidden');
+                copyIcon.classList.remove('hidden');
+            }, 2000);
+        };
+
+        let healthOK = true;
+        let readyOK = true;
+
+        const updateGlobalStatus = () => {
+            const pill = document.getElementById('global-status-pill');
+            const text = document.getElementById('global-status-text');
+
+            if (healthOK && readyOK) {
+                text.textContent = "ALL SYSTEMS OPERATIONAL";
+                pill.className = "inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-emerald-400 uppercase bg-emerald-900/30 border border-emerald-500/20 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
+            } else {
+                text.textContent = "SYSTEM DEGRADED";
+                pill.className = "inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-rose-400 uppercase bg-rose-900/30 border border-rose-500/30 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(244,63,94,0.2)]";
+            }
+        };
+
+        // Fetch Statuses - LED design
+        const updateStatusLED = async (endpoint, prefix) => {
+            const glow = document.getElementById(`${prefix}-glow`);
+            const dot = document.getElementById(`${prefix}-dot`);
+            const textEl = document.getElementById(`${prefix}-status`);
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(endpoint);
+                const endTime = performance.now();
+
+                if (response.ok) {
+                    const latency = Math.round(endTime - startTime);
+                    // Success state
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-300 shadow-[0_0_8px_#34d399]';
+                    glow.className = 'absolute w-4 h-4 bg-emerald-500/40 rounded-full animate-ping';
+                    textEl.innerHTML = `ONLINE <span class="text-[10px] text-emerald-600/80 ml-1 drop-shadow-none">[${latency}ms]</span>`;
+                    textEl.className = 'text-xs font-mono font-bold text-emerald-400 w-28 text-left drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] transition-all';
+
+                    if (prefix === 'health') healthOK = true;
+                    if (prefix === 'ready') readyOK = true;
+                } else {
+                    throw new Error('Not OK');
+                }
+            } catch (error) {
+                // Error state
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 border border-rose-400 shadow-[0_0_8px_#f43f5e]';
+                glow.className = 'absolute w-4 h-4 bg-rose-500/40 rounded-full animate-ping';
+                textEl.innerHTML = `ERROR <span class="text-[10px] text-rose-700/80 ml-1 drop-shadow-none">[FAIL]</span>`;
+                textEl.className = 'text-xs font-mono font-bold text-rose-500 w-28 text-left drop-shadow-[0_0_8px_rgba(244,63,94,0.5)] transition-all';
+
+                if (prefix === 'health') healthOK = false;
+                if (prefix === 'ready') readyOK = false;
+            }
+            updateGlobalStatus();
+        };
+
+        // Delay slighty for effect
+        setTimeout(() => {
+            updateStatusLED('/health', 'health');
+            updateStatusLED('/ready', 'ready');
+        }, 800);
+
+        // Active telemetry polling every 10 seconds for coolness factor
+        setInterval(() => {
+            updateStatusLED('/health', 'health');
+            updateStatusLED('/ready', 'ready');
+        }, 10000);
+
+        // Three.js Quoin Foundation Backbone
+        const initCornerstone = () => {
+            const canvas = document.getElementById('bg-canvas');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x06111f, 0.002);
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Lighting for the 3D block
+            const ambientLight = new THREE.AmbientLight(0x0c4a6e, 2.5); // Darker ambient to emphasize the spotlight
+            scene.add(ambientLight);
+
+            // Interactive mouse spotlight!
+            const spotlight = new THREE.PointLight(0x38bdf8, 12, 1000); // intense brightness
+            spotlight.position.set(0, 0, 200);
+            scene.add(spotlight);
+
+            const group = new THREE.Group();
+            scene.add(group);
+
+            const coreMaterial = new THREE.MeshStandardMaterial({
+                color: 0x082f49,
+                metalness: 0.6,
+                roughness: 0.2,
+            });
+
+            const highlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0ea5e9,
+                emissive: 0x0ea5e9,
+                emissiveIntensity: 0.5,
+                metalness: 0.8,
+                roughness: 0.1,
+            });
+
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.5,
+                linewidth: 2
+            });
+
+            const highlightLineMaterial = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.9,
+                linewidth: 2
+            });
+
+            // Mathematical construction of the Flat Wall & Protruding Quoins precisely matching the reference image.
+
+            // 1. Static Flat Wall (L-shaped intersection)
+            const numQuoins = 5;
+            const h = 26;
+            const gap = 3;
+            // Wall is exactly as tall as the 5 quoins and their gaps
+            const wallH = numQuoins * (h + gap) - gap;
+
+            const wallGroup = new THREE.Group();
+
+            // Wall on X-axis (centered perfectly on Z to allow equal front/back protrusion)
+            const wallX = new THREE.Mesh(new THREE.BoxGeometry(100, wallH, 12), coreMaterial);
+            const wallXWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(100.5, wallH+0.5, 12.5)), lineMaterial);
+            wallX.position.set(50, 0, 0);
+            wallXWire.position.copy(wallX.position);
+            wallGroup.add(wallX);
+            wallGroup.add(wallXWire);
+
+            // Wall on Z-axis (centered perfectly on X)
+            const wallZ = new THREE.Mesh(new THREE.BoxGeometry(12, wallH, 100), coreMaterial);
+            const wallZWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(12.5, wallH+0.5, 100.5)), lineMaterial);
+            wallZ.position.set(0, 0, -50);
+            wallZWire.position.copy(wallZ.position);
+            wallGroup.add(wallZ);
+            wallGroup.add(wallZWire);
+
+            group.add(wallGroup);
+
+            // 2. Protruding Cornerstones (Alternating Quoins)
+            const smallBlocks = [];
+            const qGroup = new THREE.Group();
+
+            // Center the stack vertically relative to the wall
+            const startY = -(wallH / 2) + (h/2);
+
+            for (let y = 0; y < numQuoins; y++) {
+                const isEven = (y % 2 === 0);
+
+                // Logic based on physical masonry overlap at an outer corner
+                // The wall thickness is 12. Quoins are 20 thick, protruding 4 units uniformly on ALL sides.
+                // This ensures they are perfectly visible 360 degrees whether looking at the front or back of the wall.
+                // Even layers run long along X (width=80, depth=20, offset to wrap the Z corner).
+                // Odd layers run long along Z (width=20, depth=80, offset to wrap the X corner).
+                const w = isEven ? 80 : 20;
+                const d = isEven ? 20 : 80;
+                const cx = isEven ? 30 : 0;
+                const cz = isEven ? 0 : -30;
+
+                const qb = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), highlightMaterial);
+                const qWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w+0.5, h+0.5, d+0.5)), highlightLineMaterial);
+
+                const bGroup = new THREE.Group();
+                bGroup.add(qb);
+                bGroup.add(qWire);
+
+                bGroup.position.set(cx, startY + y * (h + gap), cz);
+                bGroup.userData = { offset: y * 0.5, basePos: bGroup.position.clone() };
+
+                qGroup.add(bGroup);
+                smallBlocks.push(bGroup);
+            }
+            group.add(qGroup);
+
+            // Shift entire foundation group left and forward to keep the visual balance
+            group.children.forEach(child => {
+                child.position.x -= 20;
+                child.position.z += 20;
+            });
+
+            // Add floating data particles representing the API flowing from foundation
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 120;
+            const pos = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount; i++) {
+                pos[i*3] = (Math.random() - 0.5) * 350;
+                pos[i*3+1] = (Math.random() - 0.5) * 350 - 50;
+                pos[i*3+2] = (Math.random() - 0.5) * 350;
+            }
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x0ea5e9,
+                size: 2.5,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            const particles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particles);
+
+            // Position group further to the left to avoid center overlap
+            group.position.set(-240, 30, -80);
+
+            camera.position.z = 240;
+
+            let targetX = 0;
+            let targetY = 0;
+            document.addEventListener('mousemove', (e) => {
+                targetX = (e.clientX - window.innerWidth / 2) * 0.05;
+                targetY = (e.clientY - window.innerHeight / 2) * 0.05;
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            const animate = function () {
+                requestAnimationFrame(animate);
+
+                // Slow majestic rotation of the cornerstone foundation
+                group.rotation.y -= 0.002;
+                group.rotation.x = Math.sin(Date.now() * 0.0005) * 0.05;
+
+                // Unique movement for small blocks (levitation only, locked rotation)
+                const time = Date.now() * 0.001;
+                smallBlocks.forEach((sb, idx) => {
+                    sb.position.y = sb.userData.basePos.y + Math.sin(time + sb.userData.offset) * 8;
+                });
+
+                // Float particles up like data streams (slowed down)
+                const pAttr = particleGeometry.attributes.position;
+                for(let i=0; i<particleCount; i++) {
+                    pAttr.array[i*3+1] += 0.15;
+                    if(pAttr.array[i*3+1] > 200) {
+                        pAttr.array[i*3+1] = -200;
+                    }
+                }
+                pAttr.needsUpdate = true;
+
+                // Mouse parallax
+                camera.position.x += (targetX - camera.position.x) * 0.05;
+                camera.position.y += (-targetY - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                // Interactive Light Tracking (follows cursor smoothly in 3D space)
+                spotlight.position.x += (targetX * 12 - spotlight.position.x) * 0.1;
+                spotlight.position.y += (-targetY * 12 + 50 - spotlight.position.y) * 0.1;
+
+                renderer.render(scene, camera);
+            };
+
+            animate();
+        };
+
+        // Initialize when DOM is loaded
+        if (document.readyState === 'complete') {
+            initCornerstone();
+        } else {
+            window.addEventListener('DOMContentLoaded', initCornerstone);
+        }
+    </script>
+</body>
 </html>

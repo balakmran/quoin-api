@@ -23,7 +23,6 @@ async def root(request: Request) -> HTMLResponse:
         request=request,
         name="index.html",
         context={
-            "message": "All Systems Operational",
             "app_name": metadata.APP_NAME,
             "app_version": metadata.VERSION,
             "app_description": metadata.APP_DESCRIPTION,
