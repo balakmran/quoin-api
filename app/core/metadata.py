@@ -9,10 +9,10 @@ REPOSITORY_URL = "https://github.com/balakmran/quoin-api"
 COPYRIGHT_OWNER = "Balakumaran Manoharan"
 
 APP_LONG_DESCRIPTION = """
-QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation
-designed to serve as the structural cornerstone for modern Python backends.
-Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it
-provides a battle-tested "Golden Path" for developers who prioritize
+QuoinAPI (pronounced `koyn`) is a high-performance, scalable foundation \
+designed to serve as the structural cornerstone for modern Python backends. \
+Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it \
+provides a battle-tested `Golden Path` for developers who prioritize \
 architectural integrity, type safety, and observability.
 """
 
