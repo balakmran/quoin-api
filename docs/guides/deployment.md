@@ -25,7 +25,7 @@ This command:
 - Starts the application container
 - Configures networking between containers
 
-Access the application at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Access the application at [http://localhost:8000](http://localhost:8000).
 
 ### Stop Containers
 

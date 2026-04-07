@@ -34,14 +34,14 @@ just migrate-up
 just run
 ```
 
-The application will be available at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+The application will be available at [http://localhost:8000](http://localhost:8000).
 
-- **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Redoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ## 📸 Application Home Page
 
-When you visit [http://127.0.0.1:8000](http://127.0.0.1:8000), you'll see the application's home page:
+When you visit [http://localhost:8000](http://localhost:8000), you'll see the application's home page:
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
 

@@ -37,7 +37,7 @@ just run
 
 ## 📸 Application Home Page
 
-After running the server, you can visit [http://127.0.0.1:8000](http://127.0.0.1:8000) to see the application's home page:
+After running the server, you can visit [http://localhost:8000](http://localhost:8000) to see the application's home page:
 
 ![QuoinAPI Home Page](./docs/assets/images/quoin-api-homepage.png)
 
