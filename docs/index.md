@@ -163,10 +163,3 @@ requests.
 
 This project is licensed under the **MIT License**. See the [LICENSE](project/license.md)
 for details.
-
-## 🔗 Quick Links
-
-- **GitHub Repository**: [balakmran/quoin-api](https://github.com/balakmran/quoin-api)
-- **API Docs (Swagger)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **API Docs (ReDoc)**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-- **Changelog**: [View version history](project/changelog.md)
