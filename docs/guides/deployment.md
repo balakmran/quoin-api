@@ -2,7 +2,7 @@
 
 This guide covers how to deploy the QuoinAPI application using Docker.
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 The project includes a production-ready `Dockerfile` and `docker-compose.yml`
 for containerized deployment.
@@ -110,46 +110,45 @@ QUOIN_POSTGRES_DB=app_db
 
 ---
 
-## Cloud Deployment
-
-The Docker image can be deployed to any container platform:
-
-### Recommended Platforms
-
-- **Railway** - [railway.app](https://railway.app)
-- **Render** - [render.com](https://render.com)
-- **Fly.io** - [fly.io](https://fly.io)
-- **Google Cloud Run** - Serverless containers
-- **AWS ECS** - Elastic Container Service
-- **Azure Container Apps** - Managed containers
-
-### Example: Railway Deployment
-
-1. **Connect Repository**: Link your GitHub repository to Railway
-2. **Add PostgreSQL**: Add a PostgreSQL database service
-3. **Configure Environment Variables**: Set all required environment variables
-4. **Deploy**: Railway automatically builds and deploys from `Dockerfile`
-
----
-
 ## Health Checks
 
-The application includes a health check endpoint for monitoring:
+The application includes dedicated endpoints for health and readiness monitoring:
+
+### Health Probe
+
+The `/health` endpoint checks if the application process is running:
 
 ```bash
-curl http://localhost:8000/api/v1/system/health
+curl http://localhost:8000/health
 ```
 
 Expected response:
 
 ```json
 {
-  "status": "healthy",
-  "database": "connected"
+  "status": "healthy"
 }
 ```
 
-Use this endpoint for:
+### Readiness Probe
+
+The `/ready` endpoint checks if the application is ready to accept traffic (e.g., database is connected):
+
+```bash
+curl http://localhost:8000/ready
+```
+
+Expected response (HTTP 200 OK):
+
+```json
+{
+  "status": "ready"
+}
+```
+
+If the database is unavailable, it returns an HTTP 503 error.
+
+Use these endpoints for:
 
 - **Docker health checks** - `HEALTHCHECK` directive
 - **Load balancer probes** - Kubernetes liveness/readiness
