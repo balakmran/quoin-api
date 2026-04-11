@@ -1,8 +1,7 @@
-# System Architecture
+# Overview
 
-This document provides a comprehensive overview of the QuoinAPI
-architecture, including component structure, data flow, and integration
-patterns.
+Component structure, data flow, and integration patterns of the
+QuoinAPI.
 
 ---
 
@@ -272,20 +271,6 @@ and tracked in `alembic/versions/`.
 
 ---
 
-## Authentication & Authorization
-
-> [!NOTE]
-> **Not Yet Implemented** — Authentication is planned for a future
-> release. The architecture is designed to support:
->
-> - JWT token-based authentication
-> - Role-based access control (RBAC)
-> - Per-route authorization decorators
-
-Placeholder for future implementation.
-
----
-
 ## Static Files & Templates
 
 ```python
@@ -433,7 +418,7 @@ See [Testing Guide](../guides/testing.md) for patterns.
 
 ## See Also
 
-- [Design Decisions](design-decisions.md) — Why we chose these technologies
+- [Decision Log](decision-log.md) — Why we chose these technologies
 - [Error Handling](../guides/error-handling.md) — Exception architecture
 - [Database Migrations](../guides/database-migrations.md) — Schema management
 - [Observability](../guides/observability.md) — Logging and tracing

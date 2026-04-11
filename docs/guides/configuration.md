@@ -35,6 +35,30 @@ Copy the example configuration to create your local `.env` file:
 cp .env.example .env
 ```
 
+The template contains these defaults — ready for local development
+with Docker:
+
+```bash
+# Application
+# Environment: development, test, production
+QUOIN_ENV=development
+QUOIN_LOG_LEVEL=INFO
+QUOIN_OTEL_ENABLED=True
+
+# Database
+QUOIN_POSTGRES_DRIVER=postgresql+asyncpg
+QUOIN_POSTGRES_HOST=localhost
+QUOIN_POSTGRES_PORT=5432
+QUOIN_POSTGRES_USER=postgres
+QUOIN_POSTGRES_PASSWORD=postgres
+QUOIN_POSTGRES_DB=app_db
+```
+
+> [!NOTE]
+> The defaults work out of the box with `just db`. For production,
+> override `QUOIN_POSTGRES_HOST`, `QUOIN_POSTGRES_PASSWORD`, and set
+> `QUOIN_ENV=production`.
+
 ### Creating Environment-Specific Files
 
 Create `.env.test` for test-specific settings:

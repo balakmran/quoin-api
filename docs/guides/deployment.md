@@ -47,12 +47,32 @@ Build the Docker image manually for production:
 docker build -t quoin-api:latest .
 ```
 
-The `Dockerfile` is optimized for production with:
+The `Dockerfile` uses a **multi-stage build**:
 
-- **Multi-stage build** - Smaller final image size
-- **Non-root user** - Enhanced security
-- **Layer caching** - Faster rebuilds
-- **Production dependencies only** - No dev tools
+```dockerfile
+# Stage 1: Builder — install dependencies only
+FROM python:3.12-slim-bookworm AS builder
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+WORKDIR /app
+COPY pyproject.toml uv.lock* README.md ./
+RUN uv sync --no-dev --frozen
+
+# Stage 2: Final — lean production image
+FROM python:3.12-slim-bookworm
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
+COPY app/ app/
+COPY alembic/ alembic/
+COPY alembic.ini .
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
+# Non-root user for security
+RUN addgroup --system --gid 1001 fastapi && \
+    adduser --system --uid 1001 --ingroup fastapi fastapi
+RUN chown -R fastapi:fastapi /app
+USER fastapi
+CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
+```
 
 ### Running in Production
 

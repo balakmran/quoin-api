@@ -79,6 +79,20 @@ Understanding the project layout will help you navigate the codebase.
 └── pyproject.toml              # Project dependencies and tool config
 ```
 
+## 🔜 What's Next?
+
+Now that the app is running, here are the logical next steps:
+
+| Task | Guide |
+| :--- | :---- |
+| Add a new feature module | [Creating a Module](creating-a-module.md) |
+| Change environment settings | [Configuration](configuration.md) |
+| Add a database column | [Database Migrations](database-migrations.md) |
+| Write tests | [Testing](testing.md) |
+| Explore the live API | [http://localhost:8000/docs](http://localhost:8000/docs) |
+
+---
+
 ## ❓ Troubleshooting
 
 ### Port Conflicts

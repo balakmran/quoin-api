@@ -42,52 +42,115 @@ tests/
 
 ---
 
-## Fixtures
+## Pytest Configuration
 
-Shared fixtures are defined in [`conftest.py`](https://github.com/balakmran/quoin-api/blob/main/tests/conftest.py):
+Pytest is configured in `pyproject.toml`:
 
-### `app` — FastAPI Application
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"   # All async tests run without @pytest.mark.asyncio
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
 
-```python
-@pytest.fixture
-def app() -> FastAPI:
-    """Create a test FastAPI application."""
-    return create_app()
+[tool.coverage.run]
+source = ["app"]
+branch = true
+concurrency = ["thread", "greenlet"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
 ```
 
-### `anyio_backend` — Async Runtime
+> [!IMPORTANT]
+> `asyncio_mode = "auto"` means all `async def test_*` functions run
+> automatically as async. Do **not** add `@pytest.mark.asyncio` —
+> it's redundant and causes a warning.
+
+---
+
+## Fixtures
+
+Shared fixtures are defined in
+[`tests/conftest.py`](https://github.com/balakmran/quoin-api/blob/main/tests/conftest.py).
+
+### `initialize_db` — Database Setup
+
+Runs automatically before every test. Creates all tables, yields,
+then drops all tables and disposes the engine:
+
+```python
+@pytest.fixture(scope="function", autouse=True)
+async def initialize_db(
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncGenerator[None, None]:
+    monkeypatch.setattr(settings, "POSTGRES_DB", "postgres")
+    fastapi_app.state.engine = create_db_engine()
+
+    async with fastapi_app.state.engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    yield
+
+    async with fastapi_app.state.engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+    await fastapi_app.state.engine.dispose()
+```
+
+### `db_session` — Isolated Database Session
+
+Provides a session bound to a transaction that is rolled back after
+each test — guaranteeing a clean slate:
 
 ```python
 @pytest.fixture
-def anyio_backend() -> str:
-    """Return the async runtime backend."""
-    return "asyncio"
+async def db_session(
+    initialize_db: None,
+) -> AsyncGenerator[AsyncSession, None]:
+    connection = await fastapi_app.state.engine.connect()
+    trans = await connection.begin()
+    session_maker = async_sessionmaker(
+        bind=connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    session = session_maker()
+    try:
+        yield session
+    finally:
+        await session.close()
+        await trans.rollback()
+        await connection.close()
 ```
 
 ### `client` — Async HTTP Client
 
+Overrides the `get_session` dependency to inject the test session,
+so HTTP requests use the same rolled-back transaction:
+
 ```python
 @pytest.fixture
-async def client(app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
+async def client(
+    db_session: AsyncSession,
+) -> AsyncGenerator[AsyncClient, None]:
+    fastapi_app.dependency_overrides[get_session] = lambda: db_session
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
-    ) as client:
-        yield client
+        transport=ASGITransport(app=fastapi_app),
+        base_url="http://test",
+    ) as c:
+        yield c
+    fastapi_app.dependency_overrides.clear()
 ```
 
-### `session` — Database Session
-
-```python
-@pytest.fixture
-async def session(app: FastAPI) -> AsyncGenerator[AsyncSession, None]:
-    engine: AsyncEngine = app.state.engine
-    async_session = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
-    async with async_session() as session:
-        yield session
-```
+> [!TIP]
+> The `client` → `db_session` → `initialize_db` fixture chain means
+> requesting `client` in a test automatically sets up a fresh, isolated
+> database transaction. You never need to call `initialize_db` manually.
 
 ---
 

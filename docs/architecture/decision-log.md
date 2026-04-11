@@ -1,8 +1,8 @@
-# Design Decisions
+# Decision Log
 
-This document explains the key technology choices and architectural
-decisions made in the QuoinAPI project, including the rationale
-behind each decision.
+A chronological record of key technology and architecture decisions,
+including the context, options considered, and rationale behind each
+choice.
 
 ---
 
@@ -655,6 +655,6 @@ async def send_welcome_email(user_id: UUID):
 
 ## See Also
 
-- [System Architecture](overview.md) — Component structure and data flow
+- [Architecture Overview](overview.md) — Component structure and data flow
 - [Getting Started](../guides/getting-started.md) — Setup and development
 - [Configuration](../guides/configuration.md) — Environment variables

@@ -12,23 +12,32 @@ repo_name = "balakmran/quoin-api"
 nav = [
     { "Home" = "index.md" },
     { "Guides" = [
-        { "Getting Started" = "guides/getting-started.md" },
-        { "Configuration" = "guides/configuration.md" },
-        { "Database Migrations" = "guides/database-migrations.md" },
-        { "API Structure" = "guides/api-structure.md" },
-        { "Error Handling" = "guides/error-handling.md" },
-        { "Testing" = "guides/testing.md" },
-        { "Quality Checks" = "guides/quality-checks.md" },
-        { "Observability" = "guides/observability.md" },
-        { "Deployment" = "guides/deployment.md" },
-        { "Release Workflow" = "guides/release-workflow.md" },
-        { "Troubleshooting" = "guides/troubleshooting.md" },
+        { "Setup" = [
+            { "Getting Started" = "guides/getting-started.md" },
+            { "Configuration" = "guides/configuration.md" },
+        ]},
+        { "Development" = [
+            { "Creating a Module" = "guides/creating-a-module.md" },
+            { "Database Migrations" = "guides/database-migrations.md" },
+            { "Error Handling" = "guides/error-handling.md" },
+            { "Testing" = "guides/testing.md" },
+            { "Quality Checks" = "guides/quality-checks.md" },
+        ]},
+        { "Operations" = [
+            { "Observability" = "guides/observability.md" },
+            { "Deployment" = "guides/deployment.md" },
+            { "Release Workflow" = "guides/release-workflow.md" },
+        ]},
+        { "Support" = [
+            { "Troubleshooting" = "guides/troubleshooting.md" },
+        ]},
     ]},
     { "Architecture" = [
-        { "System Overview" = "architecture/overview.md" },
-        { "Design Decisions" = "architecture/design-decisions.md" },
+        { "Overview" = "architecture/overview.md" },
+        { "Decision Log" = "architecture/decision-log.md" },
     ]},
-    { "API Reference" = [
+    { "Reference" = [
+        { "Conventions" = "api/conventions.md" },
         { "Overview" = "api/overview.md" },
         { "Core" = "api/core.md" },
         { "User" = "api/user.md" },

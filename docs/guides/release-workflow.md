@@ -188,7 +188,7 @@ For critical bug fixes that need immediate release:
 3. **Bump patch version**:
 
    ```bash
-   just bump part="patch"
+   just bump
    ```
 
 4. **Update changelog**, commit, and merge to `main`

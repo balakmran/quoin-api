@@ -1,6 +1,21 @@
 # Error Handling
 
-This guide explains the error handling architecture in the QuoinAPI, including custom domain exceptions, module-level exceptions, global exception handlers, and best practices for error management.
+This guide explains the error handling architecture in the QuoinAPI,
+including custom domain exceptions, module-level exceptions, global
+exception handlers, and best practices for error management.
+
+## Exception Quick Reference
+
+| Exception             | Status | Use Case                                  |
+| :-------------------- | :----: | :---------------------------------------- |
+| `BadRequestError`     | 400    | Invalid request data or parameters        |
+| `ForbiddenError`      | 403    | Insufficient permissions                  |
+| `NotFoundError`       | 404    | Resource not found                        |
+| `ConflictError`       | 409    | Resource conflict (e.g., duplicate email) |
+| `InternalServerError` | 500    | Unexpected server errors                  |
+| `QuoinRequestValidationError` | 422 | Pydantic validation errors (internal) |
+
+All inherit from `QuoinError`. Import from `app.core.exceptions`.
 
 ---
 

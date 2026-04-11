@@ -48,6 +48,9 @@ setup_logging()
 
 ### Log Output Formats
 
+> **TIP**: `QUOIN_ENV` controls log **format** (human vs JSON). `QUOIN_LOG_LEVEL`
+> controls **verbosity**. They are independent knobs.
+
 #### Development (`QUOIN_ENV=development`)
 
 Human-readable console output:
@@ -317,8 +320,7 @@ Popular backends:
 - **Disabled** (`QUOIN_OTEL_ENABLED=False`): Zero overhead
 - **Enabled** (`QUOIN_OTEL_ENABLED=True`): ~5-10% overhead
 
-> [!TIP]
-> For high-throughput services, consider sampling (e.g., trace 10% of
+> **TIP**: For high-throughput services, consider sampling (e.g., trace 10% of
 > requests).
 
 ---

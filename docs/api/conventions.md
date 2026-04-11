@@ -1,6 +1,7 @@
-# API Structure
+# Conventions
 
-This document provides an overview of the QuoinAPI API structure, versioning strategy, and key endpoints.
+Routing conventions, URL versioning strategy, and endpoint patterns
+used across the QuoinAPI.
 
 ## Router Structure
 

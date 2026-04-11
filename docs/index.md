@@ -54,7 +54,7 @@ title: Home
 - **Observability:** OpenTelemetry, Structlog
 - **Documentation:** Zensical (MkDocs Material)
 
-Learn more about our [technology choices and design decisions →](architecture/design-decisions.md)
+Learn more about our [technology choices and decision log →](architecture/decision-log.md)
 
 ## ⚡️ Quick Start
 
