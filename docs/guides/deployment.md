@@ -25,7 +25,7 @@ This command:
 - Starts the application container
 - Configures networking between containers
 
-Access the application at [http://localhost:8000](http://localhost:8000).
+Access the application at [http://localhost:8000](http://localhost:8000) (or via `http://api.quoin-api.orb.local` if using OrbStack).
 
 ### Stop Containers
 
