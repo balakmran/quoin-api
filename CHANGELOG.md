@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **UI**: Redesigned landing page with Tailwind CSS, 3D background, and modern glassmorphism UI.
+- **Documentation**: Enabled search features, added Google Analytics, and included meta extension and social plugin.
+- **Documentation**: Enabled sticky navigation tabs in zensical configuration.
+
+### Changed
+
+- **Configuration**: Added `*.orb.local` to allowed hosts for OrbStack local domain support.
+- **Docker**: Renamed non-root user to `appuser`.
+- **Documentation**: Reorganized documentation structure, added module creation guide, and aligned docs with source code.
+- **Documentation**: Replaced cloud deployment guide with updated health and readiness probe documentation.
+- **Documentation**: Updated documentation to use localhost, removed quick links section, and updated homepage image.
+- **Chores**: Updated testing configuration and metadata formatting, added `.cache` directory to cleanup recipe.
+
+### Fixed
+
+- **Tests**: Updated system status message assertion to match new initialization text.
+
 ## [0.5.0] - 2026-02-16
 
 ### Added
@@ -159,3 +180,11 @@
 - Comprehensive test suite setup with `pytest`.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
+
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/balakmran/quoin-api/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/balakmran/quoin-api/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/balakmran/quoin-api/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/balakmran/quoin-api/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/balakmran/quoin-api/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/balakmran/quoin-api/releases/tag/v0.1.0
