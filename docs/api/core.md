@@ -8,14 +8,14 @@ Documentation for core infrastructure modules.
 
 Core exception classes for domain error handling.
 
-### AppError
+### QuoinError
 
 Base class for all application exceptions.
 
 ```python
-from app.core.exceptions import AppError
+from app.core.exceptions import QuoinError
 
-class AppError(Exception):
+class QuoinError(Exception):
     """Base class for application exceptions."""
 
     def __init__(
@@ -32,7 +32,7 @@ class AppError(Exception):
 **Usage:**
 
 ```python
-raise AppError(message="Something went wrong", status_code=500)
+raise QuoinError(message="Something went wrong", status_code=500)
 ```
 
 ### NotFoundError
@@ -75,7 +75,10 @@ Insufficient permissions (403).
 raise ForbiddenError(message="Admin access required")
 ```
 
-**Note:** FastAPI + Pydantic automatically handle request validation and return 422 responses for invalid data. You don't need a custom `ValidationError` exception.
+### QuoinRequestValidationError
+
+Wraps Pydantic validation errors with the `QuoinError` format (422).
+Used internally by the exception handler infrastructure.
 
 **Source:** [app/core/exceptions.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py)
 
@@ -94,25 +97,35 @@ from pydantic_core import MultiHostUrl
 
 class Settings(BaseSettings):
     # Environment
-    APP_ENV: str = "dev"
+    ENV: Environment = Environment.development  # development | test | production
+    LOG_LEVEL: str = "INFO"
 
     # Database
+    POSTGRES_DRIVER: str = "postgresql+asyncpg"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "fastapi"
-    POSTGRES_DRIVER: str = "postgresql+asyncpg"
+    POSTGRES_DB: str = "app_db"
 
     @computed_field
     @property
-    def DATABASE_URL(self) -> MultiHostUrl:
-        # Constructs database URL from components
+    def DATABASE_URL(self) -> PostgresDsn:
+        # Constructs database URL from POSTGRES_* components
         ...
 
     # Observability
     OTEL_ENABLED: bool = True
+
+    # Networking
+    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test"]
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
 ```
+
+All settings use the `QUOIN_` prefix (e.g., `QUOIN_POSTGRES_HOST`).
 
 **Usage:**
 
@@ -121,7 +134,7 @@ from app.core.config import settings
 
 # Access configuration
 database_url = settings.DATABASE_URL
-is_production = settings.APP_ENV == "prod"
+is_production = settings.ENV == "production"
 ```
 
 **Source:** [app/core/config.py](https://github.com/balakmran/quoin-api/blob/main/app/core/config.py)
@@ -132,18 +145,32 @@ is_production = settings.APP_ENV == "prod"
 
 Global exception handlers for converting domain exceptions to HTTP responses.
 
-### app_exception_handler
+### quoin_exception_handler
 
-Converts `AppError` exceptions to JSON responses.
+Converts `QuoinError` exceptions to JSON responses.
 
 ```python
-async def app_exception_handler(
-    request: Request, exc: AppError
+async def quoin_exception_handler(
+    request: Request, exc: QuoinError
 ) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},
         headers=exc.headers,
+    )
+```
+
+### validation_exception_handler
+
+Converts Pydantic `ValidationError` exceptions to 422 JSON responses.
+
+```python
+async def validation_exception_handler(
+    request: Request, exc: ValidationError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
     )
 ```
 
@@ -153,7 +180,8 @@ Registers all exception handlers with the FastAPI app.
 
 ```python
 def add_exception_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(AppError, app_exception_handler)
+    app.add_exception_handler(QuoinError, quoin_exception_handler)
+    app.add_exception_handler(ValidationError, validation_exception_handler)
 ```
 
 **Source:** [app/core/exception_handlers.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
@@ -170,11 +198,14 @@ CORS and other middleware configuration.
 def configure_middlewares(app: FastAPI) -> None:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 ```
+
+Allowed origins are configured via `QUOIN_BACKEND_CORS_ORIGINS` (defaults to
+`localhost:3000` and `localhost:8000`).
 
 **Source:** [app/core/middlewares.py](https://github.com/balakmran/quoin-api/blob/main/app/core/middlewares.py)
 
@@ -228,9 +259,10 @@ Application metadata and OpenAPI parameters.
 ```python
 from app.core.metadata import (
     APP_NAME,
-    APP_VERSION,
     APP_DESCRIPTION,
-    OPENAPI_PARAMETERS,
+    VERSION,
+    REPOSITORY_URL,
+    COPYRIGHT_OWNER,
 )
 ```
 

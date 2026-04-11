@@ -12,7 +12,8 @@ The application supports three environments with automatic `.env` file selection
 | Test        | `test`                  | `.env.test`       | Test suite, CI/CD     |
 | Production  | `production`            | `.env.production` | Production deployment |
 
-The environment is determined at startup from the `ENV` environment variable.
+The environment is determined at startup from the `QUOIN_ENV` environment
+variable, with `ENV` as a fallback for backward compatibility.
 
 ## Environment Variable Prefix
 
@@ -59,16 +60,19 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 
 ## Key Settings
 
-| Variable                  | Description                                         | Default       |
-| :------------------------ | :-------------------------------------------------- | :------------ |
-| `QUOIN_ENV`               | Environment (`development`, `test`, `production`)   | `development` |
-| `QUOIN_LOG_LEVEL`         | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO`        |
-| `QUOIN_OTEL_ENABLED`      | Enable OpenTelemetry tracing                        | `true`        |
-| `QUOIN_POSTGRES_HOST`     | PostgreSQL host                                     | `localhost`   |
-| `QUOIN_POSTGRES_PORT`     | PostgreSQL port                                     | `5432`        |
-| `QUOIN_POSTGRES_USER`     | PostgreSQL username                                 | `postgres`    |
-| `QUOIN_POSTGRES_PASSWORD` | PostgreSQL password                                 | `postgres`    |
-| `QUOIN_POSTGRES_DB`       | PostgreSQL database name                            | `app_db`      |
+| Variable                     | Description                                         | Default                                              |
+| :--------------------------- | :-------------------------------------------------- | :--------------------------------------------------- |
+| `QUOIN_ENV`                  | Environment (`development`, `test`, `production`)   | `development`                                        |
+| `QUOIN_LOG_LEVEL`            | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO`                                               |
+| `QUOIN_OTEL_ENABLED`         | Enable OpenTelemetry tracing                        | `true`                                               |
+| `QUOIN_POSTGRES_DRIVER`      | Database driver                                     | `postgresql+asyncpg`                                 |
+| `QUOIN_POSTGRES_HOST`        | PostgreSQL host                                     | `localhost`                                          |
+| `QUOIN_POSTGRES_PORT`        | PostgreSQL port                                     | `5432`                                               |
+| `QUOIN_POSTGRES_USER`        | PostgreSQL username                                 | `postgres`                                           |
+| `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password                                 | `postgres`                                           |
+| `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
+| `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test"]`                 |
+| `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins                                | `["http://localhost:3000", "http://localhost:8000"]` |
 
 ## Core Settings Module
 

@@ -68,18 +68,21 @@ Shared infrastructure components used across the application.
 ```python
 class Settings(BaseSettings):
     # Environment
-    APP_ENV: str = "dev"
+    ENV: Environment = Environment.development
+    LOG_LEVEL: str = "INFO"
     OTEL_ENABLED: bool = True
 
     # Database
+    POSTGRES_DRIVER: str = "postgresql+asyncpg"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "app_db"
     # ...
 
     @computed_field
     @property
     def DATABASE_URL(self) -> PostgresDsn:
-        return PostgresDsn.build(...)
+        return MultiHostUrl.build(...)
 ```
 
 Loads settings from `.env` file using Pydantic Settings.
@@ -87,13 +90,19 @@ Loads settings from `.env` file using Pydantic Settings.
 #### Exceptions (`exceptions.py`)
 
 ```python
-class AppError(Exception):
-    def __init__(self, message: str, status_code: int = 500):
+class QuoinError(Exception):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = 500,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.message = message
         self.status_code = status_code
+        self.headers = headers
 
-class NotFoundError(AppError):
-    def __init__(self, message: str = "Resource not found"):
+class NotFoundError(QuoinError):
+    def __init__(self, message: str = "Not Found"):
         super().__init__(message, status_code=404)
 ```
 
@@ -155,7 +164,6 @@ def configure_middlewares(app: FastAPI) -> None:
 def create_db_engine() -> AsyncEngine:
     return create_async_engine(
         str(settings.DATABASE_URL),
-        echo=settings.APP_ENV == "dev",
         pool_pre_ping=True,
         pool_size=20,
         max_overflow=10,
@@ -237,7 +245,7 @@ sequenceDiagram
 5. **Repository** → Queries/updates database via SQLModel
 6. **Database** → PostgreSQL with asyncpg driver
 7. **Response** → Service returns data, router serializes to JSON
-8. **Exception Handling** → Global handlers catch `AppError` exceptions
+8. **Exception Handling** → Global handlers catch `QuoinError` exceptions
 9. **Logging & Tracing** → OTEL spans, structured logs emitted
 
 ---
@@ -361,13 +369,11 @@ resource usage.
 
 ```mermaid
 graph TD
-    Service[Service Layer] -->|raises| Exception[AppError]
+    Service[Service Layer] -->|raises| Exception[QuoinError]
     Exception --> Handler[Global Exception Handler]
-    Handler --> Log[Structured Logging]
     Handler --> Response[JSON Response]
 
     Response --> Client[Client]
-    Log --> Aggregator[Log Aggregator]
 ```
 
 All business logic errors are converted to HTTP responses

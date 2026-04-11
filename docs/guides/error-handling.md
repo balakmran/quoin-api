@@ -119,12 +119,6 @@ The [`quoin_exception_handler`](https://github.com/balakmran/quoin-api/blob/main
 async def quoin_exception_handler(
     request: Request, exc: QuoinError
 ) -> Response:
-    logger.warning(
-        "quoin_error",
-        message=exc.message,
-        status_code=exc.status_code,
-        path=request.url.path,
-    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},

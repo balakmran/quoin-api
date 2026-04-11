@@ -278,10 +278,15 @@ just pr   # Run hooks manually (prek run)
 ```
 
 **Configuration:**
-```yaml
-# .prek.yaml
-pre-commit:
-  - just check
+```toml
+# prek.toml
+[[repos]]
+repo = "local"
+hooks = [
+    { id = "ruff-check", name = "ruff check", entry = "uv run ruff check", language = "system", types = ["python"], args = ["--fix"] },
+    { id = "ruff-format", name = "ruff format", entry = "uv run ruff format", language = "system", types = ["python"] },
+    { id = "ty", name = "ty", entry = "uv run ty check", language = "system", types = ["python"], pass_filenames = false }
+]
 ```
 
 **Trade-offs:**
@@ -310,11 +315,11 @@ pre-commit:
 ```just
 # Run development server
 run:
-    uv run uvicorn app.main:app --reload --port 8000
+    uv run fastapi dev app/main.py
 
 # Run all quality checks
 check:
-    just fmt
+    just format
     just lint
     just typecheck
     just test
@@ -522,9 +527,9 @@ logger.info(
 
 ```bash
 # .env
-APP_ENV=dev
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+QUOIN_ENV=development
+QUOIN_POSTGRES_HOST=localhost
+QUOIN_POSTGRES_PORT=5432
 ```
 
 **Alternatives Rejected:**

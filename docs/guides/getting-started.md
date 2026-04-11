@@ -21,16 +21,19 @@ Follow these steps to get up and running in minutes.
 git clone https://github.com/balakmran/quoin-api.git
 cd quoin-api
 
-# 2. Setup Project
+# 2. Configure Environment
+cp .env.example .env
+
+# 3. Setup Project (installs deps & git hooks)
 just setup
 
-# 3. Start the Database
+# 4. Start the Database
 just db
 
-# 4. Apply Migrations
+# 5. Apply Migrations
 just migrate-up
 
-# 5. Run the Server
+# 6. Run the Server
 just run
 ```
 

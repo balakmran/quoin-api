@@ -108,9 +108,16 @@ All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-
 | :----------------------- | :----------------------------------------- | :--------------------------- |
 | `just migrate-gen "msg"` | `alembic revision --autogenerate -m "msg"` | Generate migration           |
 | `just migrate-up`        | `alembic upgrade head`                     | Apply all pending migrations |
-| `just migrate-down`      | `alembic downgrade -1`                     | Rollback last migration      |
-| `just migrate-history`   | `alembic history`                          | Show migration history       |
-| `just migrate-current`   | `alembic current`                          | Show current revision        |
+
+> [!NOTE]
+> `migrate-down`, `migrate-history`, and `migrate-current` are not
+> wrapped in `just`. Run Alembic directly for these:
+>
+> ```bash
+> uv run alembic downgrade -1    # Rollback last migration
+> uv run alembic history         # Show migration history
+> uv run alembic current         # Show current revision
+> ```
 
 ---
 
@@ -236,10 +243,10 @@ docker-compose run app alembic upgrade head
 
 ```bash
 # Rollback last migration
-just migrate-down
+uv run alembic downgrade -1
 
 # Rollback to specific revision
-alembic downgrade abc123def456
+uv run alembic downgrade abc123def456
 ```
 
 ### Testing Rollbacks
@@ -249,7 +256,7 @@ Always test that `downgrade()` works:
 ```bash
 # Test upgrade/downgrade cycle
 just migrate-up
-just migrate-down
+uv run alembic downgrade -1
 just migrate-up
 ```
 
@@ -278,7 +285,7 @@ just migrate-up
 ls alembic/versions/
 
 # What revision is the database at?
-just migrate-current
+uv run alembic current
 ```
 
 ### Autogenerate Doesn't Detect Changes
@@ -286,7 +293,8 @@ just migrate-current
 Common causes:
 
 1. **Model not imported** in `alembic/env.py`
-2. **Different driver** between runtime and migrations (asyncpg vs psycopg)
+2. **Schema change not saved** — ensure you've saved the model file before
+   running autogenerate
 3. **SQLModel metadata not set** as target_metadata
 
 **Solution**: Add import to [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py):
@@ -300,14 +308,14 @@ from app.modules.product.models import Product  # Add new models here
 
 ## Quick Reference
 
-| Task                         | Command                      |
-| ---------------------------- | ---------------------------- |
-| Generate migration           | `just migrate-gen "message"` |
-| Apply migrations             | `just migrate-up`            |
-| Rollback one step            | `just migrate-down`          |
-| View history                 | `alembic history`            |
-| View current revision        | `alembic current`            |
-| Stamp head (without running) | `alembic stamp head`         |
+| Task                         | Command                        |
+| ---------------------------- | ------------------------------ |
+| Generate migration           | `just migrate-gen "message"`   |
+| Apply migrations             | `just migrate-up`              |
+| Rollback one step            | `uv run alembic downgrade -1`  |
+| View history                 | `uv run alembic history`       |
+| View current revision        | `uv run alembic current`       |
+| Stamp head (without running) | `uv run alembic stamp head`    |
 
 ---
 

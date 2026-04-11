@@ -28,7 +28,7 @@ Quick comparison to understand when to use each tool:
 | **When to Use**   | Business events, debugging | Performance analysis, flow |
 | **Output Format** | JSON logs (production)     | Spans with attributes      |
 | **Overhead**      | 2-5% CPU                   | 5-10% (when enabled)       |
-| **Control**       | `QUOIN_ENV` setting          | `QUOIN_OTEL_ENABLED` flag        |
+| **Control**       | `QUOIN_LOG_LEVEL` setting  | `QUOIN_OTEL_ENABLED` flag  |
 | **Best For**      | "What happened?"           | "How long did it take?"    |
 
 ---
@@ -245,7 +245,7 @@ By default, traces are printed to the console:
 }
 ```
 
-###Production Integration (Future)
+### Production Integration (Future)
 
 For production, export to a tracing backend:
 

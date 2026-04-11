@@ -60,6 +60,7 @@ Learn more about our [technology choices and design decisions →](architecture/
 
 ```bash
 # 1. Setup project (install dependencies & pre-commit hooks)
+cp .env.example .env
 just setup
 
 # 2. Start database (Docker)

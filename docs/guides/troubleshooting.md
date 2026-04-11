@@ -57,10 +57,10 @@ psycopg.OperationalError: connection refused
    just db  # Start database
    ```
 
-2. Are `POSTGRES_*` env vars correct?
+2. Are `QUOIN_POSTGRES_*` env vars correct?
 
    ```bash
-   cat .env | grep POSTGRES
+   cat .env | grep QUOIN_POSTGRES
    ```
 
 3. Is the port already in use?
@@ -77,11 +77,11 @@ async driver to be used.
 
 **Cause**: Using `postgresql://` instead of `postgresql+asyncpg://`.
 
-**Solution**: Check `POSTGRES_DRIVER` in `.env`:
+**Solution**: Check `QUOIN_POSTGRES_DRIVER` in `.env`:
 
 ```bash
 # .env
-POSTGRES_DRIVER=postgresql+asyncpg
+QUOIN_POSTGRES_DRIVER=postgresql+asyncpg
 ```
 
 ### Migration Conflicts
@@ -190,7 +190,7 @@ lsof -ti:8000 | xargs kill -9
 Or change the port:
 
 ```bash
-uvicorn app.main:app --port 8001
+uv run fastapi dev app/main.py --port 8001
 ```
 
 ---
@@ -383,7 +383,7 @@ async def http_exception_handler(request, exc):
 
 ```bash
 # .env
-OTEL_ENABLED=False  # Disable tracing
+QUOIN_OTEL_ENABLED=False  # Disable tracing
 ```
 
 ---
