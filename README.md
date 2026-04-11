@@ -50,6 +50,24 @@ QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation designed
 - **Observability:** OpenTelemetry, Structlog
 - **Documentation:** Zensical (MkDocs Material)
 
+## 🚀 Use as a Template
+
+QuoinAPI is designed to be used as a project generator via [Copier](https://copier.readthedocs.io/). To create a new API project using this architecture, first install Copier:
+
+```bash
+uv tool install copier
+# OR
+pipx install copier
+```
+
+Then generate your project:
+
+```bash
+copier copy https://github.com/balakmran/quoin-api.git my-awesome-api --trust
+```
+
+Copier will prompt you for your project name, database prefixes, and other configuration variables.
+
 ## ⚡️ Quick Start
 
 ```bash

@@ -1,0 +1,64 @@
+## Copier Configuration
+## https://copier.readthedocs.io/
+
+project_name:
+  type: str
+  default: "QuoinAPI"
+  help: "The display name of the API (e.g. My Awesome API)"
+
+project_slug:
+  type: str
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  help: "The string used in URLs, folders, etc (e.g. my-awesome-api)"
+
+env_prefix:
+  type: str
+  default: "{{ project_name | upper | replace(' ', '_') | replace('-', '_') }}"
+  help: "Prefix for environment variables (e.g. MYAPI)"
+
+description:
+  type: str
+  default: "A high-performance, scalable RESTful API foundation for modern Python backends."
+  help: "Short description for OpenAPI and pyproject.toml"
+
+long_description:
+  type: str
+  default: "{{ project_name }} is a high-performance, scalable RESTful API foundation for modern Python backends. Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty)."
+  help: "Long descriptive string for OpenAPI documentation"
+
+author_name:
+  type: str
+  default: "Balakumaran Manoharan"
+  help: "Your name for copyrights and package metadata"
+
+author_email:
+  type: str
+  default: "bala@balakmran.dev"
+  help: "Your email for package metadata"
+
+github_username:
+  type: str
+  default: "balakmran"
+  help: "Your GitHub username"
+
+google_analytics_id:
+  type: str
+  default: ""
+  help: "Google Analytics measurement ID (e.g. G-XXXXXXXXXX). Leave empty to disable."
+
+_exclude:
+  - ".git"
+  - ".venv"
+  - "__pycache__"
+  - "site"
+  - ".cache"
+  - ".pytest_cache"
+  - ".ruff_cache"
+  - ".coverage"
+  - "htmlcov"
+  - ".idea"
+  - ".vscode"
+  - "uv.lock"
+
+_tasks:
+  - "python3 scripts/copier_setup.py"

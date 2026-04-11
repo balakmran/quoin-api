@@ -1,0 +1,162 @@
+import os
+import re
+from pathlib import Path
+
+# --- Variables injected by Copier ---
+PROJECT_NAME = "{{ project_name }}"
+PROJECT_SLUG = "{{ project_slug }}"
+ENV_PREFIX = "{{ env_prefix }}"
+DESCRIPTION = "{{ description }}"
+LONG_DESCRIPTION = "{{ long_description }}"
+AUTHOR_NAME = "{{ author_name }}"
+AUTHOR_EMAIL = "{{ author_email }}"
+GITHUB_USERNAME = "{{ github_username }}"
+GOOGLE_ANALYTICS_ID = "{{ google_analytics_id }}"
+
+# --- Constants for Replacement ---
+BASE_DIR = Path.cwd()
+
+IGNORE_PATHS = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    "site",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".coverage",
+    "htmlcov",
+    ".idea",
+    ".vscode",
+    "uv.lock",
+}
+
+IGNORE_EXTENSIONS = {
+    ".pyc", ".pyo", ".pyd", ".so", ".dll", ".dylib",
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
+    ".mp4", ".mov", ".avi", ".webm",
+    ".sqlite", ".db", ".pdf"
+}
+
+
+def process_file(file_path: Path) -> None:
+    """Process a single file and apply all substitutions."""
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return  # Skip binary or non-utf-8 files
+
+    original_content = content
+
+    # 1. Replace specific long descriptions first (avoid partial overlaps)
+    # metadata.py APP_DESCRIPTION
+    content = re.sub(
+        r"APP_DESCRIPTION\s*=\s*\([^)]+\)",
+        f'APP_DESCRIPTION = "{DESCRIPTION}"',
+        content,
+    )
+    # metadata.py APP_LONG_DESCRIPTION
+    content = re.sub(
+        r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
+        f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
+        content,
+    )
+    # pyproject.toml: description field
+    content = re.sub(
+        r'description\s*=\s*"The architectural cornerstone.*?"',
+        f'description = "{DESCRIPTION}"',
+        content,
+        flags=re.DOTALL,
+    )
+    # pyproject.toml: authors email
+    content = re.sub(
+        r'email\s*=\s*"[^"]*"',
+        f'email = "{AUTHOR_EMAIL}"',
+        content,
+    )
+    # pyproject.toml/zensical: Documentation URL using old github_username
+    content = content.replace(
+        "https://balakmran.github.io/quoin-api/",
+        f"https://{GITHUB_USERNAME}.github.io/{PROJECT_SLUG}/",
+    )
+
+    # 2. Google Analytics: replace property value in zensical.toml
+    # Always keep the section; set empty string if no ID provided
+    content = re.sub(
+        r'(property\s*=\s*")[^"]*(")',
+        rf'\g<1>{GOOGLE_ANALYTICS_ID}\g<2>',
+        content,
+    )
+
+    # 3. General string replacements (order matters: longest first)
+    replacements = {
+        "QuoinAPI": PROJECT_NAME,
+        "QuoinError": "AppError",
+        "quoin-api": PROJECT_SLUG,
+        "quoin_": f"{ENV_PREFIX.lower()}_",
+        "QUOIN_": f"{ENV_PREFIX.upper()}_",
+        "balakmran": GITHUB_USERNAME,
+        "Balakumaran Manoharan": AUTHOR_NAME,
+    }
+
+    for old, new in replacements.items():
+        content = content.replace(old, new)
+
+    if original_content != content:
+        file_path.write_text(content, encoding="utf-8")
+        print(f"Updated {file_path.relative_to(BASE_DIR)}")
+
+
+def write_clean_changelog() -> None:
+    """Overwrite CHANGELOG.md with a clean starter template."""
+    changelog_path = BASE_DIR / "CHANGELOG.md"
+    content = f"""# Changelog
+
+All notable changes to **{PROJECT_NAME}** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+[Unreleased]: https://github.com/{GITHUB_USERNAME}/{PROJECT_SLUG}/commits/main
+"""
+    changelog_path.write_text(content, encoding="utf-8")
+    print("Wrote clean CHANGELOG.md")
+
+
+def run_replacements() -> None:
+    """Walk the generated project and apply all substitutions."""
+    for root, dirs, files in os.walk(BASE_DIR):
+        dirs[:] = [
+            d for d in dirs
+            if d not in IGNORE_PATHS and not d.endswith(".egg-info")
+        ]
+        for file_name in files:
+            file_path = Path(root) / file_name
+            if file_path.suffix in IGNORE_EXTENSIONS:
+                continue
+            # Skip this script and copier config (handled separately)
+            if file_name in {"copier_setup.py", "copier.yml"}:
+                continue
+            # CHANGELOG is rewritten fresh - skip in general pass
+            if file_name == "CHANGELOG.md":
+                continue
+            process_file(file_path)
+
+
+if __name__ == "__main__":
+    print(f"Running post-generation setup for {PROJECT_NAME}...")
+    run_replacements()
+    write_clean_changelog()
+
+    # Self-destruct copier files from the generated project
+    try:
+        os.remove(__file__)
+        copier_yml = BASE_DIR / "copier.yml"
+        if copier_yml.exists():
+            os.remove(copier_yml)
+    except Exception as e:
+        print(f"Warning: Could not remove setup files: {e}")
+
+    print("Setup complete! 🎉")
