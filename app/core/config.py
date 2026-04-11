@@ -67,7 +67,7 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
-    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test"]
+    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "test", "*.orb.local"]
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:8000",

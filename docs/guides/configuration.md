@@ -95,7 +95,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_POSTGRES_USER`        | PostgreSQL username                                 | `postgres`                                           |
 | `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password                                 | `postgres`                                           |
 | `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
-| `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test"]`                 |
+| `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
 | `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins                                | `["http://localhost:3000", "http://localhost:8000"]` |
 
 ## Core Settings Module

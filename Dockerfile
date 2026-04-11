@@ -31,14 +31,14 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 
 # Create a non-root user
-RUN addgroup --system --gid 1001 fastapi && \
-    adduser --system --uid 1001 --ingroup fastapi fastapi
+RUN addgroup --system --gid 1001 appuser && \
+    adduser --system --uid 1001 --ingroup appuser appuser
 
 # Set ownership of the application directory
-RUN chown -R fastapi:fastapi /app
+RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
-USER fastapi
+USER appuser
 
 # Run the application
 CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
