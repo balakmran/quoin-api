@@ -108,13 +108,14 @@ All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-
 | :----------------------- | :----------------------------------------- | :--------------------------- |
 | `just migrate-gen "msg"` | `alembic revision --autogenerate -m "msg"` | Generate migration           |
 | `just migrate-up`        | `alembic upgrade head`                     | Apply all pending migrations |
+| `just migrate-down`      | `alembic downgrade -1`                     | Rollback last migration      |
+| `just reset-db`          | (stop, restart, apply)                     | Reset database completely    |
 
 > [!NOTE]
-> `migrate-down`, `migrate-history`, and `migrate-current` are not
+> `migrate-history` and `migrate-current` are not
 > wrapped in `just`. Run Alembic directly for these:
 >
 > ```bash
-> uv run alembic downgrade -1    # Rollback last migration
 > uv run alembic history         # Show migration history
 > uv run alembic current         # Show current revision
 > ```
@@ -243,7 +244,7 @@ docker-compose run app alembic upgrade head
 
 ```bash
 # Rollback last migration
-uv run alembic downgrade -1
+just migrate-down
 
 # Rollback to specific revision
 uv run alembic downgrade abc123def456
@@ -256,7 +257,7 @@ Always test that `downgrade()` works:
 ```bash
 # Test upgrade/downgrade cycle
 just migrate-up
-uv run alembic downgrade -1
+just migrate-down
 just migrate-up
 ```
 
@@ -312,7 +313,7 @@ from app.modules.product.models import Product  # Add new models here
 | ---------------------------- | ------------------------------ |
 | Generate migration           | `just migrate-gen "message"`   |
 | Apply migrations             | `just migrate-up`              |
-| Rollback one step            | `uv run alembic downgrade -1`  |
+| Rollback one step            | `just migrate-down`            |
 | View history                 | `uv run alembic history`       |
 | View current revision        | `uv run alembic current`       |
 | Stamp head (without running) | `uv run alembic stamp head`    |

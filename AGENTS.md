@@ -26,15 +26,17 @@ The project uses `just` to automate common tasks.
 | :------------------------- | :---------------------------------------------------------- |
 | `just setup`               | Setup project (install dependencies and pre-commit hooks).  |
 | `just install`             | Install all dependencies (dev included) using `uv`.         |
+| `just dev`                 | Start DB, apply migrations, and run the dev server.         |
 | `just run`                 | Start the local development server (auto-reload enabled).   |
 | `just up`                  | Start all services (App + DB) via Docker Compose.           |
 | `just db`                  | Start only the PostgreSQL database container.               |
 | `just down`                | Stop and remove all Docker containers.                      |
+| `just logs`                | Tail live logs from the API container.                      |
 | `just check`               | Run **all** quality checks (format, lint, typecheck, test). |
 | `just format`              | Auto-format code with Ruff.                                 |
 | `just lint`                | Check code quality with Ruff.                               |
 | `just typecheck`           | Verify type annotations with ty.                            |
-| `just test`                | Run test suite with coverage.                               |
+| `just test`                | Run test suite with coverage (requires DB running).         |
 | `just clean`               | Remove build artifacts and cache.                           |
 | `just pi`                  | Install pre-commit hooks.                                   |
 | `just pr`                  | Run pre-commit hooks on all files.                          |
@@ -43,7 +45,9 @@ The project uses `just` to automate common tasks.
 | `just migrate-gen "<msg>"` | Generate a new Alembic migration.                           |
 | `just migrate-up`          | Apply pending database migrations.                          |
 | `just migrate-down`        | Rollback last migration.                                    |
-| `just bump part="<type>"`  | Bump version (patch, minor, major).                         |
+| `just reset-db`            | Reset DB (stop, restart, re-apply migrations).              |
+| `just new <module>`        | Scaffold a new feature module with all required files.      |
+| `just bump part="<type>"` | Bump version (patch, minor, major).                         |
 | `just tag`                 | Create and push git tag for release.                        |
 
 ## 📂 Architecture
@@ -138,6 +142,16 @@ structure:
 - `routes.py`: FastAPI router endpoints (calls service).
 - `exceptions.py`: Module-specific exceptions inheriting from `QuoinError`.
 - `__init__.py`: Expose the router as `router`.
+
+**Scaffold quickly with**:
+
+```bash
+just new <module_name>
+```
+
+This creates the full module skeleton in `app/modules/<module>/`
+and a test stub in `tests/modules/<module>/`.
+
 
 **Example workflow**:
 

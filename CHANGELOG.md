@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Copier**: Added `copier.yml` and `scripts/copier_setup.py.jinja` to support seamless project scaffolding via Copier.
+- **Developer Experience**: Enhanced `justfile` with several new recipes: `dev` (starts DB, applies migrations, and runs dev server), `reset-db` (resets DB state), `logs` (tails API logs), `migrate-down` (rolls back latest migration), and `new` (scaffolds new feature modules).
 - **UI**: Redesigned landing page with Tailwind CSS, 3D background, and modern glassmorphism UI.
 - **Documentation**: Enabled search features, added Google Analytics, and included meta extension and social plugin.
 - **Documentation**: Enabled sticky navigation tabs in zensical configuration.

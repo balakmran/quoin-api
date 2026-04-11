@@ -43,6 +43,9 @@ clean:
 run:
     uv run fastapi dev app/main.py
 
+# Start DB, apply migrations, and run the dev server
+dev: db migrate-up run
+
 # Install pre-commit hooks
 prek-install:
     uv run prek install
@@ -52,6 +55,25 @@ prek-run:
     uv run prek run --all-files
 
 # =============================================================================
+# Scaffolding
+# =============================================================================
+
+# Scaffold a new feature module (e.g. just new product)
+new module:
+    @mkdir -p app/modules/{{module}}
+    @touch app/modules/{{module}}/__init__.py
+    @touch app/modules/{{module}}/models.py
+    @touch app/modules/{{module}}/schemas.py
+    @touch app/modules/{{module}}/repository.py
+    @touch app/modules/{{module}}/service.py
+    @touch app/modules/{{module}}/routes.py
+    @touch app/modules/{{module}}/exceptions.py
+    @mkdir -p tests/modules/{{module}}
+    @touch tests/modules/{{module}}/__init__.py
+    @touch tests/modules/{{module}}/test_routes.py
+    @echo "Module '{{module}}' scaffolded in app/modules/{{module}}/ and tests/modules/{{module}}/"
+
+# =============================================================================
 # Database
 # =============================================================================
 
@@ -59,13 +81,26 @@ prek-run:
 db:
     docker compose up -d db
 
+# Check that the database container is running (internal guard)
+_db-check:
+    @docker compose ps db --format json 2>/dev/null | grep -q 'running' \
+        || (echo "" && echo "Database is not running. Start it with: just db" && echo "" && exit 1)
+
 # Generate a new migration
 migrate-gen message:
     uv run alembic revision --autogenerate -m "{{message}}"
 
-# Apply migrations
+# Apply pending database migrations
 migrate-up:
     uv run alembic upgrade head
+
+# Rollback the last database migration
+migrate-down:
+    uv run alembic downgrade -1
+
+# Reset the database (stop, restart, and re-apply migrations)
+reset-db: down db migrate-up
+    @echo "Database reset complete!"
 
 # =============================================================================
 # Docker
@@ -78,6 +113,10 @@ up:
 # Stop Docker containers
 down:
     docker compose down
+
+# Tail live logs from the API container
+logs:
+    docker compose logs -f api
 
 # =============================================================================
 # Quality
@@ -95,8 +134,8 @@ format:
 typecheck:
     @uv run ty check
 
-# Run tests with coverage
-test:
+# Run tests with coverage (requires DB to be running)
+test: _db-check
     @uv run pytest -q --cov=app --cov-report=html --cov-report=term:skip-covered --tb=line tests/
 
 # Run all quality checks

@@ -27,14 +27,8 @@ cp .env.example .env
 # 3. Setup Project (installs deps & git hooks)
 just setup
 
-# 4. Start the Database
-just db
-
-# 5. Apply Migrations
-just migrate-up
-
-# 6. Run the Server
-just run
+# 4. Start DB, Apply Migrations, and Run the Server
+just dev
 ```
 
 The application will be available at [http://localhost:8000](http://localhost:8000).
