@@ -59,18 +59,16 @@ Learn more about our [technology choices and decision log →](architecture/deci
 ## ⚡️ Quick Start
 
 ```bash
-# 1. Setup project (install dependencies & pre-commit hooks)
+# 1. Clone the repository and configure environment
+git clone https://github.com/balakmran/quoin-api.git
+cd quoin-api
 cp .env.example .env
+
+# 2. Setup project (install dependencies & pre-commit hooks)
 just setup
 
-# 2. Start database (Docker)
-just db
-
-# 3. Run migrations
-just migrate-up
-
-# 4. Start server
-just run
+# 3. Start DB, apply migrations, and run the server
+just dev
 ```
 
 Visit the API documentation at

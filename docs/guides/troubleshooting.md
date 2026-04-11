@@ -169,10 +169,10 @@ async def session(app) -> AsyncGenerator[AsyncSession, None]:
 
 **Cause**: Running without `--reload` flag.
 
-**Solution**: Use the `just run` command:
+**Solution**: Use the `just dev` command:
 
 ```bash
-just run  # Uses uvicorn with --reload
+just dev  # Uses uvicorn with --reload
 ```
 
 ### Port Already in Use
@@ -392,7 +392,7 @@ QUOIN_OTEL_ENABLED=False  # Disable tracing
 
 If you're still stuck:
 
-1. **Check logs**: `docker-compose logs` or `just run` output
+1. **Check logs**: `docker-compose logs` or `just dev` output
 2. **Search docs**: Use the search bar in the documentation site
 3. **Check GitHub Issues**: Look for similar problems
 4. **Review tests**: See how the feature is tested in `tests/`

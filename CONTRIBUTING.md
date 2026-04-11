@@ -22,17 +22,14 @@ Ensure you have the following tools installed:
 git clone https://github.com/balakmran/quoin-api.git
 cd quoin-api
 
-# 2. Setup Project
+# 2. Configure Environment
+cp .env.example .env
+
+# 3. Setup Project
 just setup
 
-# 3. Start the Database
-just db
-
-# 4. Apply Migrations
-just migrate-up
-
-# 5. Run the Server
-just run
+# 4. Start DB, apply migrations, and run the server
+just dev
 ```
 
 ## 📸 Application Home Page
@@ -91,10 +88,11 @@ commands.
 | :----------------------- | :-------------------------------------------------------- |
 | `just setup`             | Setup project (install dependencies and pre-commit hooks) |
 | `just install`           | Install project dependencies using `uv`                   |
-| `just run`               | Start the local development server with auto-reload       |
-| `just db`                | Start only the PostgreSQL database container              |
+| `just dev`               | Start DB, apply migrations, and run the dev server        |
+| `just reset-db`          | Reset the database cleanly                                |
 | `just up`                | Start all Docker containers (App + DB)                    |
 | `just down`              | Stop and remove all Docker containers                     |
+| `just logs`              | Tail live logs from the API container                     |
 | `just check`             | Run all quality checks (format, lint, typecheck, test)    |
 | `just clean`             | Remove build artifacts and cache directories              |
 | `just pi`                | Install pre-commit hooks (`prek install`)                 |
@@ -103,6 +101,7 @@ commands.
 | `just ds`                | Serve documentation locally (`docs-serve`)                |
 | `just migrate-gen "msg"` | Generate a new Alembic migration with a message           |
 | `just migrate-up`        | Apply all pending migrations                              |
+| `just migrate-down`      | Rollback the last migration                               |
 | `just bump part`         | Bump version (part: `patch`, `minor`, `major`)            |
 | `just tag`               | Create and push git tag for current version               |
 

@@ -91,7 +91,7 @@ Now that the app is running, here are the logical next steps:
 
 ### Port Conflicts
 
-If `just run` fails, check if port **8000** is already in use.
+If `just dev` fails, check if port **8000** is already in use.
 
 ```bash
 lsof -i :8000
