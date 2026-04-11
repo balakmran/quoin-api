@@ -68,6 +68,8 @@ features = [
     "toc.follow",
     "content.code.copy",
     "search.suggest",
+    "search.highlight",
+    "search.share",
 ]
 
 [project.theme.icon]
@@ -97,6 +99,10 @@ accent = "blue"
 [project.extra]
 generator = false
 
+[project.extra.analytics]
+provider = "google"
+property = "G-GQ3W2J8ELX"
+
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
 link = "https://github.com/balakmran"
@@ -111,6 +117,7 @@ link = "https://www.linkedin.com/in/balakmran"
 
 [project.markdown]
 extensions = [
+    "meta",
     { "pymdownx.highlight" = { anchor_linenums = true } },
     "pymdownx.superfences",
     "pymdownx.inlinehilite",
@@ -121,7 +128,7 @@ extensions = [
 ]
 
 [project.plugins]
-list = ["search", "mkdocstrings"]
+list = ["search", "mkdocstrings", "social"]
 
 [project.plugins.mkdocstrings.handlers.python]
 inventories = ["https://docs.python.org/3/objects.inv"]
