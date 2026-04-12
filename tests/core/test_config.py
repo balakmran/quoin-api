@@ -15,7 +15,7 @@ def test_environment_enum_values() -> None:
 def test_settings_defaults() -> None:
     """Test Settings default values."""
     with patch.dict(os.environ, {}, clear=True):
-        settings = Settings(_env_file=None)  # type: ignore[call-arg]
+        settings = Settings(_env_file=None)  # type: ignore
         assert settings.ENV == Environment.development
         assert settings.LOG_LEVEL == "INFO"
         assert settings.OTEL_ENABLED is True

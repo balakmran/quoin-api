@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         """Assemble the database URL."""
-        return MultiHostUrl.build(  # type: ignore[return-value]
+        return MultiHostUrl.build(  # type: ignore
             scheme=self.POSTGRES_DRIVER,
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,

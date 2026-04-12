@@ -93,7 +93,7 @@ def set_openapi_generator(app: FastAPI) -> None:
         app.openapi_schema = openapi_schema
         return app.openapi_schema
 
-    app.openapi = _openapi_generator  # type: ignore[method-assign]
+    app.openapi = _openapi_generator  # type: ignore
 
 
 __all__ = [

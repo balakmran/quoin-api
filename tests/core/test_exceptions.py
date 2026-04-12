@@ -1,6 +1,7 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
+from pydantic import BaseModel
 
 from app.core.exception_handlers import add_exception_handlers
 from app.core.exceptions import (
@@ -132,3 +133,30 @@ async def test_quoin_request_validation_error() -> None:
     assert len(pydantic_errors) == 2  # noqa: PLR2004
     assert pydantic_errors[0]["loc"] == ("field1",)
     assert pydantic_errors[1]["loc"] == ("field2",)
+
+
+@pytest.mark.asyncio
+async def test_fastapi_request_validation_handling() -> None:
+    """Test standard FastAPI parameter validations under Starlette >= 0.46.0."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    class Item(BaseModel):
+        name: str
+        price: float
+
+    @app.post("/items/")
+    async def create_item(item: Item) -> Item:
+        return item
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        # Pass a bad payload to trigger FastAPI validation error
+        response = await ac.post(
+            "/items/", json={"name": "test", "price": "not_a_float"}
+        )
+
+        # Verify Starlette exception handler routes the 422 properly
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert "detail" in response.json()

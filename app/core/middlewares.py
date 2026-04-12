@@ -9,7 +9,7 @@ def configure_cors(app: FastAPI) -> None:
     """Configure CORS middleware."""
     if settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
-            CORSMiddleware,  # type: ignore
+            CORSMiddleware,
             allow_origins=[
                 str(origin) for origin in settings.BACKEND_CORS_ORIGINS
             ],
@@ -22,7 +22,7 @@ def configure_cors(app: FastAPI) -> None:
 def configure_trusted_hosts(app: FastAPI) -> None:
     """Configure TrustedHost middleware."""
     app.add_middleware(
-        TrustedHostMiddleware,  # type: ignore
+        TrustedHostMiddleware,
         allowed_hosts=settings.ALLOWED_HOSTS,
     )
 

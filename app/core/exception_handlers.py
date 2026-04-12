@@ -28,5 +28,5 @@ async def validation_exception_handler(
 
 def add_exception_handlers(app: FastAPI) -> None:
     """Add exception handlers to the application."""
-    app.add_exception_handler(QuoinError, quoin_exception_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(ValidationError, validation_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(QuoinError, quoin_exception_handler)  # type: ignore
+    app.add_exception_handler(ValidationError, validation_exception_handler)  # type: ignore

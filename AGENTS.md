@@ -79,7 +79,7 @@ The project follows a modular structure within the `app/` directory:
 ### Code Quality
 
 - **Formatting & Linting:** Strictly enforced by **Ruff**.
-- **Type Safety:** 100% type hint coverage expected. Checked by `ty`.
+- **Type Safety:** 100% type hint coverage expected. Checked by `ty`. When silencing type checker warnings, always use a standard blanket comment (`# type: ignore`) rather than MyPy-style categorized tags (e.g., `# type: ignore[arg-type]`). The Pyright engine will fail validation on unrecognized tags.
 - **Docstrings:** Google-style docstrings are used (configured in
   `pyproject.toml`).
 - **Line Length:** Maximum 80 characters for both Code (Python) and
