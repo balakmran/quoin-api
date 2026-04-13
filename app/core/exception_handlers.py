@@ -1,4 +1,7 @@
+from typing import Any
+
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from pydantic import ValidationError
 
@@ -16,9 +19,7 @@ async def quoin_exception_handler(
     )
 
 
-async def validation_exception_handler(
-    request: Request, exc: ValidationError
-) -> Response:
+async def validation_exception_handler(request: Request, exc: Any) -> Response:
     """Handle Pydantic ValidationError exceptions."""
     return JSONResponse(
         status_code=422,
@@ -29,4 +30,7 @@ async def validation_exception_handler(
 def add_exception_handlers(app: FastAPI) -> None:
     """Add exception handlers to the application."""
     app.add_exception_handler(QuoinError, quoin_exception_handler)  # type: ignore
-    app.add_exception_handler(ValidationError, validation_exception_handler)  # type: ignore
+    app.add_exception_handler(
+        RequestValidationError, validation_exception_handler
+    )
+    app.add_exception_handler(ValidationError, validation_exception_handler)

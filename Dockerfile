@@ -31,14 +31,14 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 
 # Create a non-root user
-RUN addgroup --system --gid 1001 appuser && \
-    adduser --system --uid 1001 --ingroup appuser appuser
+RUN addgroup --system --gid 1001 quoin && \
+    adduser --system --uid 1001 --ingroup quoin quoin
 
 # Set ownership of the application directory
-RUN chown -R appuser:appuser /app
+RUN chown -R quoin:quoin /app
 
 # Switch to non-root user
-USER appuser
+USER quoin
 
 # Run the application
 CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]

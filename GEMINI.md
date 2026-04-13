@@ -85,6 +85,7 @@ The project follows a modular structure within the `app/` directory:
 - **Line Length:** Maximum 80 characters for both Code (Python) and
   Documentation (Markdown). **Exception:** Tables and code blocks are exempt.
 - **Quality Checks:** Run `just check` before committing. All checks must pass.
+- **Post-Update Check:** After updating any code, you MUST run `just check`. If any errors are found, you must fix them before concluding.
 
 ### Coding Standards
 

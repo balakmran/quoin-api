@@ -34,7 +34,7 @@ class UserRead(BaseModel):
     """Schema for reading a user."""
 
     id: uuid.UUID
-    email: str
+    email: EmailStr
     full_name: str | None = None
     is_active: bool = True
     created_at: datetime
