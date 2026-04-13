@@ -9,11 +9,12 @@
 - **UI**: Redesigned landing page with Tailwind CSS, 3D background, and modern glassmorphism UI.
 - **Documentation**: Enabled search features, added Google Analytics, and included meta extension and social plugin.
 - **Documentation**: Enabled sticky navigation tabs in zensical configuration.
+- **AI Context**: Added `Post-Update Check` instruction within agent guidelines enforcing `just check` validations.
 
 ### Changed
 
 - **Configuration**: Added `*.orb.local` to allowed hosts for OrbStack local domain support.
-- **Docker**: Renamed non-root user to `appuser`.
+- **Docker**: Renamed base image non-root user to `quoin` and mapped PostgreSQL volume target to `/var/lib/postgresql` parent directory supporting PostgreSQL v18 builds.
 - **Documentation**: Reorganized documentation structure, added module creation guide, and aligned docs with source code.
 - **Documentation**: Replaced cloud deployment guide with updated health and readiness probe documentation.
 - **Documentation**: Updated documentation to use localhost, removed quick links section, and updated homepage image.
@@ -22,6 +23,9 @@
 ### Fixed
 
 - **Tests**: Updated system status message assertion to match new initialization text.
+- **Tests**: Suppressed internal docker fallback bash evaluations from echoing globally through `just test`.
+- **Validation**: Enforced `EmailStr` across `UserRead` validation outbound mapping.
+- **Error Handling**: Hooked global API handler for FastAPI's internal `RequestValidationError` to override generic 422 errors into standard JSON serialization structures.
 
 ## [0.5.0] - 2026-02-16
 
