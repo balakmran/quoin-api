@@ -83,8 +83,11 @@ db:
 
 # Check that the database container is running (internal guard)
 _db-check:
-    @docker compose ps db --format json 2>/dev/null | grep -q 'running' \
-        || (echo "" && echo "Database is not running. Start it with: just db" && echo "" && exit 1)
+    # Skip docker compose check in GitHub Actions/CI (where services spin up natively)
+    @if [ "${CI:-}" != "true" ]; then \
+        docker compose ps db --format json 2>/dev/null | grep -q 'running' \
+            || (echo "" && echo "Database is not running. Start it with: just db" && echo "" && exit 1); \
+    fi
 
 # Generate a new migration
 migrate-gen message:
