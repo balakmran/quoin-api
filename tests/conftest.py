@@ -11,12 +11,12 @@ from app.db.session import create_db_engine, get_session
 from app.main import app as fastapi_app
 
 
-@pytest.fixture(scope="function", autouse=True)
-async def initialize_db(
-    monkeypatch: pytest.MonkeyPatch,
-) -> AsyncGenerator[None, None]:
+@pytest.fixture(scope="session", autouse=True)
+async def initialize_db() -> AsyncGenerator[None, None]:
     """Initialize the database engine for the test session."""
-    monkeypatch.setattr(settings, "POSTGRES_DB", "postgres")
+    original_db = settings.POSTGRES_DB
+    settings.POSTGRES_DB = "postgres"
+
     fastapi_app.state.engine = create_db_engine()
 
     # Create tables
@@ -31,6 +31,7 @@ async def initialize_db(
 
     await fastapi_app.state.engine.dispose()
     fastapi_app.state.engine = None
+    settings.POSTGRES_DB = original_db
 
 
 @pytest.fixture

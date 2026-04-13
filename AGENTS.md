@@ -3,6 +3,7 @@
 ## Project Overview
 
 **QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
+*Note: This repository also functions natively as a Copier template. Updating core scaffolding logic dynamically requires syncing standard overrides against `copier.yml` or `scripts/copier_setup.py.jinja`.*
 
 ## 🛠 Tech Stack & Tools
 
@@ -13,18 +14,20 @@
 - **Package Manager:** `uv` (Fast Python package installer)
 - **Task Runner:** `just`
 - **Linting/Formatting:** Ruff
-- **Type Checking:** ty (Static type checker)
+- **Type Checking:** ty (Static type checker via Pyright)
 - **Testing:** Pytest, pytest-cov
 - **Observability:** OpenTelemetry, Structlog
 - **Documentation:** Zensical (MkDocs Material)
+- **Quality Pipeline:** `prek` (Rust-based Git Hooks replacing generic pre-commit)
 
 ## 🚀 Key Commands (via `just`)
 
 The project uses `just` to automate common tasks.
+**Rule:** Use `@` prefix to suppress generic bash statement echoes to stdout. **Do not use emojis or icons** in echo commands to ensure generic terminal compatibility.
 
 | Command                    | Action                                                      |
 | :------------------------- | :---------------------------------------------------------- |
-| `just setup`               | Setup project (install dependencies and pre-commit hooks).  |
+| `just setup`               | Setup project (install dependencies and prek hooks).        |
 | `just install`             | Install all dependencies (dev included) using `uv`.         |
 | `just dev`                 | Start DB, apply migrations, and run the dev server.         |
 | `just run`                 | Start the local development server (auto-reload enabled).   |
@@ -38,8 +41,8 @@ The project uses `just` to automate common tasks.
 | `just typecheck`           | Verify type annotations with ty.                            |
 | `just test`                | Run test suite with coverage (requires DB running).         |
 | `just clean`               | Remove build artifacts and cache.                           |
-| `just pi`                  | Install pre-commit hooks.                                   |
-| `just pr`                  | Run pre-commit hooks on all files.                          |
+| `just pi`                  | Install prek hooks.                                         |
+| `just pr`                  | Run prek hooks on all files.                                |
 | `just docb`                | Build documentation.                                        |
 | `just ds`                  | Serve documentation locally.                                |
 | `just migrate-gen "<msg>"` | Generate a new Alembic migration.                           |
@@ -62,7 +65,7 @@ The project follows a modular structure within the `app/` directory:
   - `metadata.py`: Application metadata (QuoinAPI branding).
   - `openapi.py`: OpenAPI/Swagger configuration.
   - `telemetry.py`: OpenTelemetry instrumentation.
-  - `middlewares.py`: Middleware configuration.
+  - `middlewares.py`: Middleware configuration (`*.orb.local` CORS host bounds natively).
   - `exceptions.py`, `exception_handlers.py`: Global error handling (`QuoinError`).
 - **`app/db/`**: Database configuration. Engine stored on `app.state.engine`.
 - **`app/modules/`**: Feature modules (Domain-Driven Design).
@@ -80,6 +83,7 @@ The project follows a modular structure within the `app/` directory:
 
 - **Formatting & Linting:** Strictly enforced by **Ruff**.
 - **Type Safety:** 100% type hint coverage expected. Checked by `ty`. When silencing type checker warnings, always use a standard blanket comment (`# type: ignore`) rather than MyPy-style categorized tags (e.g., `# type: ignore[arg-type]`). The Pyright engine will fail validation on unrecognized tags.
+- **FastAPI Exception Handlers**: Exception handlers injected directly into FastAPI `app.add_exception_handler` MUST map payload signatures to `exc: Any` to satisfy Pyright's strict parameter dependency tracking dynamically.
 - **Docstrings:** Google-style docstrings are used (configured in
   `pyproject.toml`).
 - **Line Length:** Maximum 80 characters for both Code (Python) and
@@ -104,22 +108,22 @@ The project follows a modular structure within the `app/` directory:
 - Apply changes with `just migrate-up`.
 - Rollback if needed with `just migrate-down`.
 
-### Configuration
+### Configuration & Docker
 
 - Environment variables are managed via `.env` files.
 - **Prefix**: All environment variables use `QUOIN_` prefix (e.g., `QUOIN_ENV`, `QUOIN_DB_URL`).
 - **Environment**: Controlled by `QUOIN_ENV` (`development`, `test`, `production`).
-- Copy `.env.example` to `.env` for local development.
-- Configuration is loaded into the `Settings` class in `app/core/config.py`.
+- **Docker Volumes**: Postgres persistence volumes must strictly map into the parent directory `/var/lib/postgresql` (rather than `/data`) natively targeting Postgres 18 compatibility.
+- **Permissions**: Dockerfiles instantiate execution boundaries bound strictly to the `quoin` non-root user.
 
-### Testing
+### Testing Boundaries
 
 - Tests are written using `pytest`.
 - Run `just test` to execute the suite with coverage.
 - Run `just check` to run all quality checks (includes tests).
 - Ensure ≥95% test coverage for new features.
-- **Philosophy**: Integration tests over unit tests. Use real database.
-- **Fixtures**: Use `monkeypatch.setenv("QUOIN_ENV", "test")` to override settings.
+- **Integration Preference**: Tests execute HTTPX clients natively over real database engines hooking `SAVEPOINT` rollbacks.
+- **Fixture Event Scope**: The `initialize_db` teardown fixture in `conftest.py` MUST remain explicitly on the `function` scope. Attempting to optimize schema provisioning to `session` scope causes critical ASGI worker pool loop closures against `asyncpg`. Tests must remain globally isolated to execute in `< 3 seconds`.
 
 ## 🔑 Key Files
 
@@ -136,8 +140,7 @@ When creating a new module (e.g., `app/modules/product/`), follow this
 structure:
 
 - `models.py`: SQLModel database tables.
-- `schemas.py`: Pydantic models for Request/Response (keep separate from DB
-  models).
+- `schemas.py`: Pydantic models for Request/Response. **Rule**: Always map validation of emails specifically to `EmailStr` symmetrically.
 - `repository.py`: CRUD operations (database interaction only).
 - `service.py`: Business logic (calls repository).
 - `routes.py`: FastAPI router endpoints (calls service).
@@ -167,14 +170,11 @@ and a test stub in `tests/modules/<module>/`.
 
 ### 🧪 Testing Guidelines
 
-- **Fixtures:** Use `conftest.py` for shared resources (db session, async
-  client).
+- **Fixtures:** Use `conftest.py` for shared resources (db session, async client).
 - **Integration over Unit:** Prioritize integration tests for routes
   (`tests/modules/user/test_routes.py`).
-- **Mocking:** Mock external APIs, but use a real (test) database for repository
-  tests.
-- **Naming:** Test functions must start with `test_` and be descriptive (e.g.,
-  `test_create_user_duplicate_email_fails`).
+- **Mocking:** Mock external APIs, but use a real (test) database for repository tests.
+- **Naming:** Test functions must start with `test_` and be descriptive.
 - **Coverage:** Maintain ≥95% coverage. View reports with
   `pytest --cov=app --cov-report=html`.
 - **API Versioning**: All endpoints must be prefixed with `/api/v1/`.
@@ -183,8 +183,7 @@ and a test stub in `tests/modules/<module>/`.
 
 - **Conventional Commits:** Use the format `<type>(<scope>): <description>`.
   - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
-  - Example: `feat(user): add password reset endpoint`
-- **Pre-commit Hooks:** Install with `just pi`, run manually with `just pr`.
+- **Prek Hooks:** Fast pipeline git-hooks executed natively via `prek` (replaces standard pre-commit). Install with `just pi`, run manually with `just pr`.
 - **Branches:** Feature branches from `main`, merge via PR.
 
 ### ⚠️ Error Handling
@@ -195,14 +194,7 @@ and a test stub in `tests/modules/<module>/`.
   handler map them to HTTP status codes.
 - **Available exceptions**: `NotFoundError`, `ConflictError`, `BadRequestError`,
   `ForbiddenError`, `InternalServerError`.
-- **Example**:
-
-  ```python
-  from app.core.exceptions import ConflictError
-
-  if existing_user:
-      raise ConflictError(message="Email already registered")
-  ```
+- Exception handlers map FastAPI `RequestValidationError` structs directly to standardized JSON outputs seamlessly.
 
 ### 🚀 Release Process
 
@@ -215,12 +207,6 @@ and a test stub in `tests/modules/<module>/`.
   5. Merge to `main`
   6. Run `just tag` to create and push git tag
   7. GitHub Actions automatically creates release
-
-  | Run Command       | Bump Type | Result (Original: 0.2.0) |
-  | :---------------- | :-------- | :----------------------- |
-  | `just bump`       | Patch     | `0.2.1`                  |
-  | `just bump minor` | Minor     | `0.3.0`                  |
-  | `just bump major` | Major     | `1.0.0`                  |
 
 - **Changelog:**
   - **Update Policy**: `CHANGELOG.md` MUST be updated after **every** meaningful
@@ -251,7 +237,7 @@ and a test stub in `tests/modules/<module>/`.
 3. Database Migrations
 4. Error Handling
 5. Testing
-6. Quality Checks (NEW)
+6. Quality Checks
 7. Observability
 8. Deployment
 9. Release Workflow

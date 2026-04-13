@@ -1,5 +1,5 @@
 # Justfile
-
+# NOTE: Do not use emojis or icons in echo commands to ensure standard terminal compatibility.
 # Set environment variables from .env file
 set dotenv-load
 

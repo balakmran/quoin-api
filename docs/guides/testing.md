@@ -81,15 +81,15 @@ Shared fixtures are defined in
 
 ### `initialize_db` — Database Setup
 
-Runs automatically before every test. Creates all tables, yields,
-then drops all tables and disposes the engine:
+Runs automatically before the test session begins. Creates all tables once, yields,
+then drops all tables and disposes the engine at the end of the session, drastically improving test speeds:
 
 ```python
-@pytest.fixture(scope="function", autouse=True)
-async def initialize_db(
-    monkeypatch: pytest.MonkeyPatch,
-) -> AsyncGenerator[None, None]:
-    monkeypatch.setattr(settings, "POSTGRES_DB", "postgres")
+@pytest.fixture(scope="session", autouse=True)
+async def initialize_db() -> AsyncGenerator[None, None]:
+    original_db = settings.POSTGRES_DB
+    settings.POSTGRES_DB = "postgres"
+
     fastapi_app.state.engine = create_db_engine()
 
     async with fastapi_app.state.engine.begin() as conn:
@@ -99,7 +99,10 @@ async def initialize_db(
 
     async with fastapi_app.state.engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
+
     await fastapi_app.state.engine.dispose()
+    fastapi_app.state.engine = None
+    settings.POSTGRES_DB = original_db
 ```
 
 ### `db_session` — Isolated Database Session

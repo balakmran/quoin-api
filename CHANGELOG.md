@@ -13,6 +13,7 @@
 
 ### Changed
 
+- **Tests**: Optimized database initialization in tests using session-scoped asyncio event loops, drastically reducing test execution time from 3s to 0.4s.
 - **Configuration**: Added `*.orb.local` to allowed hosts for OrbStack local domain support.
 - **Docker**: Renamed base image non-root user to `quoin` and mapped PostgreSQL volume target to `/var/lib/postgresql` parent directory supporting PostgreSQL v18 builds.
 - **Documentation**: Reorganized documentation structure, added module creation guide, and aligned docs with source code.
