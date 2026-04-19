@@ -44,7 +44,7 @@ All commands run via `just` (task runner). `.env` is auto-loaded.
 | `just format` | `ruff format .` |
 | `just lint` | `ruff check . --fix` |
 | `just typecheck` | `ty check` |
-| `just test` | `pytest -q --cov=app` (requires DB running) |
+| `just test` | `pytest -q --cov=app --cov-report=html --cov-report=term:skip-covered --tb=line tests/` (requires DB running) |
 | `just migrate-gen "<msg>"` | `alembic revision --autogenerate -m "<msg>"` |
 | `just migrate-up` | `alembic upgrade head` |
 | `just migrate-down` | `alembic downgrade -1` |

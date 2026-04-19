@@ -127,7 +127,7 @@ Visit the API documentation at
 ├── .env.example                  # Environment variables template
 ├── docker-compose.yml            # Local dev environment
 ├── Dockerfile                    # Production Docker image
-├── AGENTS.md                     # AI Agent instructions
+├── CLAUDE.md                     # AI agent instructions
 ├── justfile                      # Command runner
 ├── pyproject.toml                # Dependencies & config
 └── zensical.toml                 # Documentation config

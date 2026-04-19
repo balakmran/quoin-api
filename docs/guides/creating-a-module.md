@@ -7,6 +7,11 @@ following the same patterns used by the existing `user` module.
 > strict layered structure. Never skip layers — services call
 > repositories, routes call services, never the reverse.
 
+!!! tip "Scaffold first"
+    Run `just new product` before following the steps below. This creates
+    the module directory and all 7 empty files so you can fill them in
+    without manually creating anything.
+
 ---
 
 ## Module Structure
@@ -82,6 +87,9 @@ Keep request/response shapes separate from the database model:
 
 ```python
 # app/modules/product/schemas.py
+import uuid
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -263,6 +271,12 @@ class ProductService:
 
 ### 7. Create the Router
 
+!!! note "Auth omitted for brevity"
+    The example below shows routes without `require_roles()` to keep it
+    focused on structure. In production modules, add the auth dependency
+    to each endpoint as shown in the [user module](https://github.com/balakmran/quoin-api/tree/main/app/modules/user/routes.py)
+    and documented in the [Authentication guide](authentication.md).
+
 ```python
 # app/modules/product/routes.py
 import uuid
@@ -368,12 +382,16 @@ v1_router.include_router(product_router)  # Add this line
 ### 10. Import the Model for Migrations
 
 Ensure Alembic can discover the model by importing it in
-`alembic/env.py`:
+`app/db/base.py`. This file is imported by `alembic/env.py` and is
+the single place where all models are registered for schema
+autogeneration:
 
 ```python
-# alembic/env.py
-from app.modules.user.models import User
-from app.modules.product.models import Product  # Add this line
+# app/db/base.py
+from sqlmodel import SQLModel  # noqa
+
+from app.modules.user.models import User  # noqa
+from app.modules.product.models import Product  # noqa — Add this line
 ```
 
 ---
@@ -425,7 +443,7 @@ async def test_get_product_not_found(client: AsyncClient) -> None:
 - [ ] `routes.py` — FastAPI router, calls service via dependency
 - [ ] `__init__.py` — Exports `router`
 - [ ] `app/api.py` — Router registered under `v1_router`
-- [ ] `alembic/env.py` — Model imported for migration detection
+- [ ] `app/db/base.py` — Model imported so Alembic can detect schema changes
 - [ ] Tests written in `tests/modules/<name>/`
 - [ ] `just check` passes
 

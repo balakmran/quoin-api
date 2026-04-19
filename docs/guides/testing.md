@@ -159,6 +159,19 @@ async def client(
     isolated database transaction. You never need to call
     `initialize_db` manually.
 
+### Pre-built Auth Clients
+
+For tests that hit authenticated endpoints, use the role-scoped client fixtures instead of `client`:
+
+| Fixture | Roles | Use for |
+| :--- | :--- | :--- |
+| `client` | none (no auth override) | Unauthenticated requests, testing 401 responses |
+| `read_client` | `users.read` | Read-only endpoints (`GET`) |
+| `admin_client` | `users.read`, `users.write` | Write endpoints (`POST`, `PATCH`, `DELETE`) |
+
+These fixtures work by injecting a `ServicePrincipal` with the appropriate roles via
+`dependency_overrides`, bypassing actual JWT validation in tests.
+
 ---
 
 ## Testing Patterns
