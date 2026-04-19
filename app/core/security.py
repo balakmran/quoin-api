@@ -48,7 +48,7 @@ class JWKSCache:
         self._uri = uri
         self._ttl = ttl_seconds
         self._keys: dict[str, Any] = {}
-        self._fetched_at: float = 0.0
+        self._fetched_at: float = float("-inf")
         self._lock = asyncio.Lock()
 
     def _is_stale(self) -> bool:

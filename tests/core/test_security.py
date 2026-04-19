@@ -86,7 +86,7 @@ def test_jwks_cache_init() -> None:
     assert cache._uri == "http://example.com/jwks"
     assert cache._ttl == _TEST_TTL_SECONDS
     assert cache._keys == {}
-    assert cache._fetched_at == 0.0
+    assert cache._fetched_at == float("-inf")
 
 
 def test_jwks_cache_is_stale_initially() -> None:
