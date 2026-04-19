@@ -2,7 +2,7 @@
 
 This guide covers version management, release tagging, and the changelog process.
 
-## 🔖 Semantic Versioning
+## Semantic Versioning
 
 We follow [Semantic Versioning (SemVer)](https://semver.org/) for all releases:
 
@@ -28,7 +28,7 @@ graph TD
 
 ---
 
-## 🚀 Release Process
+## Release Process
 
 ### 1. Update CHANGELOG.md
 
@@ -130,7 +130,7 @@ View releases at:
 
 ---
 
-## 📋 Conventional Commits
+## Conventional Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for clear
 commit history:
@@ -155,7 +155,7 @@ git commit -m "docs: update deployment guide"
 
 ---
 
-## 🔄 Release Checklist
+## Release Checklist
 
 Before creating a release:
 
@@ -169,7 +169,7 @@ Before creating a release:
 
 ---
 
-## 🐛 Hotfix Releases
+## Hotfix Releases
 
 For critical bug fixes that need immediate release:
 
@@ -200,7 +200,7 @@ For critical bug fixes that need immediate release:
 
 ---
 
-## 📦 Pre-releases
+## Pre-releases
 
 For beta or release candidate versions:
 

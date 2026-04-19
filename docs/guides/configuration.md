@@ -54,10 +54,10 @@ QUOIN_POSTGRES_PASSWORD=postgres
 QUOIN_POSTGRES_DB=app_db
 ```
 
-> [!NOTE]
-> The defaults work out of the box with `just db`. For production,
-> override `QUOIN_POSTGRES_HOST`, `QUOIN_POSTGRES_PASSWORD`, and set
-> `QUOIN_ENV=production`.
+!!! note
+    The defaults work out of the box with `just db`. For production,
+    override `QUOIN_POSTGRES_HOST`, `QUOIN_POSTGRES_PASSWORD`, and set
+    `QUOIN_ENV=production`.
 
 ### Creating Environment-Specific Files
 

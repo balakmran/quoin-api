@@ -11,9 +11,9 @@ The application uses [Alembic](https://alembic.sqlalchemy.org/) to manage
 database schema migrations. All schema changes must be defined as SQLModel
 classes and captured in versioned migration scripts.
 
-> [!IMPORTANT]
-> **Never modify the database schema manually.** Always generate migrations
-> from code changes.
+!!! warning
+    **Never modify the database schema manually.** Always generate
+    migrations from code changes.
 
 ---
 
@@ -111,14 +111,14 @@ All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-
 | `just migrate-down`      | `alembic downgrade -1`                     | Rollback last migration      |
 | `just reset-db`          | (stop, restart, apply)                     | Reset database completely    |
 
-> [!NOTE]
-> `migrate-history` and `migrate-current` are not
-> wrapped in `just`. Run Alembic directly for these:
->
-> ```bash
-> uv run alembic history         # Show migration history
-> uv run alembic current         # Show current revision
-> ```
+!!! note
+    `migrate-history` and `migrate-current` are not wrapped in `just`.
+    Run Alembic directly for these:
+
+    ```bash
+    uv run alembic history         # Show migration history
+    uv run alembic current         # Show current revision
+    ```
 
 ---
 

@@ -19,13 +19,21 @@ server (Azure AD, Okta, Auth0, Keycloak) via standard JWKS discovery.
 
 ## Concepts
 
-### NUID (Non-User ID)
+### ServicePrincipal
 
-A **NUID** is the unique identity of a **calling service** — not a human user.
-When Service A calls QuoinAPI, it authenticates using its own service identity.
+`ServicePrincipal` is the resolved identity of an authenticated calling
+service — not a human user. It is built from validated JWT claims and
+injected into every protected route by `require_roles()`.
 
-This maps to the standard OAuth 2.0 `sub` (subject) claim in the JWT, which
-is stable, unique per service, and provider-agnostic.
+```python
+class ServicePrincipal(BaseModel):
+    subject: str              # JWT `sub` — stable, unique service identifier
+    roles: list[str]          # Normalized app roles from the token
+    claims: dict[str, Any]    # Full decoded JWT payload (for advanced use)
+```
+
+`subject` maps to the OAuth 2.0 `sub` claim, which is stable and
+provider-agnostic across Azure AD, Auth0, Okta, and Keycloak:
 
 ```json
 {
@@ -35,6 +43,16 @@ is stable, unique per service, and provider-agnostic.
   "aud": "api://your-app-client-id",
   "exp": 1713484800
 }
+```
+
+Use `caller.subject` in structured logs for audit trails:
+
+```python
+logger.info(
+    "resource.deleted",
+    actor=caller.subject,
+    resource_id=resource_id,
+)
 ```
 
 ### App Roles (Domain Scoped)
@@ -70,18 +88,19 @@ Every request to a protected endpoint runs the following checks natively:
 
 ## Flow
 
-```
-Calling Service              OAuth Server              QuoinAPI
-      │                           │                        │
-      ├─ client_credentials ─────>│                        │
-      │<─ JWT (sub, roles) ───────│                        │
-      │                           │                        │
-      ├─ Bearer <JWT> ────────────────────────────────────->
-      │                           │<─ GET /jwks (cached) ──│
-      │                           │─ public keys ─────────>│
-      │                           │  validate sig/exp/aud  │
-      │                           │  check roles claim     │
-      │<─ 200 OK ───────────────────────────────────────────
+```mermaid
+sequenceDiagram
+    participant CS as Calling Service
+    participant OS as OAuth Server
+    participant QA as QuoinAPI
+
+    CS->>OS: client_credentials grant
+    OS-->>CS: JWT (sub, roles)
+    CS->>QA: Bearer <JWT>
+    QA->>OS: GET /jwks (cached)
+    OS-->>QA: public keys
+    Note over QA: validate sig / exp / aud<br/>check roles claim
+    QA-->>CS: 200 OK
 ```
 
 ---
@@ -100,16 +119,17 @@ QUOIN_OAUTH_AUDIENCE=api://{your-app-client-id}
 QUOIN_OAUTH_ROLES_CLAIM=roles
 ```
 
-> [!NOTE]
-> If your provider uses scopes instead of roles (e.g. Okta, Auth0 M2M),
-> set `QUOIN_OAUTH_ROLES_CLAIM=scope`. The validator handles both array
-> (`["users.read"]`) and space-separated string (`"users.read users.write"`)
-> formats automatically.
+!!! note
+    If your provider uses scopes instead of roles (e.g. Okta, Auth0
+    M2M), set `QUOIN_OAUTH_ROLES_CLAIM=scope`. The validator handles
+    both array (`["users.read"]`) and space-separated string
+    (`"users.read users.write"`) formats automatically.
 
-> [!TIP]
-> The local `mock-oauth2-server` places roles in the `aud` claim, so the
-> development `.env` uses `QUOIN_OAUTH_ROLES_CLAIM=aud`. Production IdPs
-> (Azure AD, Auth0, Keycloak) use `roles` — the default value.
+!!! tip
+    The local `mock-oauth2-server` places roles in the `aud` claim, so
+    the development `.env` uses `QUOIN_OAUTH_ROLES_CLAIM=aud`.
+    Production IdPs (Azure AD, Auth0, Keycloak) use `roles` — the
+    default value.
 
 ---
 
@@ -139,28 +159,6 @@ async def list_users(
 async def create_user(
     caller: Annotated[ServicePrincipal, Depends(require_roles("users.write"))]
 ): ...
-```
-
-### Accessing the caller identity
-
-The `ServicePrincipal` object is safely extracted and available in any
-protected route:
-
-```python
-class ServicePrincipal(BaseModel):
-    subject: str         # JWT `sub` claim — stable service identifier
-    roles: list[str]     # App roles from the token
-    claims: dict         # Full decoded JWT payload (for advanced use)
-```
-
-Use `caller.subject` in structured logs for deep audit trails:
-
-```python
-logger.info(
-    "resource.deleted",
-    actor=caller.subject,
-    resource_id=resource_id,
-)
 ```
 
 ---

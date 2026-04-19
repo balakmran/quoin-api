@@ -121,8 +121,9 @@ class UserService:
         return user
 ```
 
-> [!IMPORTANT]
-> Never raise `HTTPException` from services. Services should be HTTP-agnostic.
+!!! warning
+    Never raise `HTTPException` from services. Services should be
+    HTTP-agnostic.
 
 ---
 

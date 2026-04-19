@@ -96,9 +96,9 @@ class UserService:
         return user
 ```
 
-> [!IMPORTANT]
-> Always use keyword arguments for log data. This ensures fields are
-> consistent and searchable.
+!!! warning
+    Always use keyword arguments for log data. This ensures fields are
+    consistent and searchable.
 
 ### Log Levels
 

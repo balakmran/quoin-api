@@ -67,10 +67,10 @@ exclude_lines = [
 show_missing = true
 ```
 
-> [!IMPORTANT]
-> `asyncio_mode = "auto"` means all `async def test_*` functions run
-> automatically as async. Do **not** add `@pytest.mark.asyncio` —
-> it's redundant and causes a warning.
+!!! warning
+    `asyncio_mode = "auto"` means all `async def test_*` functions run
+    automatically as async. Do **not** add `@pytest.mark.asyncio` —
+    it's redundant and causes a warning.
 
 ---
 
@@ -153,10 +153,11 @@ async def client(
     fastapi_app.dependency_overrides.clear()
 ```
 
-> [!TIP]
-> The `client` → `db_session` → `initialize_db` fixture chain means
-> requesting `client` in a test automatically sets up a fresh, isolated
-> database transaction. You never need to call `initialize_db` manually.
+!!! tip
+    The `client` → `db_session` → `initialize_db` fixture chain means
+    requesting `client` in a test automatically sets up a fresh,
+    isolated database transaction. You never need to call
+    `initialize_db` manually.
 
 ---
 

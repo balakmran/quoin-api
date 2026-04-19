@@ -60,8 +60,9 @@ Interactive API documentation is available (development only):
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
 
-> [!NOTE]
-> API documentation endpoints (`/docs`, `/redoc`) are only available in non-production environments for security.
+!!! note
+    API documentation endpoints (`/docs`, `/redoc`) are only available
+    in non-production environments for security.
 
 ---
 

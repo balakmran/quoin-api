@@ -4,41 +4,17 @@ This document outlines the planned evolution of QuoinAPI. It reflects the
 current thinking of the maintainers and is subject to change based on community
 feedback and shifting priorities.
 
-> [!NOTE]
-> This is a living document. Completed items are moved to
-> [CHANGELOG.md](CHANGELOG.md). If you want to contribute to any of these
-> items, open a discussion first.
-
+!!! note
+    This is a living document. Completed items are moved to
+    [CHANGELOG.md](CHANGELOG.md).
 ## Status Legend
 
 | Symbol | Meaning |
 | :----- | :------ |
-| ✅ | Shipped |
 | 🚧 | In Progress |
 | 📋 | Planned |
 | 💡 | Under Consideration |
 | ❌ | Deferred / Won't Do |
-
----
-
-## v0.6.0 — Authentication & Security ✅
-
-A complete, provider-agnostic JWT/OIDC S2S authentication system with
-Domain-Driven Design (DDD) role scopes.
-
-| Status | Feature |
-| :----- | :------ |
-| ✅ | **`app/core/security.py`** — `JWKSCache` with automatic key rotation, `validate_token`, `get_current_caller`, and `require_roles` dependency factory. |
-| ✅ | **`ServicePrincipal` model** — Pydantic model replacing `CallerIdentity`; fields: `subject` (JWT `sub`), `roles`, `claims`. |
-| ✅ | **DDD role scopes** — Endpoints secured with `[domain].[action]` strings (e.g. `users.read`, `users.write`) instead of global roles. |
-| ✅ | **`api.superuser` bypass** — Global escape hatch in `require_roles` for seamless local testing and admin scripts. |
-| ✅ | **`UnauthorizedError` (401)** — RFC 6750 `WWW-Authenticate: Bearer` header conformant. |
-| ✅ | **OIDC configuration** — `QUOIN_OAUTH_*` variables binding to any standard IdP (Azure AD, Auth0, Keycloak). |
-| ✅ | **OpenAPI response schemas** — All `users/` endpoints document `401`, `403`, `404`, `409`, `500` with `ErrorResponse` model. |
-| ✅ | **`ErrorResponse` schema** — Shared `app/core/schemas.py` Pydantic model powering all error response docs. |
-| ✅ | **Testing infrastructure** — Dual-layer: `mock-oauth2-server` Docker service + `just token` for live tokens; `dependency_overrides` in `conftest.py` for fast unit tests. |
-| ✅ | **DB isolation fix** — Test suite now binds to `postgres` default DB (not `app_db`), preventing teardown from wiping the dev schema. |
-| ✅ | **Container healthcheck** — `pg_isready` healthcheck on the `db` service; `just db` and `just reset-db` use `--wait` for reliable startup sequencing. |
 
 ---
 
@@ -97,20 +73,6 @@ Copier template with opt-in feature flags.
 | 💡 | **Sentry integration** — Optional error tracking via `sentry-sdk[fastapi]`; toggled by Copier flag |
 | 💡 | **Multi-tenancy pattern** — Document and scaffold a tenant-scoped query pattern as an example module |
 | 💡 | **WebSocket support** — Basic WebSocket connection manager example with lifecycle integration |
-
----
-
-## Already Shipped
-
-| Version | Highlight |
-| :------ | :-------- |
-| v0.6.0 | `ServicePrincipal` model, DDD `[domain].[action]` scopes, `api.superuser` bypass, full OpenAPI error schemas, DB isolation fix |
-| v0.5.0 | API versioning (`/api/v1/`), `QuoinError` hierarchy, `QUOIN_` env prefix, project rename |
-| v0.4.0 | `app.state.engine` pattern, domain exceptions, pagination guards |
-| v0.3.1 | `just setup`, async sessionmaker fix, `metadata.py` extraction |
-| v0.3.0 | OpenTelemetry tracing, Zensical docs, `prek` hooks |
-| v0.2.0 | Landing page, `/ready` probe, system module, versioning automation |
-| v0.1.0 | Initial scaffold: FastAPI, SQLModel, Alembic, structlog, Docker, pytest |
 
 ---
 

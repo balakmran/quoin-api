@@ -2,7 +2,7 @@
 
 Welcome to the **QuoinAPI** project! This guide will help you set up your development environment and get the application running locally.
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 Ensure you have the following tools installed:
 
@@ -12,7 +12,7 @@ Ensure you have the following tools installed:
 - **[just](https://github.com/casey/just)**: A handy command runner for project tasks.
 - **[Docker](https://www.docker.com/)**: Required for running the database and services.
 
-## ⚡️ Quick Start
+## Quick Start
 
 Follow these steps to get up and running in minutes.
 
@@ -36,7 +36,7 @@ The application will be available at [http://localhost:8000](http://localhost:80
 - **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-## 📸 Application Home Page
+## Application Home Page
 
 When you visit [http://localhost:8000](http://localhost:8000), you'll see the application's home page:
 
@@ -48,7 +48,7 @@ This confirms the application is running correctly. The page includes:
 - Quick links to API documentation (Swagger UI and ReDoc)
 - Health check endpoint status
 
-## 📁 Project Structure
+## Project Structure
 
 Understanding the project layout will help you navigate the codebase.
 
@@ -73,7 +73,7 @@ Understanding the project layout will help you navigate the codebase.
 └── pyproject.toml              # Project dependencies and tool config
 ```
 
-## 🔜 What's Next?
+## What's Next?
 
 Now that the app is running, here are the logical next steps:
 
@@ -87,14 +87,18 @@ Now that the app is running, here are the logical next steps:
 
 ---
 
-## ❓ Troubleshooting
+## Troubleshooting
 
 ### Port Conflicts
 
 If `just dev` fails, check if port **8000** is already in use.
 
 ```bash
+# check the process
 lsof -i :8000
+
+# kill the process
+kill -9 $(lsof -ti:8000)
 ```
 
 ### Database Connection

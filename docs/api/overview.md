@@ -60,9 +60,6 @@ http://localhost:8000/api/v1
 | `GET`  | `/health` | Health check     | 200    |
 | `GET`  | `/ready`  | Readiness probe  | 200    |
 
-> [!NOTE]
-> Authentication is not yet implemented. All endpoints are currently
-> public.
 
 ---
 
