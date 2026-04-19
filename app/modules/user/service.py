@@ -36,6 +36,12 @@ class UserService:
     ) -> User:
         """Update a user."""
         user = await self.get_user(user_id)
+        if user_update.email is not None and user_update.email != user.email:
+            existing = await self.repository.get_by_email(
+                str(user_update.email)
+            )
+            if existing and existing.id != user_id:
+                raise DuplicateEmailError(email=str(user_update.email))
         return await self.repository.update(user, user_update)
 
     async def delete_user(self, user_id: uuid.UUID) -> None:

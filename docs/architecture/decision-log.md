@@ -621,16 +621,6 @@ QUOIN_POSTGRES_PORT=5432
 
 ## Future Considerations
 
-### Authentication
-
-**Planned:** JWT-based authentication with refresh tokens
-
-```python
-@router.get("/protected")
-async def protected_route(user: User = Depends(get_current_user)):
-    return {"user_id": user.id}
-```
-
 ### Caching
 
 **Planned:** Redis for caching frequent queries

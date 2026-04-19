@@ -15,7 +15,7 @@ import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from httpx import AsyncClient
-from jwt.algorithms import RSAAlgorithm
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
@@ -57,17 +57,27 @@ class JWKSCache:
 
     async def _refresh(self) -> None:
         """Fetch fresh keys from the JWKS URI."""
-        async with AsyncClient() as client:
-            response = await client.get(self._uri, timeout=10.0)
-            response.raise_for_status()
-            jwks = response.json()
+        try:
+            async with AsyncClient() as client:
+                response = await client.get(self._uri, timeout=10.0)
+                response.raise_for_status()
+                jwks = response.json()
+        except Exception as exc:
+            raise UnauthorizedError(
+                "Unable to fetch OAuth signing keys"
+            ) from exc
 
-        self._keys = {
-            key_data["kid"]: RSAAlgorithm.from_jwk(key_data)
-            for key_data in jwks.get("keys", [])
-            if key_data.get("use") in ("sig", None)
-            and key_data.get("kty") == "RSA"
-        }
+        keys: dict[str, Any] = {}
+        for key_data in jwks.get("keys", []):
+            if key_data.get("use") not in ("sig", None):
+                continue
+            kid = key_data.get("kid", "")
+            kty = key_data.get("kty")
+            if kty == "RSA":
+                keys[kid] = RSAAlgorithm.from_jwk(key_data)
+            elif kty == "EC":
+                keys[kid] = ECAlgorithm.from_jwk(key_data)
+        self._keys = keys
         self._fetched_at = time.monotonic()
 
     async def get_signing_key(self, kid: str) -> Any:

@@ -1,6 +1,5 @@
 import uuid
 
-import pytest
 from fastapi import status
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,7 +7,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.modules.user.models import User
 
 
-@pytest.mark.asyncio
 async def test_create_user(admin_client: AsyncClient) -> None:
     """Test creating a new user (admin required)."""
     response = await admin_client.post(
@@ -24,7 +22,6 @@ async def test_create_user(admin_client: AsyncClient) -> None:
     assert "updated_at" in data
 
 
-@pytest.mark.asyncio
 async def test_create_user_duplicate_email(admin_client: AsyncClient) -> None:
     """Test creating a user with a duplicate email."""
     # Create the first user
@@ -45,7 +42,6 @@ async def test_create_user_duplicate_email(admin_client: AsyncClient) -> None:
     )
 
 
-@pytest.mark.asyncio
 async def test_list_users(
     read_client: AsyncClient, db_session: AsyncSession
 ) -> None:
@@ -64,7 +60,6 @@ async def test_list_users(
     # Currently just returns a list
 
 
-@pytest.mark.asyncio
 async def test_get_user(
     read_client: AsyncClient, db_session: AsyncSession
 ) -> None:
@@ -81,7 +76,6 @@ async def test_get_user(
     assert data["id"] == str(user.id)
 
 
-@pytest.mark.asyncio
 async def test_get_user_not_found(read_client: AsyncClient) -> None:
     """Test getting a non-existent user."""
     random_id = uuid.uuid4()
@@ -89,7 +83,6 @@ async def test_get_user_not_found(read_client: AsyncClient) -> None:
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-@pytest.mark.asyncio
 async def test_update_user(admin_client: AsyncClient) -> None:
     """Test updating a user (admin required)."""
     # Create a user
@@ -108,7 +101,6 @@ async def test_update_user(admin_client: AsyncClient) -> None:
     assert response.json()["full_name"] == "Updated Name"
 
 
-@pytest.mark.asyncio
 async def test_delete_user(admin_client: AsyncClient) -> None:
     """Test deleting a user (admin required)."""
     # Create a user
@@ -126,3 +118,41 @@ async def test_delete_user(admin_client: AsyncClient) -> None:
     # Verify deletion by attempting to get the user
     get_res = await admin_client.get(f"/api/v1/users/{user_id}")
     assert get_res.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_update_user_email_to_new_valid_email(
+    admin_client: AsyncClient,
+) -> None:
+    """PATCH email to a fresh address that is not taken returns 200."""
+    create_res = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "before-change@example.com"},
+    )
+    user_id = create_res.json()["id"]
+
+    response = await admin_client.patch(
+        f"/api/v1/users/{user_id}",
+        json={"email": "after-change@example.com"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["email"] == "after-change@example.com"
+
+
+async def test_update_user_duplicate_email(admin_client: AsyncClient) -> None:
+    """PATCH with an email already taken by another user returns 409."""
+    r1 = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "patch-owner@example.com"},
+    )
+    await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "patch-taken@example.com"},
+    )
+    user1_id = r1.json()["id"]
+
+    response = await admin_client.patch(
+        f"/api/v1/users/{user1_id}",
+        json={"email": "patch-taken@example.com"},
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "already registered" in response.json()["detail"]

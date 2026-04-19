@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.exceptions import InternalServerError
 
 
 def create_db_engine(url: str | None = None) -> AsyncEngine:
@@ -23,16 +24,21 @@ def create_db_engine(url: str | None = None) -> AsyncEngine:
     )
 
 
+def create_session_factory(
+    engine: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
+    """Create a reusable async session factory bound to the given engine."""
+    return async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+
 async def get_session(
     request: Request,
 ) -> AsyncGenerator[AsyncSession, None]:
-    """Get a database session from app.state.engine."""
-    engine: AsyncEngine | None = getattr(request.app.state, "engine", None)
-    if not engine:
-        raise RuntimeError("Database engine is not initialized")
-
-    async_session = async_sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
-    async with async_session() as session:
+    """Get a database session from app.state.session_factory."""
+    session_factory = getattr(request.app.state, "session_factory", None)
+    if not session_factory:
+        raise InternalServerError("Database session factory is not initialized")
+    async with session_factory() as session:
         yield session
