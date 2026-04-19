@@ -87,10 +87,14 @@ then drops all tables and disposes the engine at the end of the session, drastic
 ```python
 @pytest.fixture(scope="session", autouse=True)
 async def initialize_db() -> AsyncGenerator[None, None]:
-    original_db = settings.POSTGRES_DB
-    settings.POSTGRES_DB = "postgres"
+    # Connect to the default 'postgres' database safely to avoid dropping
+    # tables from the main development 'app_db' database.
+    base_url = str(settings.DATABASE_URL)
+    test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
 
-    fastapi_app.state.engine = create_db_engine()
+    engine = create_db_engine(url=test_url)
+    fastapi_app.state.engine = engine
+    fastapi_app.state.session_factory = create_session_factory(engine)
 
     async with fastapi_app.state.engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -102,7 +106,6 @@ async def initialize_db() -> AsyncGenerator[None, None]:
 
     await fastapi_app.state.engine.dispose()
     fastapi_app.state.engine = None
-    settings.POSTGRES_DB = original_db
 ```
 
 ### `db_session` — Isolated Database Session
@@ -193,7 +196,7 @@ async def test_create_user_duplicate_email(client: AsyncClient):
     })
 
     assert response.status_code == 409
-    assert response.json() == {"detail": "Email already registered"}
+    assert "already registered" in response.json()["detail"]
 ```
 
 ### Service Tests

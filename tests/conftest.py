@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.security import ServicePrincipal, get_current_caller
-from app.db.session import create_db_engine, get_session
+from app.db.session import create_db_engine, create_session_factory, get_session
 from app.main import app as fastapi_app
 
 
@@ -20,7 +20,9 @@ async def initialize_db() -> AsyncGenerator[None, None]:
     base_url = str(settings.DATABASE_URL)
     test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
 
-    fastapi_app.state.engine = create_db_engine(url=test_url)
+    engine = create_db_engine(url=test_url)
+    fastapi_app.state.engine = engine
+    fastapi_app.state.session_factory = create_session_factory(engine)
 
     # Create tables
     async with fastapi_app.state.engine.begin() as conn:

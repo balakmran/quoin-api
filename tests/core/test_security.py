@@ -5,11 +5,12 @@ import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from httpx import Response
-from jwt.algorithms import RSAAlgorithm
+from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 
 from app.core import security as security_module
 from app.core.exceptions import ForbiddenError, UnauthorizedError
@@ -134,6 +135,112 @@ async def test_jwks_cache_refresh_parses_rsa_keys(
 
     assert "key-1" in cache._keys
     assert cache._fetched_at > 0
+
+
+async def test_jwks_cache_refresh_parses_ec_keys() -> None:
+    """_refresh populates _keys with EC public keys (ES256 support)."""
+    ec_private_key = ec.generate_private_key(ec.SECP256R1())
+    ec_public_key = ec_private_key.public_key()
+    jwk_dict = json.loads(ECAlgorithm.to_jwk(ec_public_key))
+    jwk_dict["kid"] = "ec-key-1"
+    jwk_dict["use"] = "sig"
+    jwks_payload = {"keys": [jwk_dict]}
+
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = jwks_payload
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=AsyncMock(
+            __aenter__=AsyncMock(
+                return_value=AsyncMock(
+                    get=AsyncMock(return_value=mock_response)
+                )
+            ),
+            __aexit__=AsyncMock(return_value=False),
+        ),
+    ):
+        await cache._refresh()
+
+    assert "ec-key-1" in cache._keys
+
+
+async def test_jwks_cache_refresh_skips_non_sig_keys() -> None:
+    """_refresh ignores keys whose 'use' is not 'sig' or absent."""
+    jwks_payload = {"keys": [{"kid": "enc-key", "kty": "RSA", "use": "enc"}]}
+
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = jwks_payload
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=AsyncMock(
+            __aenter__=AsyncMock(
+                return_value=AsyncMock(
+                    get=AsyncMock(return_value=mock_response)
+                )
+            ),
+            __aexit__=AsyncMock(return_value=False),
+        ),
+    ):
+        await cache._refresh()
+
+    assert cache._keys == {}
+
+
+async def test_jwks_cache_refresh_skips_unknown_kty_keys() -> None:
+    """_refresh ignores keys with an unrecognised kty (e.g. OKP)."""
+    jwks_payload = {"keys": [{"kid": "okp-key", "kty": "OKP", "use": "sig"}]}
+
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = jwks_payload
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=AsyncMock(
+            __aenter__=AsyncMock(
+                return_value=AsyncMock(
+                    get=AsyncMock(return_value=mock_response)
+                )
+            ),
+            __aexit__=AsyncMock(return_value=False),
+        ),
+    ):
+        await cache._refresh()
+
+    assert cache._keys == {}
+
+
+async def test_jwks_cache_refresh_raises_on_http_error() -> None:
+    """_refresh raises UnauthorizedError when the JWKS endpoint is down."""
+    cache = JWKSCache("http://example.com/jwks")
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=AsyncMock(
+            __aenter__=AsyncMock(
+                return_value=AsyncMock(
+                    get=AsyncMock(
+                        side_effect=httpx.ConnectError("connection refused")
+                    )
+                )
+            ),
+            __aexit__=AsyncMock(return_value=False),
+        ),
+    ):
+        with pytest.raises(
+            UnauthorizedError, match="Unable to fetch OAuth signing keys"
+        ):
+            await cache._refresh()
 
 
 async def test_jwks_cache_get_signing_key_found(

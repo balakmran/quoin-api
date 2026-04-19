@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "fastapi", "dev", "app/main.py"],
+      "port": 8000
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-m", "zensical", "serve", "--dev-addr", "localhost:8001"],
+      "port": 8001
+    },
+    {
+      "name": "oauth",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "oauth", "-d", "--wait"],
+      "port": 8080,
+      "autoPort": false
+    },
+    {
+      "name": "db",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "up", "-d", "--wait", "db"],
+      "port": 5432,
+      "autoPort": false
+    }
+  ]
+}

@@ -11,7 +11,7 @@ from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
 from app.core.telemetry import setup_opentelemetry
-from app.db.session import create_db_engine
+from app.db.session import create_db_engine, create_session_factory
 
 
 def create_app() -> FastAPI:
@@ -21,7 +21,9 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         """Manage application lifecycle."""
-        app.state.engine = create_db_engine()
+        engine = create_db_engine()
+        app.state.engine = engine
+        app.state.session_factory = create_session_factory(engine)
         yield
         await app.state.engine.dispose()
 
