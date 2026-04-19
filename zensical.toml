@@ -19,6 +19,7 @@ nav = [
         { "Development" = [
             { "Creating a Module" = "guides/creating-a-module.md" },
             { "Database Migrations" = "guides/database-migrations.md" },
+            { "Authentication" = "guides/authentication.md" },
             { "Error Handling" = "guides/error-handling.md" },
             { "Testing" = "guides/testing.md" },
             { "Quality Checks" = "guides/quality-checks.md" },
@@ -43,8 +44,9 @@ nav = [
         { "User" = "api/user.md" },
     ]},
     { "Project" = [
-        { "Contributing" = "project/contributing.md" },
+        { "Roadmap" = "project/roadmap.md" },
         { "Changelog" = "project/changelog.md" },
+        { "Contributing" = "project/contributing.md" },
         { "License" = "project/license.md" },
     ]},
 ]

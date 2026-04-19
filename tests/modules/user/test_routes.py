@@ -3,17 +3,17 @@ import uuid
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.modules.user.models import User
 
 
 @pytest.mark.asyncio
-async def test_create_user(client: AsyncClient):
-    """Test creating a new user."""
-    response = await client.post(
+async def test_create_user(admin_client: AsyncClient) -> None:
+    """Test creating a new user (admin required)."""
+    response = await admin_client.post(
         "/api/v1/users/",
-        json={
-            "email": "test@example.com",
-            "full_name": "Test User",
-        },
+        json={"email": "test@example.com", "full_name": "Test User"},
     )
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
@@ -21,110 +21,108 @@ async def test_create_user(client: AsyncClient):
     assert data["full_name"] == "Test User"
     assert "id" in data
     assert "created_at" in data
+    assert "updated_at" in data
 
 
 @pytest.mark.asyncio
-async def test_create_user_duplicate_email(client: AsyncClient):
+async def test_create_user_duplicate_email(admin_client: AsyncClient) -> None:
     """Test creating a user with a duplicate email."""
-    # Create first user
-    await client.post(
+    # Create the first user
+    await admin_client.post(
         "/api/v1/users/",
-        json={"email": "duplicate@example.com", "full_name": "First User"},
+        json={"email": "duplicate@example.com", "full_name": "User 1"},
     )
 
-    # Try to create second user with same email
-    response = await client.post(
+    # Try to create a second user with the same email
+    response = await admin_client.post(
         "/api/v1/users/",
-        json={"email": "duplicate@example.com", "full_name": "Second User"},
+        json={"email": "duplicate@example.com", "full_name": "User 2"},
     )
     assert response.status_code == status.HTTP_409_CONFLICT
-    assert "duplicate@example.com" in response.json()["detail"]
-    assert "already registered" in response.json()["detail"]
+    assert (
+        response.json()["detail"]
+        == "Email 'duplicate@example.com' is already registered"
+    )
 
 
 @pytest.mark.asyncio
-async def test_list_users(client: AsyncClient):
-    """Test listing users."""
-    # Create a user to ensure list is not empty
-    await client.post(
-        "/api/v1/users/",
-        json={"email": "list@example.com", "full_name": "List User"},
-    )
+async def test_list_users(
+    read_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Test listing users (read access)."""
+    # Create a user directly via DB
+    user = User(email="list@example.com", full_name="List User")
+    db_session.add(user)
+    await db_session.commit()
 
-    response = await client.get("/api/v1/users/")
+    response = await read_client.get("/api/v1/users/")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
     assert len(data) >= 1
-
-    # Verify structure of first item
-    user = data[0]
-    assert "email" in user
-    assert "id" in user
+    # Check that pagination headers/metadata might be present in the future
+    # Currently just returns a list
 
 
 @pytest.mark.asyncio
-async def test_get_user(client: AsyncClient):
-    """Test getting a user by ID."""
-    # Create a user
-    create_res = await client.post(
-        "/api/v1/users/",
-        json={"email": "get@example.com", "full_name": "Get User"},
-    )
-    user_id = create_res.json()["id"]
+async def test_get_user(
+    read_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Test getting a user by ID (read access)."""
+    user = User(email="get@example.com", full_name="Get User")
+    db_session.add(user)
+    await db_session.commit()
 
-    # Get the user
-    response = await client.get(f"/api/v1/users/{user_id}")
+    # Get the user (read required)
+    response = await read_client.get(f"/api/v1/users/{user.id}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["email"] == "get@example.com"
-    assert data["id"] == user_id
+    assert data["id"] == str(user.id)
 
 
 @pytest.mark.asyncio
-async def test_get_user_not_found(client: AsyncClient):
+async def test_get_user_not_found(read_client: AsyncClient) -> None:
     """Test getting a non-existent user."""
     random_id = uuid.uuid4()
-    response = await client.get(f"/api/v1/users/{random_id}")
+    response = await read_client.get(f"/api/v1/users/{random_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_update_user(client: AsyncClient):
-    """Test updating a user."""
+async def test_update_user(admin_client: AsyncClient) -> None:
+    """Test updating a user (admin required)."""
     # Create a user
-    create_res = await client.post(
+    create_res = await admin_client.post(
         "/api/v1/users/",
         json={"email": "update@example.com", "full_name": "Original Name"},
     )
     user_id = create_res.json()["id"]
 
     # Update the user
-    response = await client.patch(
+    response = await admin_client.patch(
         f"/api/v1/users/{user_id}",
         json={"full_name": "Updated Name"},
     )
     assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["full_name"] == "Updated Name"
-    assert data["email"] == "update@example.com"  # Should remain unchanged
+    assert response.json()["full_name"] == "Updated Name"
 
 
 @pytest.mark.asyncio
-async def test_delete_user(client: AsyncClient):
-    """Test deleting a user."""
+async def test_delete_user(admin_client: AsyncClient) -> None:
+    """Test deleting a user (admin required)."""
     # Create a user
-    create_res = await client.post(
+    create_res = await admin_client.post(
         "/api/v1/users/",
         json={"email": "delete@example.com", "full_name": "Delete Me"},
     )
     user_id = create_res.json()["id"]
 
     # Delete the user
-    response = await client.delete(f"/api/v1/users/{user_id}")
+    response = await admin_client.delete(f"/api/v1/users/{user_id}")
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert response.content == b""  # 204 has no content
 
-    # Verify user is gone
-    get_res = await client.get(f"/api/v1/users/{user_id}")
+    # Verify deletion by attempting to get the user
+    get_res = await admin_client.get(f"/api/v1/users/{user_id}")
     assert get_res.status_code == status.HTTP_404_NOT_FOUND

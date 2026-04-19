@@ -1,6 +1,6 @@
 [project]
 name = "quoin-api"
-version = "0.5.0"
+version = "0.6.0"
 description = "The architectural cornerstone for high-performance, scalable Python services"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -24,6 +24,8 @@ dependencies = [
     "opentelemetry-sdk>=1.41.0",
     "opentelemetry-exporter-otlp>=1.41.0",
     "opentelemetry-instrumentation-fastapi>=0.62b0",
+    "PyJWT[crypto]>=2.12.1",
+    "httpx>=0.28.1",
 ]
 
 [project.urls]
@@ -37,15 +39,14 @@ dev = [
     { include-group = "docs" },
 ]
 tooling = [
-    "ruff==0.15.10",
-    "ty==0.0.29",
+    "ruff==0.15.11",
+    "ty==0.0.31",
     "prek==0.3.8",
 ]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
-    "httpx>=0.28.1",
 ]
 docs = [
     "zensical==0.0.32",

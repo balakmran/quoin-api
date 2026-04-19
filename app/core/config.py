@@ -73,5 +73,11 @@ class Settings(BaseSettings):
         "http://localhost:8000",
     ]
 
+    # OAuth 2.0 / OIDC
+    OAUTH_JWKS_URI: str | None = None
+    OAUTH_ISSUER: str | None = None
+    OAUTH_AUDIENCE: str | None = None
+    OAUTH_ROLES_CLAIM: str = "roles"
+
 
 settings = Settings()

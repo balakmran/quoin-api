@@ -43,8 +43,8 @@ clean:
 run:
     uv run fastapi dev app/main.py
 
-# Start DB, apply migrations, and run the dev server
-dev: db migrate-up run
+# Start DB + OAuth, apply migrations, and run the dev server
+dev: db oauth migrate-up run
 
 # Install pre-commit hooks
 prek-install:
@@ -79,7 +79,7 @@ new module:
 
 # Start only the database container
 db:
-    docker compose up -d db
+    docker compose up -d --wait db
 
 # Check that the database container is running (internal guard)
 _db-check:
@@ -102,7 +102,10 @@ migrate-down:
     uv run alembic downgrade -1
 
 # Reset the database (stop, restart, and re-apply migrations)
-reset-db: down db migrate-up
+reset-db:
+    docker compose down -v
+    docker compose up -d --wait db
+    uv run alembic upgrade head
     @echo "Database reset complete!"
 
 # =============================================================================
@@ -112,6 +115,14 @@ reset-db: down db migrate-up
 # Start Docker containers (all services)
 up:
     VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml) docker compose up -d --build
+
+# Start only the mock OAuth server
+oauth:
+    @docker compose up oauth -d --wait --wait-timeout 60
+
+# Generate an access token from the mock OAuth server
+@token +args="":
+    python3 scripts/gen_token.py {{args}}
 
 # Stop Docker containers
 down:

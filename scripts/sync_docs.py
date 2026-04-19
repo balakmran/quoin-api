@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Sync project documentation files from root to docs/project/.
 
-This script copies CONTRIBUTING.md, CHANGELOG.md, and LICENSE from the
-project root to docs/project/, adjusting image paths as needed.
+This script copies CONTRIBUTING.md, CHANGELOG.md, ROADMAP.md, and LICENSE
+from the project root to docs/project/, adjusting image paths as needed.
 """
 
 import re
@@ -66,6 +66,7 @@ def main() -> None:
             True,  # Adjust image paths
         ),
         (root / "CHANGELOG.md", docs_project / "changelog.md", False),
+        (root / "ROADMAP.md", docs_project / "roadmap.md", False),
         (root / "LICENSE", docs_project / "license.md", False),
     ]
 

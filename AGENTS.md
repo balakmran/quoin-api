@@ -25,33 +25,35 @@
 The project uses `just` to automate common tasks.
 **Rule:** Use `@` prefix to suppress generic bash statement echoes to stdout. **Do not use emojis or icons** in echo commands to ensure generic terminal compatibility.
 
-| Command                    | Action                                                      |
-| :------------------------- | :---------------------------------------------------------- |
-| `just setup`               | Setup project (install dependencies and prek hooks).        |
-| `just install`             | Install all dependencies (dev included) using `uv`.         |
-| `just dev`                 | Start DB, apply migrations, and run the dev server.         |
-| `just run`                 | Start the local development server (auto-reload enabled).   |
-| `just up`                  | Start all services (App + DB) via Docker Compose.           |
-| `just db`                  | Start only the PostgreSQL database container.               |
-| `just down`                | Stop and remove all Docker containers.                      |
-| `just logs`                | Tail live logs from the API container.                      |
-| `just check`               | Run **all** quality checks (format, lint, typecheck, test). |
-| `just format`              | Auto-format code with Ruff.                                 |
-| `just lint`                | Check code quality with Ruff.                               |
-| `just typecheck`           | Verify type annotations with ty.                            |
-| `just test`                | Run test suite with coverage (requires DB running).         |
-| `just clean`               | Remove build artifacts and cache.                           |
-| `just pi`                  | Install prek hooks.                                         |
-| `just pr`                  | Run prek hooks on all files.                                |
-| `just docb`                | Build documentation.                                        |
-| `just ds`                  | Serve documentation locally.                                |
-| `just migrate-gen "<msg>"` | Generate a new Alembic migration.                           |
-| `just migrate-up`          | Apply pending database migrations.                          |
-| `just migrate-down`        | Rollback last migration.                                    |
-| `just reset-db`            | Reset DB (stop, restart, re-apply migrations).              |
-| `just new <module>`        | Scaffold a new feature module with all required files.      |
-| `just bump part="<type>"` | Bump version (patch, minor, major).                         |
-| `just tag`                 | Create and push git tag for release.                        |
+| Command                           | Action                                                        |
+| :-------------------------------- | :------------------------------------------------------------ |
+| `just setup`                      | Setup project (install dependencies and prek hooks).          |
+| `just install`                    | Install all dependencies (dev included) using `uv`.           |
+| `just dev`                        | Start DB + OAuth, apply migrations, and run the dev server.   |
+| `just run`                        | Start the local development server (auto-reload enabled).     |
+| `just up`                         | Start all services (App + DB) via Docker Compose.             |
+| `just db`                         | Start only the PostgreSQL database container (with `--wait`). |
+| `just oauth`                      | Start only the mock OAuth server (with `--wait`).             |
+| `just token [--sub X] [--roles Y]`| Generate a signed JWT from the mock OAuth server.             |
+| `just down`                       | Stop and remove all Docker containers.                        |
+| `just logs`                       | Tail live logs from the API container.                        |
+| `just check`                      | Run **all** quality checks (format, lint, typecheck, test).   |
+| `just format`                     | Auto-format code with Ruff.                                   |
+| `just lint`                       | Check code quality with Ruff.                                 |
+| `just typecheck`                  | Verify type annotations with ty.                              |
+| `just test`                       | Run test suite with coverage (requires DB running).           |
+| `just clean`                      | Remove build artifacts and cache.                             |
+| `just pi`                         | Install prek hooks.                                           |
+| `just pr`                         | Run prek hooks on all files.                                  |
+| `just docb`                       | Build documentation.                                          |
+| `just ds`                         | Serve documentation locally.                                  |
+| `just migrate-gen "<msg>"`        | Generate a new Alembic migration.                             |
+| `just migrate-up`                 | Apply pending database migrations.                            |
+| `just migrate-down`               | Rollback last migration.                                      |
+| `just reset-db`                   | Purge volumes (`down -v`), restart DB, re-apply migrations.   |
+| `just new <module>`               | Scaffold a new feature module with all required files.        |
+| `just bump part="<type>"`         | Bump version (patch, minor, major).                           |
+| `just tag`                        | Create and push git tag for release.                          |
 
 ## 📂 Architecture
 
@@ -89,7 +91,7 @@ The project follows a modular structure within the `app/` directory:
 - **Line Length:** Maximum 80 characters for both Code (Python) and
   Documentation (Markdown). **Exception:** Tables and code blocks are exempt.
 - **Quality Checks:** Run `just check` before committing. All checks must pass.
-- **Post-Update Check:** After updating any code, you MUST run `just check`. If any errors are found, you must fix them before concluding.
+- **CRITICAL RULE:** EVERY SINGLE TIME you create or update ANY code or script, you MUST immediately run `just check`. If you encounter any formatting (`ruff format`), linting (`ruff`), or type-checking (`ty`) errors, you MUST fix them automatically before ending your turn. You are not allowed to skip this step.
 
 ### Coding Standards
 
@@ -123,7 +125,7 @@ The project follows a modular structure within the `app/` directory:
 - Run `just check` to run all quality checks (includes tests).
 - Ensure ≥95% test coverage for new features.
 - **Integration Preference**: Tests execute HTTPX clients natively over real database engines hooking `SAVEPOINT` rollbacks.
-- **Fixture Event Scope**: The `initialize_db` teardown fixture in `conftest.py` MUST remain explicitly on the `function` scope. Attempting to optimize schema provisioning to `session` scope causes critical ASGI worker pool loop closures against `asyncpg`. Tests must remain globally isolated to execute in `< 3 seconds`.
+- **Fixture Scope**: The `initialize_db` fixture in `conftest.py` is `session`-scoped. It targets the `postgres` default database (not `app_db`) via URL substitution to prevent test teardown from dropping the developer's schema.
 
 ## 🔑 Key Files
 

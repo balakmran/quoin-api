@@ -2,15 +2,21 @@
 
 [![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135.3-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **The architectural cornerstone for high-performance, scalable Python services.**
 
 ![QuoinAPI](docs/assets/images/quoin-api-banner.png)
 
-QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
+QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation
+designed to serve as the structural cornerstone for modern Python backends.
+Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it provides
+a battle-tested "Golden Path" for developers who prioritize architectural
+integrity, type safety, and observability.
 
-## 🏗️ Key Highlights
+## Key Highlights
 
 ### High-Performance Core
 
@@ -36,7 +42,7 @@ QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation designed
 - **Environment-based configuration** with `.env` file selection
 - **Just-based automation** for common development tasks
 
-## 🛠 Tech Stack & Tools
+## Tech Stack & Tools
 
 - **Framework:** FastAPI
 - **Database:** PostgreSQL (using `asyncpg` driver)
@@ -50,7 +56,7 @@ QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation designed
 - **Observability:** OpenTelemetry, Structlog
 - **Documentation:** Zensical (MkDocs Material)
 
-## 🚀 Use as a Template
+## Use as a Template
 
 QuoinAPI is designed to be used as a project generator via [Copier](https://copier.readthedocs.io/). To create a new API project using this architecture, first install Copier:
 
@@ -68,7 +74,7 @@ copier copy https://github.com/balakmran/quoin-api.git my-awesome-api --trust
 
 Copier will prompt you for your project name, database prefixes, and other configuration variables.
 
-## ⚡️ Quick Start
+## Quick Start
 
 ```bash
 # 1. Clone the repository and configure environment
@@ -86,7 +92,7 @@ just dev
 Visit the API documentation at
 [http://localhost:8000/docs](http://localhost:8000/docs).
 
-## 📂 Project Structure
+## Project Structure
 
 ```plaintext
 ├── app/
@@ -127,11 +133,15 @@ Visit the API documentation at
 └── zensical.toml                 # Documentation config
 ```
 
-## 📚 Changelog
+## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-## 📜 Contributing
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and upcoming milestones.
+
+## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this
 project.

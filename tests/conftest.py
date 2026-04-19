@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.security import ServicePrincipal, get_current_caller
 from app.db.session import create_db_engine, get_session
 from app.main import app as fastapi_app
 
@@ -14,10 +15,12 @@ from app.main import app as fastapi_app
 @pytest.fixture(scope="session", autouse=True)
 async def initialize_db() -> AsyncGenerator[None, None]:
     """Initialize the database engine for the test session."""
-    original_db = settings.POSTGRES_DB
-    settings.POSTGRES_DB = "postgres"
+    # Connect to the default 'postgres' database safely to avoid dropping
+    # tables from the main development 'app_db' database.
+    base_url = str(settings.DATABASE_URL)
+    test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
 
-    fastapi_app.state.engine = create_db_engine()
+    fastapi_app.state.engine = create_db_engine(url=test_url)
 
     # Create tables
     async with fastapi_app.state.engine.begin() as conn:
@@ -31,7 +34,6 @@ async def initialize_db() -> AsyncGenerator[None, None]:
 
     await fastapi_app.state.engine.dispose()
     fastapi_app.state.engine = None
-    settings.POSTGRES_DB = original_db
 
 
 @pytest.fixture
@@ -78,4 +80,46 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
     # Clear overrides after test
+    fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def caller_read() -> ServicePrincipal:
+    """ServicePrincipal with users.read role only."""
+    return ServicePrincipal(
+        subject="test-service-read",
+        roles=["users.read"],
+        claims={},
+    )
+
+
+@pytest.fixture
+def caller_admin() -> ServicePrincipal:
+    """ServicePrincipal with users.read + users.write roles."""
+    return ServicePrincipal(
+        subject="test-service-admin",
+        roles=["users.read", "users.write"],
+        claims={},
+    )
+
+
+@pytest.fixture
+async def read_client(
+    client: AsyncClient,
+    caller_read: ServicePrincipal,
+) -> AsyncGenerator[AsyncClient, None]:
+    """HTTP client authenticated as a service with users.read role."""
+    fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_read
+    yield client
+    fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def admin_client(
+    client: AsyncClient,
+    caller_admin: ServicePrincipal,
+) -> AsyncGenerator[AsyncClient, None]:
+    """HTTP client authenticated as a service with users.read + users.write."""
+    fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_admin
+    yield client
     fastapi_app.dependency_overrides.clear()

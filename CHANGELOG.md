@@ -2,31 +2,53 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-18
+
 ### Added
 
-- **Copier**: Added `copier.yml` and `scripts/copier_setup.py.jinja` to support seamless project scaffolding via Copier.
-- **Developer Experience**: Enhanced `justfile` with several new recipes: `dev` (starts DB, applies migrations, and runs dev server), `reset-db` (resets DB state), `logs` (tails API logs), `migrate-down` (rolls back latest migration), and `new` (scaffolds new feature modules).
-- **UI**: Redesigned landing page with Tailwind CSS, 3D background, and modern glassmorphism UI.
-- **Documentation**: Enabled search features, added Google Analytics, and included meta extension and social plugin.
-- **Documentation**: Enabled sticky navigation tabs in zensical configuration.
-- **AI Context**: Added `Post-Update Check` instruction within agent guidelines enforcing `just check` validations.
+- **Security**: Full OAuth 2.0/2.1 S2S authentication stack — `JWKSCache`
+  (JWKS rotation), `validate_token`, `get_current_caller`, and `require_roles`
+  dependency factory in `app/core/security.py`.
+- **Security**: `ServicePrincipal` Pydantic model (`subject`, `roles`,
+  `claims`) as the resolved caller identity; `api.superuser` bypass for local
+  dev; `UnauthorizedError` (401) with RFC 6750 `WWW-Authenticate: Bearer`.
+- **Security**: DDD role scopes — `[domain].[action]` strings (e.g.
+  `users.read`, `users.write`) declared explicitly per route, no global roles.
+- **OpenAPI**: `ErrorResponse` schema in `app/core/schemas.py`; all `users/`
+  endpoints fully document `401`, `403`, `404`, `409`, `500` responses.
+- **Configuration**: `QUOIN_OAUTH_*` settings for binding to any OIDC
+  provider; `mock-oauth2-server` Docker service + `just token --roles <roles>`
+  for local RS256 JWT generation.
+- **Developer Experience**: `just dev` — starts DB (with healthcheck), applies
+  migrations, and runs the server in one command. `just reset-db` purges
+  volumes with `docker compose down -v` for a clean slate.
+- **Testing**: Dual-layer auth — live tokens via `mock-oauth2-server`;
+  `ServicePrincipal` fixture injection via `dependency_overrides` for
+  zero-container unit tests. DB isolation fix prevents test teardown from
+  wiping the dev `app_db` schema.
+- **Copier**: Added `copier.yml` and `scripts/copier_setup.py.jinja`.
+- **Documentation**: `docs/guides/authentication.md` covering DDD scopes,
+  `api.superuser` bypass, dependency graph, and both testing layers.
 
 ### Changed
 
-- **Tests**: Optimized database initialization in tests using session-scoped asyncio event loops, drastically reducing test execution time from 3s to 0.4s.
-- **Configuration**: Added `*.orb.local` to allowed hosts for OrbStack local domain support.
-- **Docker**: Renamed base image non-root user to `quoin` and mapped PostgreSQL volume target to `/var/lib/postgresql` parent directory supporting PostgreSQL v18 builds.
-- **Documentation**: Reorganized documentation structure, added module creation guide, and aligned docs with source code.
-- **Documentation**: Replaced cloud deployment guide with updated health and readiness probe documentation.
-- **Documentation**: Updated documentation to use localhost, removed quick links section, and updated homepage image.
-- **Chores**: Updated testing configuration and metadata formatting, added `.cache` directory to cleanup recipe.
+- **Security**: Role strings declared at route level with DDD scope syntax;
+  no global `OAUTH_READ_ROLE` / `OAUTH_ADMIN_ROLE` settings.
+- **Developer Experience**: `justfile` — added `dev`, `reset-db`, `logs`,
+  `migrate-down`, `new`, and `oauth` recipes.
+- **Docker**: Non-root user renamed to `quoin`; PostgreSQL volume mapped to
+  `/var/lib/postgresql` for v18 compatibility; `pg_isready` healthcheck added.
+- **Configuration**: Added `*.orb.local` to allowed CORS hosts.
+- **Documentation**: Reorganized navigation; added authentication,
+  module creation, and quality-checks guides.
 
 ### Fixed
 
-- **Tests**: Updated system status message assertion to match new initialization text.
-- **Tests**: Suppressed internal docker fallback bash evaluations from echoing globally through `just test`.
-- **Validation**: Enforced `EmailStr` across `UserRead` validation outbound mapping.
-- **Error Handling**: Hooked global API handler for FastAPI's internal `RequestValidationError` to override generic 422 errors into standard JSON serialization structures.
+- **Tests**: `initialize_db` teardown no longer drops tables from the dev
+  `app_db` after `just check`.
+- **Validation**: Enforced `EmailStr` on `UserRead` outbound mapping.
+- **Error Handling**: Hooked `RequestValidationError` to return standard
+  `{"detail": ...}` JSON instead of FastAPI's default 422 shape.
 
 ## [0.5.0] - 2026-02-16
 
@@ -188,7 +210,8 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/balakmran/quoin-api/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/balakmran/quoin-api/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/balakmran/quoin-api/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/balakmran/quoin-api/compare/v0.3.0...v0.3.1

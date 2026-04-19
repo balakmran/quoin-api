@@ -6,15 +6,21 @@ title: Home
 
 [![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.135.3-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![QuoinAPI](assets/images/quoin-api-banner.png)
 
 > **The architectural cornerstone for high-performance, scalable Python services.**
 
-**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation designed to serve as the structural cornerstone for modern Python backends. Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty), it provides a battle-tested "Golden Path" for developers who prioritize architectural integrity, type safety, and observability.
+**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation
+designed to serve as the structural cornerstone for modern Python backends.
+Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty),
+it provides a battle-tested "Golden Path" for developers who prioritize
+architectural integrity, type safety, and observability.
 
-## 🏗️ Key Highlights
+## Key Highlights
 
 #### High-Performance Core
 
@@ -40,7 +46,7 @@ title: Home
 - **Environment-based configuration** with `.env` file selection
 - **Just-based automation** for common development tasks
 
-## 🛠 Tech Stack & Tools
+## Tech Stack & Tools
 
 - **Framework:** FastAPI
 - **Database:** PostgreSQL (using `asyncpg` driver)
@@ -56,7 +62,7 @@ title: Home
 
 Learn more about our [technology choices and decision log →](architecture/decision-log.md)
 
-## ⚡️ Quick Start
+## Quick Start
 
 ```bash
 # 1. Clone the repository and configure environment
@@ -76,14 +82,14 @@ Visit the API documentation at
 
 **Need help?** Check out the [Getting Started Guide →](guides/getting-started.md)
 
-## 📸 Running Application
+## Running Application
 
 ![QuoinAPI Home Page](assets/images/quoin-api-homepage.png)
 
 The application home page provides real-time health indicators and quick links
 to API documentation.
 
-## ️ Architecture
+## ️Architecture
 
 ```mermaid
 graph TB
@@ -101,22 +107,24 @@ graph TB
 
 Read the [full architecture documentation →](architecture/overview.md)
 
-## 📂 Project Structure
+## Project Structure
 
 ```plaintext
 ├── app/
 │   ├── core/
 │   │   ├── config.py             # Pydantic settings
-│   │   ├── exceptions.py         # Custom exceptions
 │   │   ├── exception_handlers.py # Global exception handlers
+│   │   ├── exceptions.py         # Custom exceptions
 │   │   ├── logging.py            # Structlog configuration
 │   │   ├── metadata.py           # Application metadata
 │   │   ├── middlewares.py        # Middleware configuration
 │   │   ├── openapi.py            # OpenAPI configuration
+│   │   ├── schemas.py            # Pydantic schemas
+│   │   ├── security.py           # Security utilities
 │   │   └── telemetry.py          # OpenTelemetry instrumentation
 │   ├── db/                       # Database connection & base models
-│   │   ├── session.py            # Database session
-│   │   └── base.py               # Base models
+│   │   ├── base.py               # Base models
+│   │   └── session.py            # Database session
 │   ├── modules/
 │   │   ├── system/               # System health & status
 │   │   └── user/                 # User management module
@@ -143,22 +151,26 @@ Read the [full architecture documentation →](architecture/overview.md)
 └── pyproject.toml                # Dependencies & config
 ```
 
-## 📖 Documentation
+## Documentation
 
-| Section                                         | Description                                                                                                             |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **📚 [Guides](guides/getting-started.md)**      | Step-by-step guides for getting started, configuration, error handling, testing, database migrations, and observability |
-| **🏗️ [Architecture](architecture/overview.md)** | System architecture overview, design decisions, component diagrams, and data flow                                       |
-| **🔌 [API Reference](api/overview.md)**         | Complete API documentation with core modules, user module, REST endpoints, and code examples                            |
-| **📋 [Project Info](project/contributing.md)**  | Contributing guide, changelog, license (MIT), and GitHub repository                                                     |
+| Section                                      | Description                                                                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **[Guides](guides/getting-started.md)**      | Step-by-step guides for getting started, configuration, error handling, testing, database migrations, and observability |
+| **[Architecture](architecture/overview.md)** | System architecture overview, design decisions, component diagrams, and data flow                                       |
+| **[API Reference](api/overview.md)**         | Complete API documentation with core modules, user module, REST endpoints, and code examples                            |
+| **[Project Info](project/contributing.md)**  | Contributing guide, changelog, license (MIT), and GitHub repository                                                     |
 
-## 🤝 Contributing
+## Roadmap
+
+See the [Roadmap](project/roadmap.md) for planned features and upcoming milestones.
+
+## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](project/contributing.md)
 to learn about our development process, coding standards, and how to submit pull
 requests.
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License**. See the [LICENSE](project/license.md)
 for details.

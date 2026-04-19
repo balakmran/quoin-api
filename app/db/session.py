@@ -11,10 +11,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 
 
-def create_db_engine() -> AsyncEngine:
+def create_db_engine(url: str | None = None) -> AsyncEngine:
     """Create and return a new async database engine."""
     return create_async_engine(
-        str(settings.DATABASE_URL),
+        url or str(settings.DATABASE_URL),
         echo=False,
         future=True,
         pool_size=20,

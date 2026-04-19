@@ -114,3 +114,23 @@ class ForbiddenError(QuoinError):
     ) -> None:
         """Initialize ForbiddenError."""
         super().__init__(message, status_code=403, headers=headers)
+
+
+class UnauthorizedError(QuoinError):
+    """Unauthorized — missing, expired, or invalid Bearer token."""
+
+    def __init__(
+        self,
+        message: str = "Unauthorized",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize UnauthorizedError.
+
+        Includes WWW-Authenticate: Bearer header per RFC 6750 §3.1.
+        """
+        default_headers = {"WWW-Authenticate": "Bearer"}
+        super().__init__(
+            message,
+            status_code=401,
+            headers=headers or default_headers,
+        )
