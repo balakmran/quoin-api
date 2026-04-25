@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Developer Experience**: First-class Claude Code setup — 5 workflow skills
+  (`quoin-new-module`, `quoin-db-migration`, `quoin-auth-route`,
+  `quoin-write-tests`, `quoin-release`, `quoin-pre-pr`) loaded on-demand from
+  `.claude/skills/`; `Stop` hook runs `just format && just lint &&
+  just typecheck` after every dirty turn; `PreToolUse` hook blocks edits to
+  `.env` credential files, `uv.lock`, and applied Alembic migrations; 5
+  Claude plugins enabled (`commit-commands`, `pr-review-toolkit`,
+  `security-guidance`, `claude-md-management`, `claude-code-setup`);
+  `context7` MCP server committed in `.mcp.json` for live SDK docs.
+- **Quality**: Pre-push pytest gate added to `prek.toml`; `just setup` now
+  installs both commit and pre-push hooks.
+- **Documentation**: `docs/guides/ai-setup.md` covering the full Claude Code
+  setup with invocation patterns, first-time setup, and extension guide.
+
 ## [0.6.0] - 2026-04-18
 
 ### Added
