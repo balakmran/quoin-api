@@ -38,6 +38,10 @@ This verifies that any doc changes (new guides, nav additions, docstring
 updates) render without errors. A broken docs build blocks the CI pipeline
 the same as a failing test — catch it here, not in the PR.
 
+`just docb` also syncs `CHANGELOG.md` → `docs/project/changelog.md` (and
+similarly for `CONTRIBUTING.md`, `ROADMAP.md`, `LICENSE`). **Commit the
+synced files** — they are checked-in build artifacts, not gitignored.
+
 If `just docb` fails, fix the docs issue before continuing.
 
 ## 3. Create the PR
