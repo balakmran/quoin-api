@@ -23,6 +23,7 @@ nav = [
             { "Error Handling" = "guides/error-handling.md" },
             { "Testing" = "guides/testing.md" },
             { "Quality Checks" = "guides/quality-checks.md" },
+            { "AI-Assisted Development" = "guides/ai-setup.md" },
         ]},
         { "Operations" = [
             { "Observability" = "guides/observability.md" },

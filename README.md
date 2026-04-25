@@ -137,6 +137,13 @@ Visit the API documentation at
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## AI-Assisted Development
+
+This project has a Claude Code setup with project-specific skills,
+quality-enforcement hooks, and live SDK documentation via MCP.
+See the [AI-Assisted Development guide](docs/guides/ai-setup.md) for
+the full reference.
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for planned features and upcoming milestones.
