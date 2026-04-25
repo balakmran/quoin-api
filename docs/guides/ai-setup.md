@@ -85,6 +85,15 @@ Project fixture map (`client`, `read_client`, `admin_client`, `db_session`,
 domain-specific callers for new modules, and common test anti-patterns to
 avoid.
 
+### `quoin-pre-pr`
+
+**Triggers on:** "create a PR", "open a pull request", "I'm done with this
+feature", "ready to merge", "ship this"
+
+Two-step pre-PR checklist: update `CHANGELOG.md [Unreleased]` with a concise
+entry for the work → run `just docb` to verify the docs build is clean →
+then create the PR.
+
 ### `quoin-release`
 
 **Triggers on:** "cut a release", "bump the version", "tag the release",
