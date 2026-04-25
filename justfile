@@ -46,9 +46,10 @@ run:
 # Start DB + OAuth, apply migrations, and run the dev server
 dev: db oauth migrate-up run
 
-# Install pre-commit hooks
+# Install pre-commit + pre-push hooks
 prek-install:
     uv run prek install
+    uv run prek install --hook-type pre-push
 
 # Run pre-commit hooks on all files
 prek-run:

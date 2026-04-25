@@ -14,5 +14,6 @@ repo = "local"
 hooks = [
     { id = "ruff-check", name = "ruff check", entry = "uv run ruff check", language = "system", types = ["python"], args = ["--fix"] },
     { id = "ruff-format", name = "ruff format", entry = "uv run ruff format", language = "system", types = ["python"] },
-    { id = "ty", name = "ty", entry = "uv run ty check", language = "system", types = ["python"], pass_filenames = false }
+    { id = "ty", name = "ty", entry = "uv run ty check", language = "system", types = ["python"], pass_filenames = false },
+    { id = "pytest", name = "pytest", entry = "uv run pytest -q --tb=line tests/", language = "system", pass_filenames = false, stages = ["pre-push"], always_run = true }
 ]
