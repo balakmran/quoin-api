@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.openapi import APITag
-from app.core.schemas import ErrorResponse
+from app.core.schemas import ProblemDetail
 from app.core.security import ServicePrincipal, require_roles
 from app.db.session import get_session
 from app.modules.user.models import User
@@ -18,15 +18,15 @@ router = APIRouter(
     tags=[APITag.users],
     responses={
         401: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "Unauthorized - Missing or invalid token",
         },
         403: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "Forbidden - Token lacks the required domain scope",
         },
         500: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "Internal Server Error",
         },
     },
@@ -47,7 +47,7 @@ def get_user_service(
     status_code=status.HTTP_201_CREATED,
     responses={
         409: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "User with this email already exists",
         }
     },
@@ -77,7 +77,7 @@ async def list_users(
     response_model=UserRead,
     responses={
         404: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "User not found",
         }
     },
@@ -95,9 +95,9 @@ async def get_user(
     "/{user_id}",
     response_model=UserRead,
     responses={
-        404: {"model": ErrorResponse, "description": "User not found"},
+        404: {"model": ProblemDetail, "description": "User not found"},
         409: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "Email already registered to another user",
         },
     },
@@ -117,7 +117,7 @@ async def update_user(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         404: {
-            "model": ErrorResponse,
+            "model": ProblemDetail,
             "description": "User not found",
         }
     },

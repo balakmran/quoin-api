@@ -20,7 +20,11 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        """Manage application lifecycle."""
+        """Create DB engine and session factory on startup; dispose on shutdown.
+
+        Args:
+            app: The FastAPI application instance.
+        """
         engine = create_db_engine()
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)

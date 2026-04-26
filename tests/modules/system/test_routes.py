@@ -79,5 +79,10 @@ async def test_ready_failure(app: FastAPI):
     ) as ac:
         response = await ac.get("/ready")
 
+    body = response.json()
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert response.json()["detail"] == "Database connection failed"
+    assert response.headers["content-type"] == "application/problem+json"
+    assert body["type"] == "urn:quoin:error:service_unavailable_error"
+    assert body["status"] == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert body["detail"] == "Database connection failed"
+    assert body["instance"] == "/ready"

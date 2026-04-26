@@ -134,3 +134,15 @@ class UnauthorizedError(QuoinError):
             status_code=401,
             headers=headers or default_headers,
         )
+
+
+class ServiceUnavailableError(QuoinError):
+    """Service Unavailable — a required dependency is unreachable."""
+
+    def __init__(
+        self,
+        message: str = "Service Unavailable",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize ServiceUnavailableError."""
+        super().__init__(message, status_code=503, headers=headers)

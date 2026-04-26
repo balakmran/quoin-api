@@ -4,6 +4,23 @@
 
 ### Added
 
+- **Errors**: RFC 9457 Problem Details — all error responses now return
+  `Content-Type: application/problem+json` with `type` (URN derived from
+  the exception class), `title` (standard HTTP phrase), `status`, `detail`,
+  `instance` (request path), and an `errors` array on 422 responses.
+  `ProblemDetail` Pydantic model in `app/core/schemas.py`; `ErrorResponse`
+  replaced throughout.
+- **Errors**: `ServiceUnavailableError` (503) domain exception; `/ready`
+  endpoint now raises it instead of `HTTPException` when the database is
+  unreachable.
+- **Observability**: `RequestIDMiddleware` — generates or propagates a
+  request ID header (default `X-Request-ID`, configurable via
+  `QUOIN_REQUEST_ID_HEADER`), binds it to every structlog event for the
+  request, and echoes it on the response.
+- **Observability**: OpenTelemetry trace/log correlation — `_add_otel_context`
+  structlog processor injects `trace_id` and `span_id` into every log event
+  when an active OTel span exists. Vendor-neutral OTLP setup documented with
+  Jaeger local quickstart.
 - **Developer Experience**: First-class Claude Code setup — 5 workflow skills
   (`quoin-new-module`, `quoin-db-migration`, `quoin-auth-route`,
   `quoin-write-tests`, `quoin-release`, `quoin-pre-pr`) loaded on-demand from
@@ -15,6 +32,13 @@
   `context7` MCP server committed in `.mcp.json` for live SDK docs.
 - **Quality**: Pre-push pytest gate added to `prek.toml`; `just setup` now
   installs both commit and pre-push hooks.
+
+### Changed
+
+- **Errors**: `quoin_exception_handler` now emits a structured `warning` log
+  (`event="quoin_error"`) before returning; previously it returned silently.
+- **Observability**: Observability guide rewritten to be vendor-neutral —
+  Jaeger/CNCF only, commercial backends removed.
 - **Documentation**: `docs/guides/ai-setup.md` covering the full Claude Code
   setup with invocation patterns, first-time setup, and extension guide.
 

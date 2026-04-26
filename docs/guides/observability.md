@@ -146,6 +146,34 @@ async def process_order(order_id: str):
 All three log statements will automatically include `order_id` and
 `user_id`.
 
+### Request ID
+
+Every request is assigned a unique ID and bound to the log context
+automatically by `RequestIDMiddleware`. No code is required in routes
+or services — the field appears in every log event for that request.
+
+```json
+{
+  "event": "user_created",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "level": "info"
+}
+```
+
+The middleware reads the ID from the incoming request header, or
+generates a `uuid4()` if the header is absent. The same header is
+echoed back on the response so clients can correlate their own logs.
+
+The header name defaults to `X-Request-ID` and is configurable:
+
+```bash
+# .env
+QUOIN_REQUEST_ID_HEADER=X-Correlation-ID
+```
+
+This affects both the inbound lookup and the outbound response header,
+so callers and the application always agree on the name.
+
 ---
 
 ## OpenTelemetry Tracing
@@ -214,61 +242,105 @@ span.set_attribute("user.tier", "premium")
 span.set_attribute("feature.enabled", True)
 ```
 
+### Log Correlation
+
+Every log event emitted during a traced request automatically includes
+`trace_id` and `span_id` fields, injected by `_add_otel_context` in
+[`app/core/logging.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/logging.py).
+No extra code is needed in routes or services.
+
+```json
+{
+  "event": "user_created",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "level": "info"
+}
+```
+
+The `trace_id` matches the span printed by the console exporter (or
+the trace visible in your backend), so you can jump from any log line
+directly to the full trace.
+
+When `QUOIN_OTEL_ENABLED=False` or no active span exists, the fields
+are omitted rather than set to zero values.
+
 ### Enabling/Disabling OTEL
 
 Control via environment variable:
 
 ```bash
 # .env
-QUOIN_OTEL_ENABLED=True   # Enable tracing (production)
-QUOIN_OTEL_ENABLED=False  # Disable tracing (development)
+QUOIN_OTEL_ENABLED=True   # Enable tracing (default in production)
+QUOIN_OTEL_ENABLED=False  # Disable tracing (skips all instrumentation)
 ```
 
 ---
 
 ## Viewing Traces
 
-### Console Exporter (Development)
+QuoinAPI exports via OTLP, the vendor-neutral OpenTelemetry wire
+protocol. Any OTLP-compatible backend works without changing
+application code — only the `OTEL_EXPORTER_OTLP_ENDPOINT` env var
+needs to point at it.
 
-By default, traces are printed to the console:
+### Console (development default)
+
+With no `OTEL_EXPORTER_OTLP_ENDPOINT` set, spans are printed to
+stdout. Each span includes a `trace_id` you can match against the
+`trace_id` field in your structlog output:
 
 ```
 {
     name: POST /api/v1/users/
-    context: SpanContext(...)
-    kind: SpanKind.SERVER
-    parent_id: None
+    context: {"trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", ...}
     start_time: 2026-02-15T15:30:00.000000Z
     end_time: 2026-02-15T15:30:00.123456Z
-    attributes: {
-        'http.method': 'POST',
-        'http.url': '/api/v1/users/',
-        'http.status_code': 201,
-    }
 }
 ```
 
-### Production Integration (Future)
+### Jaeger (local UI)
 
-For production, export to a tracing backend:
+[Jaeger](https://www.jaegertracing.io/) is a CNCF open-source tracing
+backend. Run it as a single container:
 
-```python
-# app/core/telemetry.py
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-# Export to Jaeger/Tempo/Datadog
-otlp_exporter = OTLPSpanExporter(
-    endpoint="https://otel-collector.example.com:4317"
-)
-span_processor = BatchSpanProcessor(otlp_exporter)
+```bash
+docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 4318:4318 \
+  jaegertracing/all-in-one:latest
 ```
 
-Popular backends:
+Then point the app at it:
 
-- **Jaeger** (open-source)
-- **Grafana Tempo** (open-source)
-- **Datadog APM** (commercial)
-- **New Relic** (commercial)
+```bash
+# .env
+QUOIN_OTEL_ENABLED=True
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+Open `http://localhost:16686` and search by service name
+(`quoin-api`). Each trace shows the full span tree with correlated
+log fields attached.
+
+### Production
+
+Any OTLP-compatible backend works — set the endpoint and the app
+ships spans and metrics without code changes:
+
+| Backend | Type | OTLP endpoint |
+| :--- | :--- | :--- |
+| Grafana Tempo | Open source | `http://tempo:4318` |
+| Jaeger | Open source (CNCF) | `http://jaeger:4318` |
+| OpenTelemetry Collector | Open source (CNCF) | `http://otel-col:4318` |
+
+!!! tip
+    For production, route through the
+    [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+    rather than exporting directly to a backend. It gives you batching,
+    retry, tail-based sampling, and the ability to fan out to multiple
+    backends without changing the app.
 
 ---
 

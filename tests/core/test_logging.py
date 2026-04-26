@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,7 +9,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import Environment
 from app.core.exception_handlers import validation_exception_handler
-from app.core.logging import setup_logging
+from app.core.logging import _add_otel_context, setup_logging
 
 
 def test_setup_logging() -> None:
@@ -62,6 +63,44 @@ def test_setup_logging_not_dev() -> None:
         mock_root_logger.handlers.clear.assert_called_once()
         mock_root_logger.addHandler.assert_called_once()
         mock_root_logger.setLevel.assert_called_with(logging.INFO)
+
+
+def test_add_otel_context_injects_fields_when_span_valid() -> None:
+    """Test trace_id and span_id are added when an active span exists."""
+    mock_ctx = MagicMock()
+    mock_ctx.is_valid = True
+    mock_ctx.trace_id = 0x4BF92F3577B34DA6A3CE929D0E0E4736
+    mock_ctx.span_id = 0x00F067AA0BA902B7
+
+    mock_span = MagicMock()
+    mock_span.get_span_context.return_value = mock_ctx
+
+    with patch(
+        "app.core.logging.trace.get_current_span", return_value=mock_span
+    ):
+        result: dict[str, Any] = {}
+        _add_otel_context(None, "info", result)
+
+    assert result["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
+    assert result["span_id"] == "00f067aa0ba902b7"
+
+
+def test_add_otel_context_omits_fields_when_span_invalid() -> None:
+    """Test no fields are added when there is no active span."""
+    mock_ctx = MagicMock()
+    mock_ctx.is_valid = False
+
+    mock_span = MagicMock()
+    mock_span.get_span_context.return_value = mock_ctx
+
+    with patch(
+        "app.core.logging.trace.get_current_span", return_value=mock_span
+    ):
+        result: dict[str, Any] = {}
+        _add_otel_context(None, "info", result)
+
+    assert "trace_id" not in result
+    assert "span_id" not in result
 
 
 @pytest.mark.asyncio

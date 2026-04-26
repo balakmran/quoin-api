@@ -1,9 +1,24 @@
 import logging
 import sys
+from collections.abc import MutableMapping
+from typing import Any
 
 import structlog
+from opentelemetry import trace
 
 from app.core.config import Environment, settings
+
+
+def _add_otel_context(
+    logger: Any, method: str, event_dict: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
+    """Inject active OTel trace_id and span_id into every log event."""
+    span = trace.get_current_span()
+    ctx = span.get_span_context()
+    if ctx.is_valid:
+        event_dict["trace_id"] = format(ctx.trace_id, "032x")
+        event_dict["span_id"] = format(ctx.span_id, "016x")
+    return event_dict
 
 
 def setup_logging() -> None:
@@ -11,6 +26,7 @@ def setup_logging() -> None:
     # Processors compatible with both PrintLogger and stdlib logger
     shared_processors = [
         structlog.contextvars.merge_contextvars,
+        _add_otel_context,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.StackInfoRenderer(),
