@@ -1,11 +1,16 @@
+import uuid
 from unittest.mock import patch
 
+import pytest
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
 from app.core.middlewares import (
+    RequestIDMiddleware,
     configure_cors,
     configure_middlewares,
     configure_trusted_hosts,
@@ -61,11 +66,102 @@ def test_configure_middlewares() -> None:
     ):
         configure_middlewares(app)
 
-        # Verify both middlewares are added
         has_cors = any(m.cls == CORSMiddleware for m in app.user_middleware)
         has_trusted_host = any(
             m.cls == TrustedHostMiddleware for m in app.user_middleware
         )
+        has_request_id = any(
+            m.cls == RequestIDMiddleware for m in app.user_middleware
+        )
 
         assert has_cors
         assert has_trusted_host
+        assert has_request_id
+
+
+@pytest.fixture
+def request_id_app() -> FastAPI:
+    """Minimal app with only RequestIDMiddleware registered."""
+    app = FastAPI()
+    app.add_middleware(RequestIDMiddleware)
+
+    @app.get("/test")
+    async def endpoint() -> dict[str, str]:
+        return {}
+
+    return app
+
+
+@pytest.mark.asyncio
+async def test_request_id_middleware_generates_id(
+    request_id_app: FastAPI,
+) -> None:
+    """Test that a UUID is generated when no request ID header is present."""
+    async with AsyncClient(
+        transport=ASGITransport(app=request_id_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/test")
+
+    header = settings.REQUEST_ID_HEADER
+    assert header in response.headers
+    uuid.UUID(response.headers[header])  # raises if not a valid UUID
+
+
+@pytest.mark.asyncio
+async def test_request_id_middleware_propagates_existing_id(
+    request_id_app: FastAPI,
+) -> None:
+    """Test that a provided request ID is echoed back unchanged."""
+    incoming = "my-trace-id-42"
+    async with AsyncClient(
+        transport=ASGITransport(app=request_id_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get(
+            "/test", headers={settings.REQUEST_ID_HEADER: incoming}
+        )
+
+    assert response.headers[settings.REQUEST_ID_HEADER] == incoming
+
+
+@pytest.mark.asyncio
+async def test_request_id_middleware_custom_header_name() -> None:
+    """Test that a custom QUOIN_REQUEST_ID_HEADER is honoured."""
+    with patch.object(settings, "REQUEST_ID_HEADER", "X-Correlation-ID"):
+        app = FastAPI()
+        app.add_middleware(RequestIDMiddleware)
+
+        @app.get("/test")
+        async def endpoint() -> dict[str, str]:
+            return {}
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get(
+                "/test", headers={"X-Correlation-ID": "corr-99"}
+            )
+
+    assert response.headers["X-Correlation-ID"] == "corr-99"
+    assert "X-Request-ID" not in response.headers
+
+
+@pytest.mark.asyncio
+async def test_request_id_middleware_binds_and_clears_structlog(
+    request_id_app: FastAPI,
+) -> None:
+    """Test request_id is bound during the request and cleared after."""
+    captured: dict[str, object] = {}
+
+    @request_id_app.get("/capture")
+    async def capture_ctx() -> dict[str, str]:
+        captured.update(structlog.contextvars.get_contextvars())
+        return {}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=request_id_app), base_url="http://test"
+    ) as ac:
+        await ac.get(
+            "/capture", headers={settings.REQUEST_ID_HEADER: "ctx-test-id"}
+        )
+
+    assert captured["request_id"] == "ctx-test-id"

@@ -11,8 +11,6 @@ from starlette.responses import Response
 
 from app.core.config import settings
 
-logger = structlog.get_logger(__name__)
-
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Generate or propagate X-Request-ID and bind it to the log context."""

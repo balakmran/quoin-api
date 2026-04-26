@@ -2,6 +2,7 @@ import pytest
 from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
+from structlog.testing import capture_logs
 
 from app.core.exception_handlers import add_exception_handlers
 from app.core.exceptions import (
@@ -11,6 +12,7 @@ from app.core.exceptions import (
     InternalServerError,
     NotFoundError,
     QuoinError,
+    ServiceUnavailableError,
 )
 
 
@@ -160,3 +162,44 @@ async def test_fastapi_request_validation_handling() -> None:
         # Verify Starlette exception handler routes the 422 properly
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert "detail" in response.json()
+
+
+def test_service_unavailable_error_init() -> None:
+    """Test ServiceUnavailableError initialization."""
+    err = ServiceUnavailableError()
+    assert err.message == "Service Unavailable"
+    assert err.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert err.headers is None
+
+    err_custom = ServiceUnavailableError(
+        message="DB down", headers={"Retry-After": "30"}
+    )
+    assert err_custom.message == "DB down"
+    assert err_custom.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert err_custom.headers == {"Retry-After": "30"}
+
+
+@pytest.mark.asyncio
+async def test_quoin_exception_handler_logs() -> None:
+    """Test that quoin_exception_handler emits a structured warning log."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/error")
+    async def raise_error() -> None:
+        raise QuoinError(
+            message="log test error",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        with capture_logs() as cap_logs:
+            await ac.get("/error")
+
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["event"] == "quoin_error"
+    assert cap_logs[0]["status_code"] == status.HTTP_400_BAD_REQUEST
+    assert cap_logs[0]["message"] == "log test error"
+    assert cap_logs[0]["log_level"] == "warning"

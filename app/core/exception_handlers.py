@@ -1,5 +1,6 @@
 from typing import Any
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
@@ -7,11 +8,19 @@ from pydantic import ValidationError
 
 from app.core.exceptions import QuoinError
 
+logger = structlog.get_logger(__name__)
+
 
 async def quoin_exception_handler(
     request: Request, exc: QuoinError
 ) -> Response:
     """Handle QuoinError exceptions."""
+    logger.warning(
+        "quoin_error",
+        status_code=exc.status_code,
+        message=exc.message,
+        path=request.url.path,
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},
