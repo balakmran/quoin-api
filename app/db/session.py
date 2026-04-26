@@ -13,7 +13,14 @@ from app.core.exceptions import InternalServerError
 
 
 def create_db_engine(url: str | None = None) -> AsyncEngine:
-    """Create and return a new async database engine."""
+    """Create a configured async SQLAlchemy engine.
+
+    Args:
+        url: Optional connection URL; defaults to settings.DATABASE_URL.
+
+    Returns:
+        A new AsyncEngine with connection pooling pre-configured.
+    """
     return create_async_engine(
         url or str(settings.DATABASE_URL),
         echo=False,
@@ -27,7 +34,14 @@ def create_db_engine(url: str | None = None) -> AsyncEngine:
 def create_session_factory(
     engine: AsyncEngine,
 ) -> async_sessionmaker[AsyncSession]:
-    """Create a reusable async session factory bound to the given engine."""
+    """Create an async session factory bound to the given engine.
+
+    Args:
+        engine: The AsyncEngine the factory will use for connections.
+
+    Returns:
+        A reusable async_sessionmaker that yields AsyncSession objects.
+    """
     return async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
@@ -36,7 +50,20 @@ def create_session_factory(
 async def get_session(
     request: Request,
 ) -> AsyncGenerator[AsyncSession, None]:
-    """Get a database session from app.state.session_factory."""
+    """Yield a database session for the duration of the request.
+
+    Reads the session factory from app.state, which is initialised
+    during application startup.
+
+    Args:
+        request: The current FastAPI request (used to access app.state).
+
+    Yields:
+        An AsyncSession scoped to this request.
+
+    Raises:
+        InternalServerError: If the session factory is not initialised.
+    """
     session_factory = getattr(request.app.state, "session_factory", None)
     if not session_factory:
         raise InternalServerError("Database session factory is not initialized")

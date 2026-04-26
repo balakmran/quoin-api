@@ -1,11 +1,29 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
-class ErrorResponse(BaseModel):
-    """Standard error response model used across the application.
+class ProblemDetail(BaseModel):
+    """RFC 9457 Problem Details response body.
 
-    This schema ensures OpenAPI documentation correctly maps the
-    error JSON payloads emitted by the global exception handlers.
+    Returned for all error responses with Content-Type
+    application/problem+json.
     """
 
-    detail: str = Field(..., description="A human-readable error description.")
+    type: str = Field(
+        default="about:blank",
+        description="URI identifying the problem type.",
+    )
+    title: str = Field(..., description="Short, human-readable summary.")
+    status: int = Field(..., description="HTTP status code.")
+    detail: str = Field(..., description="Human-readable explanation.")
+    instance: str = Field(
+        ..., description="URI of the specific occurrence (request path)."
+    )
+    errors: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Per-field validation errors (RFC 9457 extension). "
+            "Only present on 422 responses."
+        ),
+    )

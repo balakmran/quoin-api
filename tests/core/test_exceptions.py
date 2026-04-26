@@ -4,7 +4,11 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
 from structlog.testing import capture_logs
 
-from app.core.exception_handlers import add_exception_handlers
+from app.core.exception_handlers import (
+    _problem_title,
+    _problem_type,
+    add_exception_handlers,
+)
 from app.core.exceptions import (
     BadRequestError,
     ConflictError,
@@ -14,6 +18,97 @@ from app.core.exceptions import (
     QuoinError,
     ServiceUnavailableError,
 )
+from app.core.schemas import ProblemDetail
+
+_PROBLEM_CONTENT_TYPE = "application/problem+json"
+
+
+# ---------------------------------------------------------------------------
+# ProblemDetail model
+# ---------------------------------------------------------------------------
+
+
+def test_problem_detail_required_fields() -> None:
+    """ProblemDetail serialises all RFC 9457 required fields."""
+    p = ProblemDetail(
+        type="urn:quoin:error:not_found_error",
+        title="Not Found",
+        status=404,
+        detail="User not found",
+        instance="/api/v1/users/abc",
+    )
+    d = p.model_dump()
+    assert d["type"] == "urn:quoin:error:not_found_error"
+    assert d["title"] == "Not Found"
+    assert d["status"] == status.HTTP_404_NOT_FOUND
+    assert d["detail"] == "User not found"
+    assert d["instance"] == "/api/v1/users/abc"
+    assert d["errors"] is None
+
+
+def test_problem_detail_errors_excluded_when_none() -> None:
+    """Errors field is excluded from JSON when None."""
+    p = ProblemDetail(
+        title="Not Found",
+        status=status.HTTP_404_NOT_FOUND,
+        detail="gone",
+        instance="/x",
+    )
+    json_str = p.model_dump_json(exclude_none=True)
+    assert "errors" not in json_str
+
+
+def test_problem_detail_type_default() -> None:
+    """Type defaults to about:blank per RFC 9457."""
+    p = ProblemDetail(
+        title="x",
+        status=status.HTTP_400_BAD_REQUEST,
+        detail="y",
+        instance="/z",
+    )
+    assert p.type == "about:blank"
+
+
+# ---------------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------------
+
+
+def test_problem_type_known_exceptions() -> None:
+    """_problem_type derives URN from exception class name."""
+    assert _problem_type(NotFoundError()) == "urn:quoin:error:not_found_error"
+    assert _problem_type(ConflictError()) == "urn:quoin:error:conflict_error"
+    assert (
+        _problem_type(BadRequestError()) == "urn:quoin:error:bad_request_error"
+    )
+    assert (
+        _problem_type(InternalServerError())
+        == "urn:quoin:error:internal_server_error"
+    )
+    assert (
+        _problem_type(ServiceUnavailableError())
+        == "urn:quoin:error:service_unavailable_error"
+    )
+
+
+def test_problem_title_standard_codes() -> None:
+    """_problem_title returns the standard HTTP reason phrase."""
+    assert _problem_title(400) == "Bad Request"
+    assert _problem_title(404) == "Not Found"
+    assert _problem_title(409) == "Conflict"
+    assert _problem_title(422) == "Unprocessable Entity"
+    assert _problem_title(500) == "Internal Server Error"
+    assert _problem_title(503) == "Service Unavailable"
+
+
+def test_problem_title_unknown_code() -> None:
+    """_problem_title falls back to 'Error' for unknown codes."""
+    assert _problem_title(999) == "Error"
+
+
+# ---------------------------------------------------------------------------
+# QuoinError hierarchy
+# ---------------------------------------------------------------------------
 
 
 def test_quoin_error_init() -> None:
@@ -44,37 +139,8 @@ def test_internal_server_error_init() -> None:
 
 
 @pytest.mark.asyncio
-async def test_exception_handlers() -> None:
-    """Test exception handlers via a temporary app."""
-    app = FastAPI()
-    add_exception_handlers(app)
-
-    @app.get("/quoin_error")
-    async def raise_quoin_error() -> None:
-        raise QuoinError(
-            message="Custom App Error", status_code=status.HTTP_418_IM_A_TEAPOT
-        )
-
-    @app.get("/generic_error")
-    async def raise_generic_error() -> None:
-        raise ValueError("Something went wrong")
-
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        # Test QuoinError handler
-        response = await ac.get("/quoin_error")
-        assert response.status_code == status.HTTP_418_IM_A_TEAPOT
-        assert response.json() == {"detail": "Custom App Error"}
-
-        # Test generic exception handler (should raise exception)
-        with pytest.raises(ValueError):
-            await ac.get("/generic_error")
-
-
-@pytest.mark.asyncio
 async def test_not_found_error() -> None:
-    """Test NotFoundError initialization and handler."""
+    """Test NotFoundError initialization."""
     err = NotFoundError(message="User not found")
     assert err.message == "User not found"
     assert err.status_code == status.HTTP_404_NOT_FOUND
@@ -82,7 +148,7 @@ async def test_not_found_error() -> None:
 
 @pytest.mark.asyncio
 async def test_conflict_error() -> None:
-    """Test ConflictError initialization and handler."""
+    """Test ConflictError initialization."""
     err = ConflictError(message="Email already exists")
     assert err.message == "Email already exists"
     assert err.status_code == status.HTTP_409_CONFLICT
@@ -90,7 +156,7 @@ async def test_conflict_error() -> None:
 
 @pytest.mark.asyncio
 async def test_bad_request_error() -> None:
-    """Test BadRequestError initialization and handler."""
+    """Test BadRequestError initialization."""
     err = BadRequestError(message="Invalid input")
     assert err.message == "Invalid input"
     assert err.status_code == status.HTTP_400_BAD_REQUEST
@@ -98,70 +164,10 @@ async def test_bad_request_error() -> None:
 
 @pytest.mark.asyncio
 async def test_forbidden_error() -> None:
-    """Test ForbiddenError initialization and handler."""
+    """Test ForbiddenError initialization."""
     err = ForbiddenError(message="Access denied")
     assert err.message == "Access denied"
     assert err.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.asyncio
-async def test_quoin_request_validation_error() -> None:
-    """Test QuoinRequestValidationError initialization and errors method."""
-    from app.core.exceptions import (  # noqa: PLC0415
-        QuoinRequestValidationError,
-        ValidationError,
-    )
-
-    # Create validation errors list
-    errors: list[ValidationError] = [
-        {
-            "loc": ("field1",),
-            "msg": "field required",
-            "type": "missing",
-            "input": {},
-        },
-        {
-            "loc": ("field2",),
-            "msg": "value is not a valid integer",
-            "type": "int_parsing",
-            "input": "not_an_int",
-        },
-    ]
-
-    err = QuoinRequestValidationError(errors=errors)
-
-    # Test that errors() method returns proper Pydantic error format
-    pydantic_errors = err.errors()
-    assert len(pydantic_errors) == 2  # noqa: PLR2004
-    assert pydantic_errors[0]["loc"] == ("field1",)
-    assert pydantic_errors[1]["loc"] == ("field2",)
-
-
-@pytest.mark.asyncio
-async def test_fastapi_request_validation_handling() -> None:
-    """Test standard FastAPI parameter validations under Starlette >= 0.46.0."""
-    app = FastAPI()
-    add_exception_handlers(app)
-
-    class Item(BaseModel):
-        name: str
-        price: float
-
-    @app.post("/items/")
-    async def create_item(item: Item) -> Item:
-        return item
-
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as ac:
-        # Pass a bad payload to trigger FastAPI validation error
-        response = await ac.post(
-            "/items/", json={"name": "test", "price": "not_a_float"}
-        )
-
-        # Verify Starlette exception handler routes the 422 properly
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-        assert "detail" in response.json()
 
 
 def test_service_unavailable_error_init() -> None:
@@ -180,8 +186,111 @@ def test_service_unavailable_error_init() -> None:
 
 
 @pytest.mark.asyncio
+async def test_quoin_request_validation_error() -> None:
+    """Test QuoinRequestValidationError initialization and errors method."""
+    from app.core.exceptions import (  # noqa: PLC0415
+        QuoinRequestValidationError,
+        ValidationError,
+    )
+
+    errors: list[ValidationError] = [
+        {
+            "loc": ("field1",),
+            "msg": "field required",
+            "type": "missing",
+            "input": {},
+        },
+        {
+            "loc": ("field2",),
+            "msg": "value is not a valid integer",
+            "type": "int_parsing",
+            "input": "not_an_int",
+        },
+    ]
+
+    err = QuoinRequestValidationError(errors=errors)
+
+    pydantic_errors = err.errors()
+    assert len(pydantic_errors) == 2  # noqa: PLR2004
+    assert pydantic_errors[0]["loc"] == ("field1",)
+    assert pydantic_errors[1]["loc"] == ("field2",)
+
+
+# ---------------------------------------------------------------------------
+# Exception handler integration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_exception_handlers() -> None:
+    """QuoinError handler returns RFC 9457 body and correct status."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/quoin_error")
+    async def raise_quoin_error() -> None:
+        raise QuoinError(
+            message="Custom App Error", status_code=status.HTTP_418_IM_A_TEAPOT
+        )
+
+    @app.get("/generic_error")
+    async def raise_generic_error() -> None:
+        raise ValueError("Something went wrong")
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/quoin_error")
+        body = response.json()
+
+        assert response.status_code == status.HTTP_418_IM_A_TEAPOT
+        assert response.headers["content-type"] == _PROBLEM_CONTENT_TYPE
+        assert body["type"] == "urn:quoin:error:quoin_error"
+        assert body["title"] == "I'm a Teapot"
+        assert body["status"] == status.HTTP_418_IM_A_TEAPOT
+        assert body["detail"] == "Custom App Error"
+        assert body["instance"] == "/quoin_error"
+        assert "errors" not in body
+
+        with pytest.raises(ValueError):
+            await ac.get("/generic_error")
+
+
+@pytest.mark.asyncio
+async def test_fastapi_request_validation_handling() -> None:
+    """FastAPI validation errors produce RFC 9457 with errors array."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    class Item(BaseModel):
+        name: str
+        price: float
+
+    @app.post("/items/")
+    async def create_item(item: Item) -> Item:
+        return item
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.post(
+            "/items/", json={"name": "test", "price": "not_a_float"}
+        )
+
+    body = response.json()
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.headers["content-type"] == _PROBLEM_CONTENT_TYPE
+    assert body["type"] == "urn:quoin:error:validation_error"
+    assert body["title"] == "Unprocessable Entity"
+    assert body["status"] == 422  # noqa: PLR2004
+    assert body["detail"] == "Request validation failed"
+    assert isinstance(body["errors"], list)
+    assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
 async def test_quoin_exception_handler_logs() -> None:
-    """Test that quoin_exception_handler emits a structured warning log."""
+    """quoin_exception_handler emits a structured warning log."""
     app = FastAPI()
     add_exception_handlers(app)
 

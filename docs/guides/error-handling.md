@@ -1,6 +1,6 @@
 # Error Handling
 
-This guide explains the error handling architecture in the QuoinAPI,
+This guide explains the error handling architecture in QuoinAPI,
 including custom domain exceptions, module-level exceptions, global
 exception handlers, and best practices for error management.
 
@@ -9,6 +9,7 @@ exception handlers, and best practices for error management.
 | Exception                     | Status | Use Case                                  |
 | :---------------------------- | :----: | :---------------------------------------- |
 | `BadRequestError`             | 400    | Invalid request data or parameters        |
+| `UnauthorizedError`           | 401    | Missing or invalid Bearer token           |
 | `ForbiddenError`              | 403    | Insufficient permissions                  |
 | `NotFoundError`               | 404    | Resource not found                        |
 | `ConflictError`               | 409    | Resource conflict (e.g., duplicate email) |
@@ -20,23 +21,88 @@ All inherit from `QuoinError`. Import from `app.core.exceptions`.
 
 ---
 
+## Error Response Format (RFC 9457)
+
+All errors return `Content-Type: application/problem+json` with a
+[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details
+body:
+
+```json
+{
+  "type": "urn:quoin:error:not_found_error",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "User with ID 'f47ac10b' not found",
+  "instance": "/api/v1/users/f47ac10b"
+}
+```
+
+| Field      | Description                                            |
+| :--------- | :----------------------------------------------------- |
+| `type`     | URN identifying the problem type (machine-readable)    |
+| `title`    | Standard HTTP reason phrase for the status code        |
+| `status`   | HTTP status code (mirrors the response status)         |
+| `detail`   | Human-readable explanation of this specific occurrence |
+| `instance` | Request path where the error occurred                  |
+| `errors`   | Per-field array; only present on 422 responses         |
+
+### type URN convention
+
+`type` is derived automatically from the exception class name:
+
+```
+urn:quoin:error:<snake_case_class_name>
+```
+
+Examples: `NotFoundError` → `urn:quoin:error:not_found_error`,
+`DuplicateEmailError` → `urn:quoin:error:duplicate_email_error`.
+
+### Validation errors (422)
+
+Validation errors include an `errors` array (RFC 9457 extension):
+
+```json
+{
+  "type": "urn:quoin:error:validation_error",
+  "title": "Unprocessable Entity",
+  "status": 422,
+  "detail": "Request validation failed",
+  "instance": "/api/v1/users/",
+  "errors": [
+    {
+      "type": "string_type",
+      "loc": ["body", "email"],
+      "msg": "Input should be a valid string",
+      "input": 42,
+      "url": "https://errors.pydantic.dev/..."
+    }
+  ]
+}
+```
+
+---
+
 ## Architecture Overview
 
-The application uses a **module-level exception** pattern where business logic errors are represented by custom exception classes that extend core `QuoinError` classes. These exceptions are automatically caught by global handlers and converted to appropriate HTTP responses.
+The application uses a **module-level exception** pattern where
+business logic errors are represented by custom exception classes that
+extend core `QuoinError` classes. These exceptions are automatically
+caught by global handlers and converted to RFC 9457 responses.
 
 ```mermaid
 graph LR
     A[Service Layer] -->|raises| B[Module Exception]
     B -->|inherits from| C[QuoinError]
     C -->|caught by| D[Global Handler]
-    D -->|returns| E[JSON Response]
+    D -->|returns| E[application/problem+json]
 ```
 
 ---
 
 ## Exception Hierarchy
 
-All application exceptions inherit from [`QuoinError`](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py):
+All application exceptions inherit from
+[`QuoinError`](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py):
 
 ```python
 from app.core.exceptions import QuoinError
@@ -61,6 +127,7 @@ class QuoinError(Exception):
 | Exception                     | Status Code | Use Case                                  |
 | :---------------------------- | :---------- | :---------------------------------------- |
 | `BadRequestError`             | 400         | Invalid request data or parameters        |
+| `UnauthorizedError`           | 401         | Missing or invalid Bearer token           |
 | `ForbiddenError`              | 403         | Insufficient permissions                  |
 | `NotFoundError`               | 404         | Resource not found                        |
 | `ConflictError`               | 409         | Resource conflict (e.g., duplicate email) |
@@ -79,7 +146,8 @@ class QuoinError(Exception):
 
 ## Module-Level Exceptions
 
-Each module defines domain-specific exceptions that inherit from core exceptions and provide rich context:
+Each module defines domain-specific exceptions that inherit from core
+exceptions and provide rich context:
 
 ```python
 # app/modules/user/exceptions.py
@@ -98,29 +166,36 @@ class DuplicateEmailError(ConflictError):
         super().__init__(message=f"Email '{email}' is already registered")
 ```
 
+The `type` URN in error responses is derived automatically from the
+class name, so `UserNotFoundError` produces
+`urn:quoin:error:user_not_found_error` without any additional
+configuration.
+
 ### Benefits of Module-Level Exceptions
 
-1. **Rich Context**: Exceptions include relevant IDs, values, and details
-2. **Type Safety**: Each exception is a distinct type for better error handling
-3. **Discoverability**: Clearly defined in each module's `exceptions.py`
+1. **Rich Context**: Exceptions include relevant IDs, values, and
+   details
+2. **Type Safety**: Each exception is a distinct type for better error
+   handling
+3. **Discoverability**: Clearly defined in each module's
+   `exceptions.py`
 4. **Maintainability**: Easier to track and update error messages
 
 ---
 
 ## Usage in Services
 
-**Always raise module-specific exceptions in service layers**, not HTTP exceptions:
+**Always raise module-specific exceptions in service layers**, not
+HTTP exceptions:
 
 ```python
 from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
 
 class UserService:
     async def create_user(self, user_create: UserCreate) -> User:
-        # Check for conflicts
         existing = await self.repository.get_by_email(user_create.email)
         if existing:
             raise DuplicateEmailError(email=user_create.email)
-
         return await self.repository.create(user_create)
 
     async def get_user(self, user_id: uuid.UUID) -> User:
@@ -138,37 +213,53 @@ class UserService:
 
 ## Global Exception Handlers
 
-The [`quoin_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) automatically converts `QuoinError` exceptions to JSON responses:
+The
+[`quoin_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
+automatically converts `QuoinError` exceptions to RFC 9457 responses:
 
 ```python
 async def quoin_exception_handler(
-    request: Request, exc: QuoinError
+    request: Request, exc: Any
 ) -> Response:
-    return JSONResponse(
+    problem = ProblemDetail(
+        type=_problem_type(exc),
+        title=_problem_title(exc.status_code),
+        status=exc.status_code,
+        detail=exc.message,
+        instance=request.url.path,
+    )
+    return Response(
+        content=problem.model_dump_json(exclude_none=True),
         status_code=exc.status_code,
-        content={"detail": exc.message},
+        media_type="application/problem+json",
         headers=exc.headers,
     )
 ```
 
-The [`validation_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) handles Pydantic validation errors:
+The `validation_exception_handler` handles Pydantic validation errors
+and includes the `errors` array:
 
 ```python
 async def validation_exception_handler(
-    request: Request, exc: ValidationError
+    request: Request, exc: Any
 ) -> Response:
-    logger.warning(
-        "validation_error",
+    problem = ProblemDetail(
+        type="urn:quoin:error:validation_error",
+        title="Unprocessable Entity",
+        status=422,
+        detail="Request validation failed",
+        instance=request.url.path,
         errors=exc.errors(),
-        path=request.url.path,
     )
-    return JSONResponse(
+    return Response(
+        content=problem.model_dump_json(exclude_none=True),
         status_code=422,
-        content={"detail": exc.errors()},
+        media_type="application/problem+json",
     )
 ```
 
-These handlers are registered in [`main.py`](https://github.com/balakmran/quoin-api/blob/main/app/main.py):
+These handlers are registered in
+[`main.py`](https://github.com/balakmran/quoin-api/blob/main/app/main.py):
 
 ```python
 from app.core.exception_handlers import add_exception_handlers
@@ -179,36 +270,10 @@ add_exception_handlers(app)
 
 ---
 
-## Error Response Format
-
-All errors return a consistent JSON structure:
-
-```json
-{
-  "detail": "Email 'existing@example.com' is already registered"
-}
-```
-
-Example API error response with rich context:
-
-```bash
-POST /api/v1/users/
-{
-  "email": "existing@example.com",
-  "full_name": "John Doe"
-}
-
-# Response: 409 Conflict
-{
-  "detail": "Email 'existing@example.com' is already registered"
-}
-```
-
----
-
 ## Creating Custom Module Exceptions
 
-For new modules, create an `exceptions.py` file with domain-specific errors:
+For new modules, create an `exceptions.py` file with domain-specific
+errors:
 
 ```python
 # app/modules/billing/exceptions.py
@@ -231,82 +296,62 @@ class InvoiceNotFoundError(NotFoundError):
         )
 ```
 
-Then use in services:
+The resulting error responses will automatically use the derived URN
+type — no handler registration needed:
 
-```python
-from app.modules.billing.exceptions import PaymentFailedError
-
-class BillingService:
-    async def charge(self, payment_id: str, amount: Decimal) -> Payment:
-        try:
-            result = await self.gateway.charge(amount)
-        except GatewayError as e:
-            raise PaymentFailedError(payment_id=payment_id, reason=str(e))
-        return result
+```json
+{
+  "type": "urn:quoin:error:payment_failed_error",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Payment 'pay_abc' failed: card declined",
+  "instance": "/api/v1/billing/pay_abc/charge"
+}
 ```
 
 ---
 
 ## Logging
 
-All `QuoinError` exceptions are automatically logged with structured logging:
+All `QuoinError` exceptions are automatically logged with structured
+logging before the response is sent:
 
 ```json
 {
   "event": "quoin_error",
-  "message": "User with ID 'f47ac10b-58cc-4372-a567-0e02b2c3d479' not found",
+  "message": "User with ID 'f47ac10b' not found",
   "status_code": 404,
-  "path": "/api/v1/users/f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "timestamp": "2026-02-16T15:30:00.000000",
+  "path": "/api/v1/users/f47ac10b",
   "level": "warning"
 }
 ```
 
 ---
 
-## Validation Errors
+## OpenAPI Documentation
 
-FastAPI's built-in validation errors (from Pydantic) are handled automatically:
+Routes declare their error responses using `ProblemDetail` as the
+model:
 
-```bash
-POST /api/v1/users/
-{
-    "email": "not-an-email",
-    "full_name": "John Doe"
-}
+```python
+from app.core.schemas import ProblemDetail
 
-# Response: 422 Unprocessable Entity
-{
-    "detail": [
-        {
-            "type": "value_error",
-            "loc": ["body", "email"],
-            "msg": "value is not a valid email address",
-            "input": "not-an-email"
-    }
-  ]
-}
+@router.get(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={
+        404: {
+            "model": ProblemDetail,
+            "description": "User not found",
+        }
+    },
+)
+async def get_user(...) -> User:
+    ...
 ```
 
----
-
-## Best Practices
-
-### ✅ Do
-
-- Create module-specific exception classes that inherit from core exceptions
-- Include relevant context (IDs, values) in exception messages
-- Raise domain exceptions from services with rich context
-- Use descriptive error messages that help debugging
-- Let the global handlers convert exceptions to HTTP responses
-
-### ❌ Don't
-
-- Raise `HTTPException` from services or repositories
-- Use generic exceptions like `ValueError` or `RuntimeError`
-- Return error responses directly from services
-- Catch exceptions in routes (let handlers do it)
-- Use base `QuoinError` directly (use specific subclasses or create custom ones)
+This ensures the OpenAPI schema correctly documents the RFC 9457
+response shape for every error status code.
 
 ---
 
@@ -326,25 +371,27 @@ async def test_get_user_not_found(user_service):
     assert exc_info.value.status_code == 404
 ```
 
-For integration tests, validate the HTTP response:
+For integration tests, validate the full RFC 9457 response:
 
 ```python
 async def test_create_user_duplicate_email(client):
-    # Create first user
     await client.post("/api/v1/users/", json={
         "email": "test@example.com",
-        "full_name": "Test User"
+        "full_name": "Test User",
     })
 
-    # Try to create duplicate
     response = await client.post("/api/v1/users/", json={
         "email": "test@example.com",
-        "full_name": "Another User"
+        "full_name": "Another User",
     })
 
+    body = response.json()
     assert response.status_code == 409
-    assert "test@example.com" in response.json()["detail"]
-    assert "already registered" in response.json()["detail"]
+    assert response.headers["content-type"] == "application/problem+json"
+    assert body["type"] == "urn:quoin:error:duplicate_email_error"
+    assert body["status"] == 409
+    assert "test@example.com" in body["detail"]
+    assert body["instance"] == "/api/v1/users/"
 ```
 
 ---
@@ -353,5 +400,6 @@ async def test_create_user_duplicate_email(client):
 
 - [Core Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py) — Source code
 - [Exception Handlers](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) — Handler implementation
+- [ProblemDetail Schema](https://github.com/balakmran/quoin-api/blob/main/app/core/schemas.py) — RFC 9457 response model
 - [User Module Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/exceptions.py) — Example module exceptions
-- [User Service Example](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/service.py) — Real-world usage
+- [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) — Problem Details for HTTP APIs

@@ -35,10 +35,13 @@ async def test_create_user_duplicate_email(admin_client: AsyncClient) -> None:
         "/api/v1/users/",
         json={"email": "duplicate@example.com", "full_name": "User 2"},
     )
+    body = response.json()
     assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.headers["content-type"] == "application/problem+json"
+    assert body["type"] == "urn:quoin:error:duplicate_email_error"
+    assert body["status"] == status.HTTP_409_CONFLICT
     assert (
-        response.json()["detail"]
-        == "Email 'duplicate@example.com' is already registered"
+        body["detail"] == "Email 'duplicate@example.com' is already registered"
     )
 
 
