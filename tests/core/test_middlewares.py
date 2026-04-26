@@ -43,7 +43,20 @@ async def test_timeout_middleware_fast_request_passes(
     timeout_app: FastAPI,
 ) -> None:
     """Fast requests complete normally under the configured timeout."""
-    with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 5.0):
+    async with AsyncClient(
+        transport=ASGITransport(app=timeout_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/fast")
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.asyncio
+async def test_timeout_middleware_disabled_when_zero(
+    timeout_app: FastAPI,
+) -> None:
+    """Setting timeout to 0 disables the middleware (slow request passes)."""
+    with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 0):
         async with AsyncClient(
             transport=ASGITransport(app=timeout_app), base_url="http://test"
         ) as ac:

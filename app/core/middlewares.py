@@ -36,6 +36,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             Details response if the deadline is exceeded.
         """
         timeout = settings.REQUEST_TIMEOUT_SECONDS
+        if timeout <= 0:
+            return await call_next(request)
         try:
             with anyio.fail_after(timeout):
                 return await call_next(request)
@@ -98,11 +100,16 @@ def configure_trusted_hosts(app: FastAPI) -> None:
 
 
 def configure_middlewares(app: FastAPI) -> None:
-    """Configure all application middlewares."""
+    """Configure all application middlewares.
+
+    Middleware is registered in innermost-first order (add_middleware is
+    LIFO): TimeoutMiddleware is added last so it becomes the outermost
+    layer and wraps the entire request lifecycle.
+    """
     configure_cors(app)
     configure_trusted_hosts(app)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(TimeoutMiddleware)
+    app.add_middleware(TimeoutMiddleware)  # outermost — added last
 
 
 __all__ = [

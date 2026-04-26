@@ -163,7 +163,7 @@ limit, the middleware cancels it and returns a 504 RFC 9457 response:
 ```
 
 The timeout is configurable via `QUOIN_REQUEST_TIMEOUT_SECONDS`
-(default: `30.0`):
+(default: `30.0`; set to `0` or negative to disable):
 
 ```bash
 # .env
