@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Awaitable, Callable
 
+import anyio
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,50 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.core.config import settings
+from app.core.exception_handlers import _problem_response
+from app.core.schemas import ProblemDetail
+
+logger = structlog.get_logger(__name__)
+
+
+class TimeoutMiddleware(BaseHTTPMiddleware):
+    """Enforce a per-request wall-clock timeout using anyio cancel scopes."""
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        """Cancel the request and return 504 if it exceeds the timeout.
+
+        Args:
+            request: The incoming request.
+            call_next: The next middleware or route handler.
+
+        Returns:
+            The response from the downstream handler, or a 504 Problem
+            Details response if the deadline is exceeded.
+        """
+        timeout = settings.REQUEST_TIMEOUT_SECONDS
+        if timeout <= 0:
+            return await call_next(request)
+        try:
+            with anyio.fail_after(timeout):
+                return await call_next(request)
+        except TimeoutError:
+            logger.warning(
+                "request_timeout",
+                path=request.url.path,
+                timeout=timeout,
+            )
+            problem = ProblemDetail(
+                type="urn:quoin:error:gateway_timeout_error",
+                title="Gateway Timeout",
+                status=504,
+                detail=f"Request exceeded {timeout}s timeout",
+                instance=request.url.path,
+            )
+            return _problem_response(problem, 504)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -55,14 +100,21 @@ def configure_trusted_hosts(app: FastAPI) -> None:
 
 
 def configure_middlewares(app: FastAPI) -> None:
-    """Configure all application middlewares."""
+    """Configure all application middlewares.
+
+    Middleware is registered in innermost-first order (add_middleware is
+    LIFO): TimeoutMiddleware is added last so it becomes the outermost
+    layer and wraps the entire request lifecycle.
+    """
     configure_cors(app)
     configure_trusted_hosts(app)
     app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(TimeoutMiddleware)  # outermost — added last
 
 
 __all__ = [
     "RequestIDMiddleware",
+    "TimeoutMiddleware",
     "configure_cors",
     "configure_middlewares",
     "configure_trusted_hosts",

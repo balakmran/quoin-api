@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Operability**: `TimeoutMiddleware` — per-request wall-clock timeout
+  using `anyio.fail_after()`; configurable via
+  `QUOIN_REQUEST_TIMEOUT_SECONDS` (default 30 s); returns 504 RFC 9457
+  `GatewayTimeoutError` on breach. `anyio` cancel scopes are used
+  instead of `asyncio.wait_for()` to guarantee cancellation of nested
+  async calls.
+- **Errors**: `GatewayTimeoutError` (504) domain exception.
 - **Errors**: RFC 9457 Problem Details — all error responses now return
   `Content-Type: application/problem+json` with `type` (URN derived from
   the exception class), `title` (standard HTTP phrase), `status`, `detail`,

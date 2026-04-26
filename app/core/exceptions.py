@@ -146,3 +146,22 @@ class ServiceUnavailableError(QuoinError):
     ) -> None:
         """Initialize ServiceUnavailableError."""
         super().__init__(message, status_code=503, headers=headers)
+
+
+class GatewayTimeoutError(QuoinError):
+    """Gateway Timeout — request exceeded the configured wall-clock limit.
+
+    Note: TimeoutMiddleware builds the 504 RFC 9457 response directly
+    rather than raising this exception, because BaseHTTPMiddleware runs
+    outside the ExceptionMiddleware layer where registered handlers live.
+    This class exists for use in service/route code and for type-safe
+    construction of timeout error details.
+    """
+
+    def __init__(
+        self,
+        message: str = "Request timed out",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize GatewayTimeoutError."""
+        super().__init__(message, status_code=504, headers=headers)

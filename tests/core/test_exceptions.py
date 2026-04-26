@@ -13,6 +13,7 @@ from app.core.exceptions import (
     BadRequestError,
     ConflictError,
     ForbiddenError,
+    GatewayTimeoutError,
     InternalServerError,
     NotFoundError,
     QuoinError,
@@ -88,6 +89,10 @@ def test_problem_type_known_exceptions() -> None:
     assert (
         _problem_type(ServiceUnavailableError())
         == "urn:quoin:error:service_unavailable_error"
+    )
+    assert (
+        _problem_type(GatewayTimeoutError())
+        == "urn:quoin:error:gateway_timeout_error"
     )
 
 
@@ -183,6 +188,21 @@ def test_service_unavailable_error_init() -> None:
     assert err_custom.message == "DB down"
     assert err_custom.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert err_custom.headers == {"Retry-After": "30"}
+
+
+def test_gateway_timeout_error_init() -> None:
+    """GatewayTimeoutError sets status 504 and default message."""
+    err = GatewayTimeoutError()
+    assert err.message == "Request timed out"
+    assert err.status_code == status.HTTP_504_GATEWAY_TIMEOUT
+    assert err.headers is None
+
+    err_custom = GatewayTimeoutError(
+        message="Upstream timed out", headers={"Retry-After": "5"}
+    )
+    assert err_custom.message == "Upstream timed out"
+    assert err_custom.status_code == status.HTTP_504_GATEWAY_TIMEOUT
+    assert err_custom.headers == {"Retry-After": "5"}
 
 
 @pytest.mark.asyncio
