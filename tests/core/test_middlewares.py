@@ -32,7 +32,7 @@ def timeout_app() -> FastAPI:
 
     @app.get("/slow")
     async def slow_endpoint() -> dict[str, str]:
-        await anyio.sleep(10)
+        await anyio.sleep(0.5)
         return {"ok": "true"}
 
     return app
@@ -78,7 +78,7 @@ async def test_timeout_middleware_integration_real_app() -> None:
 
     @app.get("/test-timeout-slow")
     async def _slow() -> dict[str, str]:
-        await anyio.sleep(10)
+        await anyio.sleep(0.5)
         return {}
 
     with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 0.05):
