@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     ENV: Environment = Environment.development
     LOG_LEVEL: str = "INFO"
     OTEL_ENABLED: bool = True
+    REQUEST_ID_HEADER: str = "X-Request-ID"
 
     # Database
     POSTGRES_DRIVER: str = "postgresql+asyncpg"

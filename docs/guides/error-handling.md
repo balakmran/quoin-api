@@ -6,14 +6,15 @@ exception handlers, and best practices for error management.
 
 ## Exception Quick Reference
 
-| Exception             | Status | Use Case                                  |
-| :-------------------- | :----: | :---------------------------------------- |
-| `BadRequestError`     | 400    | Invalid request data or parameters        |
-| `ForbiddenError`      | 403    | Insufficient permissions                  |
-| `NotFoundError`       | 404    | Resource not found                        |
-| `ConflictError`       | 409    | Resource conflict (e.g., duplicate email) |
-| `InternalServerError` | 500    | Unexpected server errors                  |
-| `QuoinRequestValidationError` | 422 | Pydantic validation errors (internal) |
+| Exception                     | Status | Use Case                                  |
+| :---------------------------- | :----: | :---------------------------------------- |
+| `BadRequestError`             | 400    | Invalid request data or parameters        |
+| `ForbiddenError`              | 403    | Insufficient permissions                  |
+| `NotFoundError`               | 404    | Resource not found                        |
+| `ConflictError`               | 409    | Resource conflict (e.g., duplicate email) |
+| `QuoinRequestValidationError` | 422    | Pydantic validation errors (internal)     |
+| `InternalServerError`         | 500    | Unexpected server errors                  |
+| `ServiceUnavailableError`     | 503    | Required dependency unreachable           |
 
 All inherit from `QuoinError`. Import from `app.core.exceptions`.
 
@@ -63,8 +64,16 @@ class QuoinError(Exception):
 | `ForbiddenError`              | 403         | Insufficient permissions                  |
 | `NotFoundError`               | 404         | Resource not found                        |
 | `ConflictError`               | 409         | Resource conflict (e.g., duplicate email) |
-| `InternalServerError`         | 500         | Unexpected server errors                  |
 | `QuoinRequestValidationError` | 422         | Pydantic validation errors                |
+| `InternalServerError`         | 500         | Unexpected server errors                  |
+| `ServiceUnavailableError`     | 503         | Required dependency unreachable           |
+
+!!! tip "503 vs 500"
+    Use `ServiceUnavailableError` when a required external dependency
+    (database, cache, downstream API) is unreachable and the request
+    cannot be retried locally. Use `InternalServerError` for unexpected
+    failures within your own code. The distinction matters for callers:
+    503 signals "retry later", 500 signals "something is broken here".
 
 ---
 

@@ -146,6 +146,34 @@ async def process_order(order_id: str):
 All three log statements will automatically include `order_id` and
 `user_id`.
 
+### Request ID
+
+Every request is assigned a unique ID and bound to the log context
+automatically by `RequestIDMiddleware`. No code is required in routes
+or services — the field appears in every log event for that request.
+
+```json
+{
+  "event": "user_created",
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "level": "info"
+}
+```
+
+The middleware reads the ID from the incoming request header, or
+generates a `uuid4()` if the header is absent. The same header is
+echoed back on the response so clients can correlate their own logs.
+
+The header name defaults to `X-Request-ID` and is configurable:
+
+```bash
+# .env
+QUOIN_REQUEST_ID_HEADER=X-Correlation-ID
+```
+
+This affects both the inbound lookup and the outbound response header,
+so callers and the application always agree on the name.
+
 ---
 
 ## OpenTelemetry Tracing
