@@ -17,6 +17,7 @@ from app.core.middlewares import (
     configure_middlewares,
     configure_trusted_hosts,
 )
+from app.main import create_app
 
 
 @pytest.fixture
@@ -68,6 +69,30 @@ async def test_timeout_middleware_slow_request_returns_504(
     assert body["type"] == "urn:quoin:error:gateway_timeout_error"
     assert body["status"] == status.HTTP_504_GATEWAY_TIMEOUT
     assert body["instance"] == "/slow"
+
+
+@pytest.mark.asyncio
+async def test_timeout_middleware_integration_real_app() -> None:
+    """Timeout fires through the full create_app() middleware stack."""
+    app = create_app()
+
+    @app.get("/test-timeout-slow")
+    async def _slow() -> dict[str, str]:
+        await anyio.sleep(10)
+        return {}
+
+    with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 0.05):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get("/test-timeout-slow")
+
+    assert response.status_code == status.HTTP_504_GATEWAY_TIMEOUT
+    assert response.headers["content-type"] == "application/problem+json"
+    body = response.json()
+    assert body["type"] == "urn:quoin:error:gateway_timeout_error"
+    assert body["status"] == status.HTTP_504_GATEWAY_TIMEOUT
+    assert body["instance"] == "/test-timeout-slow"
 
 
 def test_configure_cors_enabled() -> None:
