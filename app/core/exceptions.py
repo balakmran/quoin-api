@@ -146,3 +146,15 @@ class ServiceUnavailableError(QuoinError):
     ) -> None:
         """Initialize ServiceUnavailableError."""
         super().__init__(message, status_code=503, headers=headers)
+
+
+class GatewayTimeoutError(QuoinError):
+    """Gateway Timeout — request exceeded the configured wall-clock limit."""
+
+    def __init__(
+        self,
+        message: str = "Request timed out",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize GatewayTimeoutError."""
+        super().__init__(message, status_code=504, headers=headers)

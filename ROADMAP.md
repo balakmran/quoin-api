@@ -34,27 +34,28 @@ existing OpenTelemetry setup and closes the gap between "the app runs" and
 
 | Status | Feature |
 | :----- | :------ |
-| 📋 | **Request ID middleware** — Generate/propagate `X-Request-ID` and bind it to the structlog context per request |
-| 📋 | **Trace/log correlation** — Inject `trace_id` and `span_id` from the active OTel span into every structlog event |
 | 📋 | **OTel Metrics** — Add `MeterProvider` alongside the existing `TracerProvider`; export via OTLP or Prometheus |
 | 📋 | **`/metrics` endpoint** — Expose a Prometheus-compatible scrape endpoint in the `system` module |
-| 📋 | **Liveness vs readiness split** — Separate `/healthz` (process up) from `/readyz` (DB + dependencies reachable) |
-| 📋 | **`application/problem+json` errors** — RFC 7807 envelope wired into the global `QuoinError` handler |
-| 📋 | **Request timeouts + graceful shutdown** — Per-request timeout middleware and in-flight request drain on SIGTERM |
+| 📋 | **Request timeouts** — Per-request wall-clock timeout middleware using `anyio.fail_after()`; configurable via `QUOIN_REQUEST_TIMEOUT_SECONDS`; returns 504 RFC 9457 |
 | 📋 | **Audit log** — Append-only `audit` table and service for who-did-what-when, distinct from app logs |
 | 📋 | **SLOs + alert rules** — SLO doc plus checked-in alert rules YAML for latency, error rate, and saturation |
 
 ---
 
-## v0.8.0 — Security & Supply Chain
+## v0.8.0 — Security & Production Hardening
 
-The procurement gate. Brings the repo to a state where a security review
-won't surface obvious gaps and a dependency CVE won't ship to production
-unnoticed.
+The procurement gate plus the production-readiness gate. Brings the repo
+to a state where a security review won't surface obvious gaps, a
+dependency CVE won't ship unnoticed, and the service can talk to outside
+systems and survive load without falling over.
 
 | Status | Feature |
 | :----- | :------ |
-| 📋 | **Rate limiting** — Integrate `slowapi` as middleware; configure per-route limits declaratively |
+| 📋 | **Outbound HTTP client** — Shared `httpx.AsyncClient` lifecycle-managed in lifespan; retries with exponential backoff (`tenacity`); circuit breaker (`pybreaker`); OTel-instrumented |
+| 📋 | **Request size caps** — Starlette middleware enforcing a configurable max request body size; returns 413 RFC 9457 |
+| 📋 | **Rate limiting** — `slowapi` middleware with per-IP and per-token (JWT subject) limits; in-memory backend for dev, Redis for production |
+| 📋 | **Idempotency keys** — `Idempotency-Key` header support for non-GET mutations; Redis-backed response cache with TTL; dedupes retries on POST/PUT/PATCH/DELETE |
+| 📋 | **Graceful shutdown** — In-flight request drain on SIGTERM; in-app counter middleware + lifespan wait with `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`; switch dev/prod runner from `fastapi` CLI to `uvicorn` for graceful shutdown control |
 | 📋 | **Audit fields** — Add `last_login_at` to `User`; propagate actor identity into the audit log on every mutation |
 | 📋 | **Supply chain scanning in CI** — `pip-audit`, Trivy (image), Semgrep (SAST), and gitleaks (secrets) on every PR |
 | 📋 | **Security headers middleware** — HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
@@ -76,7 +77,6 @@ risks breaking downstream consumers, so the contract decisions land here.
 | 📋 | **Soft delete** — Wire `User.is_active = False` semantics into `delete_user`; add `deleted_at` timestamp |
 | 📋 | **Pagination/filter/sort envelope** — Standard list-response shape and query-parameter conventions across all modules |
 | 📋 | **ETag / `If-Match`** — Optimistic concurrency control on update endpoints |
-| 📋 | **Idempotency keys** — DB-backed idempotency-key store for non-GET mutations |
 | 📋 | **Versioning + deprecation policy** — `Sunset` and `Deprecation` headers; documented policy beyond the `/api/v1` prefix |
 
 ---
@@ -98,7 +98,6 @@ schema changes from causing downtime.
 | 📋 | **Blue/green or canary deploy workflow** — Sample workflow + doc for staged rollouts |
 | 📋 | **Rollback runbook** — Tied to image tag; tested as part of the release ritual |
 | 📋 | **Incident + post-mortem templates** — Markdown templates under `docs/runbooks/` |
-| 📋 | **Shared outbound HTTP client** — `httpx`-based client with timeouts, retries, backoff, and circuit breaker |
 | 📋 | **Zero-downtime migration playbook** — Expand/contract patterns documented; `migrate-gen` guard flags destructive operations for review |
 | 📋 | **Backup + PITR runbook** — Documented procedure with a quarterly restore drill |
 
@@ -128,7 +127,7 @@ real-world demand for each is clearer.
 | Status | Feature |
 | :----- | :------ |
 | 💡 | **ARQ background jobs** — Persistent async task queue for emails, webhooks, long-running work |
-| 💡 | **Redis cache layer** — Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale |
+| 💡 | **Redis cache layer** — General-purpose response/data caching helpers on top of the existing Redis client used for rate limiting and idempotency |
 | 💡 | **Multi-tenancy pattern** — Tenant-scoped query pattern with an example module |
 | 💡 | **Organizations + memberships + scopes** — Richer authorization model beyond `require_roles` |
 | 💡 | **API keys** — Hashed at rest, scoped, rotatable; for service-to-service callers |

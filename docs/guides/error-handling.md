@@ -16,6 +16,7 @@ exception handlers, and best practices for error management.
 | `QuoinRequestValidationError` | 422    | Pydantic validation errors (internal)     |
 | `InternalServerError`         | 500    | Unexpected server errors                  |
 | `ServiceUnavailableError`     | 503    | Required dependency unreachable           |
+| `GatewayTimeoutError`         | 504    | Request exceeded the configured timeout   |
 
 All inherit from `QuoinError`. Import from `app.core.exceptions`.
 
@@ -134,6 +135,7 @@ class QuoinError(Exception):
 | `QuoinRequestValidationError` | 422         | Pydantic validation errors                |
 | `InternalServerError`         | 500         | Unexpected server errors                  |
 | `ServiceUnavailableError`     | 503         | Required dependency unreachable           |
+| `GatewayTimeoutError`         | 504         | Request exceeded the configured timeout   |
 
 !!! tip "503 vs 500"
     Use `ServiceUnavailableError` when a required external dependency
@@ -141,6 +143,37 @@ class QuoinError(Exception):
     cannot be retried locally. Use `InternalServerError` for unexpected
     failures within your own code. The distinction matters for callers:
     503 signals "retry later", 500 signals "something is broken here".
+
+---
+
+## Request Timeouts
+
+`TimeoutMiddleware` enforces a per-request wall-clock limit using an
+`anyio` cancel scope. If a request takes longer than the configured
+limit, the middleware cancels it and returns a 504 RFC 9457 response:
+
+```json
+{
+  "type": "urn:quoin:error:gateway_timeout_error",
+  "title": "Gateway Timeout",
+  "status": 504,
+  "detail": "Request exceeded 30.0s timeout",
+  "instance": "/api/v1/users/"
+}
+```
+
+The timeout is configurable via `QUOIN_REQUEST_TIMEOUT_SECONDS`
+(default: `30.0`):
+
+```bash
+# .env
+QUOIN_REQUEST_TIMEOUT_SECONDS=10.0
+```
+
+`anyio.fail_after()` is used instead of `asyncio.wait_for()` because
+cancel scopes reliably propagate cancellation through nested async
+calls, avoiding the race condition where `wait_for` can leave a
+coroutine running after the deadline.
 
 ---
 

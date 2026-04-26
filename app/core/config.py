@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     OTEL_ENABLED: bool = True
     REQUEST_ID_HEADER: str = "X-Request-ID"
+    REQUEST_TIMEOUT_SECONDS: float = 30.0
 
     # Database
     POSTGRES_DRIVER: str = "postgresql+asyncpg"
