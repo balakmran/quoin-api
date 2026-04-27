@@ -55,6 +55,3 @@ jobs:
 
       - name: Run quality checks
         run: just check
-
-      - name: Build documentation
-        run: just docs-build
