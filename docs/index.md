@@ -46,7 +46,7 @@ architectural integrity, type safety, and observability.
 - **Environment-based configuration** with `.env` file selection
 - **Just-based automation** for common development tasks
 
-## Tech Stack & Tools
+## Tech Stack
 
 - **Framework:** FastAPI
 - **Database:** PostgreSQL (using `asyncpg` driver)
