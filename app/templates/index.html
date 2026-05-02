@@ -364,209 +364,124 @@
             updateStatusLED('/ready', 'ready');
         }, 10000);
 
-        // Three.js Quoin Foundation Backbone
-        const initCornerstone = () => {
+        const initBackground = () => {
             const canvas = document.getElementById('bg-canvas');
             const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x06111f, 0.002);
+            scene.fog = new THREE.FogExp2(0x06111f, 0.003);
 
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            camera.position.z = 220;
 
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-            // Lighting for the 3D block
-            const ambientLight = new THREE.AmbientLight(0x0c4a6e, 2.5); // Darker ambient to emphasize the spotlight
-            scene.add(ambientLight);
-
-            // Interactive mouse spotlight!
-            const spotlight = new THREE.PointLight(0x38bdf8, 12, 1000); // intense brightness
-            spotlight.position.set(0, 0, 200);
+            scene.add(new THREE.AmbientLight(0x0c4a6e, 3));
+            const spotlight = new THREE.PointLight(0x38bdf8, 14, 900);
+            spotlight.position.set(0, 60, 180);
             scene.add(spotlight);
 
-            const group = new THREE.Group();
-            scene.add(group);
+            const blockMat = new THREE.MeshStandardMaterial({
+                color: 0x0ea5e9, emissive: 0x0ea5e9, emissiveIntensity: 0.4,
+                metalness: 0.85, roughness: 0.15,
+            });
+            const wireMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
 
-            const coreMaterial = new THREE.MeshStandardMaterial({
-                color: 0x082f49,
-                metalness: 0.6,
-                roughness: 0.2,
+            const sizes = [
+                [40,16,16],[16,40,16],[16,16,40],[28,28,12],[12,28,28],
+                [22,12,34],[34,14,14],[14,34,14],[18,18,18],[28,10,20],
+                [10,28,20],[20,20,10],[24,12,24],[12,24,12],[30,12,18],[18,30,12],
+            ];
+
+            const blocks = sizes.map((dims, i) => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(...dims), blockMat);
+                const wire = new THREE.LineSegments(
+                    new THREE.EdgesGeometry(new THREE.BoxGeometry(dims[0]+0.5, dims[1]+0.5, dims[2]+0.5)),
+                    wireMat
+                );
+                const c = new THREE.Group();
+                c.add(mesh, wire);
+                const side = i % 2 === 0 ? -1 : 1;
+                c.position.set(
+                    side * (80 + Math.random() * 150),
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200 - 40
+                );
+                c.userData = {
+                    floatOffset: Math.random() * Math.PI * 2,
+                    floatSpeed: 0.4 + Math.random() * 0.4,
+                    floatAmp: 6 + Math.random() * 10,
+                    rotSpeed: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.006,
+                        (Math.random() - 0.5) * 0.006,
+                        (Math.random() - 0.5) * 0.004
+                    ),
+                    baseY: c.position.y,
+                };
+                scene.add(c);
+                return c;
             });
 
-            const highlightMaterial = new THREE.MeshStandardMaterial({
-                color: 0x0ea5e9,
-                emissive: 0x0ea5e9,
-                emissiveIntensity: 0.5,
-                metalness: 0.8,
-                roughness: 0.1,
-            });
-
-            const lineMaterial = new THREE.LineBasicMaterial({
-                color: 0x38bdf8,
-                transparent: true,
-                opacity: 0.5,
-                linewidth: 2
-            });
-
-            const highlightLineMaterial = new THREE.LineBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.9,
-                linewidth: 2
-            });
-
-            // Mathematical construction of the Flat Wall & Protruding Quoins precisely matching the reference image.
-
-            // 1. Static Flat Wall (L-shaped intersection)
-            const numQuoins = 5;
-            const h = 26;
-            const gap = 3;
-            // Wall is exactly as tall as the 5 quoins and their gaps
-            const wallH = numQuoins * (h + gap) - gap;
-
-            const wallGroup = new THREE.Group();
-
-            // Wall on X-axis (centered perfectly on Z to allow equal front/back protrusion)
-            const wallX = new THREE.Mesh(new THREE.BoxGeometry(100, wallH, 12), coreMaterial);
-            const wallXWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(100.5, wallH+0.5, 12.5)), lineMaterial);
-            wallX.position.set(50, 0, 0);
-            wallXWire.position.copy(wallX.position);
-            wallGroup.add(wallX);
-            wallGroup.add(wallXWire);
-
-            // Wall on Z-axis (centered perfectly on X)
-            const wallZ = new THREE.Mesh(new THREE.BoxGeometry(12, wallH, 100), coreMaterial);
-            const wallZWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(12.5, wallH+0.5, 100.5)), lineMaterial);
-            wallZ.position.set(0, 0, -50);
-            wallZWire.position.copy(wallZ.position);
-            wallGroup.add(wallZ);
-            wallGroup.add(wallZWire);
-
-            group.add(wallGroup);
-
-            // 2. Protruding Cornerstones (Alternating Quoins)
-            const smallBlocks = [];
-            const qGroup = new THREE.Group();
-
-            // Center the stack vertically relative to the wall
-            const startY = -(wallH / 2) + (h/2);
-
-            for (let y = 0; y < numQuoins; y++) {
-                const isEven = (y % 2 === 0);
-
-                // Logic based on physical masonry overlap at an outer corner
-                // The wall thickness is 12. Quoins are 20 thick, protruding 4 units uniformly on ALL sides.
-                // This ensures they are perfectly visible 360 degrees whether looking at the front or back of the wall.
-                // Even layers run long along X (width=80, depth=20, offset to wrap the Z corner).
-                // Odd layers run long along Z (width=20, depth=80, offset to wrap the X corner).
-                const w = isEven ? 80 : 20;
-                const d = isEven ? 20 : 80;
-                const cx = isEven ? 30 : 0;
-                const cz = isEven ? 0 : -30;
-
-                const qb = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), highlightMaterial);
-                const qWire = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w+0.5, h+0.5, d+0.5)), highlightLineMaterial);
-
-                const bGroup = new THREE.Group();
-                bGroup.add(qb);
-                bGroup.add(qWire);
-
-                bGroup.position.set(cx, startY + y * (h + gap), cz);
-                bGroup.userData = { offset: y * 0.5, basePos: bGroup.position.clone() };
-
-                qGroup.add(bGroup);
-                smallBlocks.push(bGroup);
+            const particleCount = 140;
+            const pPos = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                pPos[i*3]   = (Math.random() - 0.5) * 420;
+                pPos[i*3+1] = (Math.random() - 0.5) * 420 - 60;
+                pPos[i*3+2] = (Math.random() - 0.5) * 420;
             }
-            group.add(qGroup);
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({
+                color: 0x0ea5e9, size: 2.5, transparent: true, opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+            })));
 
-            // Shift entire foundation group left and forward to keep the visual balance
-            group.children.forEach(child => {
-                child.position.x -= 20;
-                child.position.z += 20;
-            });
-
-            // Add floating data particles representing the API flowing from foundation
-            const particleGeometry = new THREE.BufferGeometry();
-            const particleCount = 120;
-            const pos = new Float32Array(particleCount * 3);
-            for(let i=0; i<particleCount; i++) {
-                pos[i*3] = (Math.random() - 0.5) * 350;
-                pos[i*3+1] = (Math.random() - 0.5) * 350 - 50;
-                pos[i*3+2] = (Math.random() - 0.5) * 350;
-            }
-            particleGeometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            const particleMaterial = new THREE.PointsMaterial({
-                color: 0x0ea5e9,
-                size: 2.5,
-                transparent: true,
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending
-            });
-            const particles = new THREE.Points(particleGeometry, particleMaterial);
-            scene.add(particles);
-
-            // Position group further to the left to avoid center overlap
-            group.position.set(-240, 30, -80);
-
-            camera.position.z = 240;
-
-            let targetX = 0;
-            let targetY = 0;
+            let targetX = 0, targetY = 0;
             document.addEventListener('mousemove', (e) => {
-                targetX = (e.clientX - window.innerWidth / 2) * 0.05;
-                targetY = (e.clientY - window.innerHeight / 2) * 0.05;
+                targetX = (e.clientX - window.innerWidth / 2) * 0.04;
+                targetY = (e.clientY - window.innerHeight / 2) * 0.04;
             });
-
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
-            const animate = function () {
+            const animate = () => {
                 requestAnimationFrame(animate);
-
-                // Slow majestic rotation of the cornerstone foundation
-                group.rotation.y -= 0.002;
-                group.rotation.x = Math.sin(Date.now() * 0.0005) * 0.05;
-
-                // Unique movement for small blocks (levitation only, locked rotation)
                 const time = Date.now() * 0.001;
-                smallBlocks.forEach((sb, idx) => {
-                    sb.position.y = sb.userData.basePos.y + Math.sin(time + sb.userData.offset) * 8;
+
+                blocks.forEach(b => {
+                    const d = b.userData;
+                    b.position.y = d.baseY + Math.sin(time * d.floatSpeed + d.floatOffset) * d.floatAmp;
+                    b.rotation.x += d.rotSpeed.x;
+                    b.rotation.y += d.rotSpeed.y;
+                    b.rotation.z += d.rotSpeed.z;
                 });
 
-                // Float particles up like data streams (slowed down)
-                const pAttr = particleGeometry.attributes.position;
-                for(let i=0; i<particleCount; i++) {
-                    pAttr.array[i*3+1] += 0.15;
-                    if(pAttr.array[i*3+1] > 200) {
-                        pAttr.array[i*3+1] = -200;
-                    }
+                const pAttr = pGeo.attributes.position;
+                for (let i = 0; i < particleCount; i++) {
+                    pAttr.array[i*3+1] += 0.12;
+                    if (pAttr.array[i*3+1] > 220) pAttr.array[i*3+1] = -220;
                 }
                 pAttr.needsUpdate = true;
 
-                // Mouse parallax
                 camera.position.x += (targetX - camera.position.x) * 0.05;
                 camera.position.y += (-targetY - camera.position.y) * 0.05;
                 camera.lookAt(scene.position);
 
-                // Interactive Light Tracking (follows cursor smoothly in 3D space)
-                spotlight.position.x += (targetX * 12 - spotlight.position.x) * 0.1;
-                spotlight.position.y += (-targetY * 12 + 50 - spotlight.position.y) * 0.1;
+                spotlight.position.x += (targetX * 10 - spotlight.position.x) * 0.08;
+                spotlight.position.y += (-targetY * 10 + 60 - spotlight.position.y) * 0.08;
 
                 renderer.render(scene, camera);
             };
-
             animate();
         };
 
-        // Initialize when DOM is loaded
         if (document.readyState === 'complete') {
-            initCornerstone();
+            initBackground();
         } else {
-            window.addEventListener('DOMContentLoaded', initCornerstone);
+            window.addEventListener('DOMContentLoaded', initBackground);
         }
     </script>
 </body>

@@ -1,9 +1,9 @@
 [project]
 site_name = "QuoinAPI"
 site_url = "https://balakmran.github.io/quoin-api/"
-site_description = "The architectural cornerstone for high-performance, scalable Python services"
+site_description = "Built for teams who ship, not configure. A production-ready FastAPI template."
 site_author = "Balakumaran Manoharan"
-copyright = "&copy; 2026 Balakumaran Manoharan"
+copyright = "&copy; 2026 balakmran"
 docs_dir = "docs"
 site_dir = "site"
 use_directory_urls = true
@@ -11,6 +11,7 @@ repo_url = "https://github.com/balakmran/quoin-api"
 repo_name = "balakmran/quoin-api"
 nav = [
     { "Home" = "index.md" },
+    { "Docs" = "docs.md" },
     { "Guides" = [
         { "Setup" = [
             { "Getting Started" = "guides/getting-started.md" },
@@ -52,10 +53,15 @@ nav = [
     ]},
 ]
 extra_css = ["stylesheets/extra.css"]
+extra_javascript = [
+    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
+    "javascripts/home.js",
+]
 
 [project.theme]
 name = "material"
 language = "en"
+logo = "assets/logo.svg"
 features = [
     "navigation.tabs",
     "navigation.tabs.sticky",

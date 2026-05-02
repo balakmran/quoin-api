@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0ea5e9" fill-opacity="0.15"/>
+  <text x="16" y="24" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="23" font-weight="800"
+        fill="#38bdf8">Q</text>
+</svg>
