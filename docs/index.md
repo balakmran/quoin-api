@@ -1,176 +1,128 @@
 ---
 title: Home
+hide:
+  - navigation
+  - toc
+  - footer
 ---
 
-# QuoinAPI
+<div class="quoin-home" markdown="0">
 
-[![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.135.3-teal.svg)](https://fastapi.tiangolo.com/)
-[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+<canvas id="quoin-bg-canvas" aria-hidden="true"></canvas>
 
-![QuoinAPI](assets/images/quoin-api-banner.png)
+<section class="quoin-hero">
+  <h1 class="quoin-hero__title">The Foundation for your<br>Python backend API</h1>
 
-> **The architectural cornerstone for high-performance, scalable Python services.**
+  <p class="quoin-hero__tagline">
+    Built for teams who ship, not configure.
+  </p>
 
-**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation
-designed to serve as the structural cornerstone for modern Python backends.
-Built with **FastAPI**, **SQLModel**, and the **Astral stack** (uv, ruff, ty),
-it provides a battle-tested "Golden Path" for developers who prioritize
-architectural integrity, type safety, and observability.
+  <div class="quoin-hero__cta">
+    <div class="quoin-cli">
+      <span class="quoin-cli__cmd">copier copy gh:balakmran/quoin-api my-api</span>
+      <button class="quoin-cli__copy" aria-label="Copy command">
+        <svg class="quoin-cli__copy-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+        </svg>
+        <svg class="quoin-cli__copy-check" hidden xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="quoin-hero__cta-buttons">
+      <a href="guides/getting-started/" class="md-button md-button--primary">Get started</a>
+    </div>
+  </div>
+</section>
 
-## Key Highlights
+<section class="quoin-bento">
 
-#### High-Performance Core
+  <!-- Row 1, col 1-2: High Performance (wide) -->
+  <div class="quoin-bento__tile quoin-bento__tile--wide">
+    <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/fastapi/38bdf8" alt="FastAPI">
+    <span class="quoin-bento__label">Async-first</span>
+    <h2>High Performance</h2>
+    <p>FastAPI, asyncpg, and Pydantic v2 — built for production-grade throughput from day one.</p>
+  </div>
 
-- **Async-first** patterns with FastAPI and async PostgreSQL via `asyncpg`
-- **Lightning-fast tooling** powered by `uv` for dependency management
-- **Optimized** for production workloads with connection pooling
+  <!-- Row 1, col 3: Database Native -->
+  <div class="quoin-bento__tile">
+    <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/postgresql/38bdf8" alt="PostgreSQL">
+    <span class="quoin-bento__label">ORM · Migrations</span>
+    <h2>Database Native</h2>
+    <p>PostgreSQL with SQLModel ORM and Alembic migrations pre-wired.</p>
+  </div>
 
-#### Structural Integrity
+  <!-- Row 1, col 4: Strict Quality -->
+  <div class="quoin-bento__tile">
+    <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/ruff/38bdf8" alt="Ruff">
+    <span class="quoin-bento__label">Zero compromise</span>
+    <h2>Strict Quality</h2>
+    <p>ty, Ruff, and Pytest enforced on every commit via pre-commit hooks.</p>
+  </div>
 
-- **100% type-annotated** code verified by `ty` and strict linting via `ruff`
-- **Domain-driven design** with module-level exceptions and rich error context
-- **API versioning** with `/api/v1/` prefix for future-proof evolution
+  <!-- Row 2, col 1: Observable -->
+  <div class="quoin-bento__tile">
+    <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/opentelemetry/38bdf8" alt="OpenTelemetry">
+    <span class="quoin-bento__label">Built-in</span>
+    <h2>Observable</h2>
+    <p>Distributed tracing with OpenTelemetry and structured logs with Structlog.</p>
+  </div>
 
-#### Built-in Observability
+  <!-- Row 2, col 2: Tooling -->
+  <div class="quoin-bento__tile">
+    <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/uv/38bdf8" alt="uv">
+    <span class="quoin-bento__label">DX-first</span>
+    <h2>Modern Tooling</h2>
+    <p>uv, just, prek, and Docker — fast installs, task runner, hooks, and shipping.</p>
+  </div>
 
-- **Integrated OpenTelemetry** for distributed tracing
-- **Structured logging** with Structlog for machine-readable logs
-- **Health checks** and readiness endpoints out of the box
+  <!-- Row 2, col 3-4: Ship on Day One (wide) -->
+  <div class="quoin-bento__tile quoin-bento__tile--wide">
+    <svg class="quoin-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+    <span class="quoin-bento__label">Golden Path</span>
+    <h2>Ship on Day One</h2>
+    <p>Copier scaffolds auth, migrations, observability, CI, and Docker before you write a line of business logic.</p>
+  </div>
 
-#### Architectural Efficiency
+</section>
 
-- **Ready-to-use template** that eliminates boilerplate
-- **Environment-based configuration** with `.env` file selection
-- **Just-based automation** for common development tasks
+<section class="quoin-cmds">
+  <p class="quoin-cmds__eyebrow">Recipes</p>
+  <div class="quoin-cmds__terminal">
+    <div class="quoin-cmds__bar">
+      <span></span><span></span><span></span>
+    </div>
+    <ul class="quoin-cmds__list">
+      <li>
+        <span class="quoin-cmds__prompt">$</span>
+        <code>just setup</code>
+        <span class="quoin-cmds__comment"># install deps &amp; wire commit hooks</span>
+      </li>
+      <li>
+        <span class="quoin-cmds__prompt">$</span>
+        <code>just dev</code>
+        <span class="quoin-cmds__comment"># DB + OAuth + migrations + server</span>
+      </li>
+      <li>
+        <span class="quoin-cmds__prompt">$</span>
+        <code>just new order</code>
+        <span class="quoin-cmds__comment"># scaffold a complete DDD module</span>
+      </li>
+      <li>
+        <span class="quoin-cmds__prompt">$</span>
+        <code>just check</code>
+        <span class="quoin-cmds__comment"># format → lint → typecheck → test</span>
+      </li>
+    </ul>
+  </div>
+</section>
 
-## Tech Stack
+<footer class="quoin-home__footer">
+  <p class="quoin-home__footer-copy">
+    Built by <a href="https://github.com/balakmran" target="_blank" rel="noopener">balakmran</a>
+    &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License
+  </p>
+</footer>
 
-- **Framework:** FastAPI
-- **Database:** PostgreSQL (using `asyncpg` driver)
-- **ORM:** SQLModel (SQLAlchemy wrapper)
-- **Migrations:** Alembic
-- **Package Manager:** `uv` (Fast Python package installer)
-- **Task Runner:** `just`
-- **Linting/Formatting:** Ruff
-- **Type Checking:** ty (Static type checker)
-- **Testing:** Pytest, pytest-cov
-- **Observability:** OpenTelemetry, Structlog
-- **Documentation:** Zensical (MkDocs Material)
-
-Learn more about our [technology choices and decision log →](architecture/decision-log.md)
-
-## Quick Start
-
-```bash
-# 1. Clone the repository and configure environment
-git clone https://github.com/balakmran/quoin-api.git
-cd quoin-api
-cp .env.example .env
-
-# 2. Setup project (install dependencies & pre-commit hooks)
-just setup
-
-# 3. Start DB, apply migrations, and run the server
-just dev
-```
-
-Visit the API documentation at
-[http://localhost:8000/docs](http://localhost:8000/docs).
-
-**Need help?** Check out the [Getting Started Guide →](guides/getting-started.md)
-
-## Running Application
-
-![QuoinAPI Home Page](assets/images/quoin-api-homepage.png)
-
-The application home page provides real-time health indicators and quick links
-to API documentation.
-
-## ️Architecture
-
-```mermaid
-graph TB
-    Client[Client/Browser] -->|HTTP| FastAPI[FastAPI Application]
-    FastAPI -->|Business Logic| Service[Service Layer]
-    Service -->|Database Access| Repository[Repository Layer]
-    Repository -->|SQL| PostgreSQL[(PostgreSQL)]
-
-    FastAPI -->|Structured Logs| Structlog[Structlog]
-    FastAPI -->|Traces| OTEL[OpenTelemetry]
-
-    Service -->|Domain Exceptions| Handlers[Exception Handlers]
-    Handlers -->|JSON Response| Client
-```
-
-Read the [full architecture documentation →](architecture/overview.md)
-
-## Project Structure
-
-```plaintext
-├── app/
-│   ├── core/
-│   │   ├── config.py             # Pydantic settings
-│   │   ├── exception_handlers.py # Global exception handlers
-│   │   ├── exceptions.py         # Custom exceptions
-│   │   ├── logging.py            # Structlog configuration
-│   │   ├── metadata.py           # Application metadata
-│   │   ├── middlewares.py        # Middleware configuration
-│   │   ├── openapi.py            # OpenAPI configuration
-│   │   ├── schemas.py            # Pydantic schemas
-│   │   ├── security.py           # Security utilities
-│   │   └── telemetry.py          # OpenTelemetry instrumentation
-│   ├── db/                       # Database connection & base models
-│   │   ├── base.py               # Base models
-│   │   └── session.py            # Database session
-│   ├── modules/
-│   │   ├── system/               # System health & status
-│   │   └── user/                 # User management module
-│   │       ├── exceptions.py     # Domain-specific exceptions
-│   │       ├── models.py         # SQLModel database tables
-│   │       ├── schemas.py        # Pydantic request/response models
-│   │       ├── repository.py     # Database access (CRUD)
-│   │       ├── service.py        # Business logic
-│   │       └── routes.py         # FastAPI router endpoints
-│   ├── static/                   # Static assets
-│   ├── templates/                # Jinja2 templates
-│   │   └── index.html            # Home page
-│   ├── api.py                    # API Route structure
-│   └── main.py                   # Application entry point
-├── tests/                        # Pytest test suite
-├── alembic/                      # Database migrations
-├── docs/                         # This documentation
-├── scripts/                      # Utility scripts
-├── .env.example                  # Environment variables template
-├── docker-compose.yml            # Local dev environment
-├── Dockerfile                    # Production Docker image
-├── AGENTS.md                     # AI Agent instructions
-├── justfile                      # Task runner
-└── pyproject.toml                # Dependencies & config
-```
-
-## Documentation
-
-| Section                                      | Description                                                                                                             |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **[Guides](guides/getting-started.md)**      | Step-by-step guides for getting started, configuration, error handling, testing, database migrations, and observability |
-| **[Architecture](architecture/overview.md)** | System architecture overview, design decisions, component diagrams, and data flow                                       |
-| **[API Reference](api/overview.md)**         | Complete API documentation with core modules, user module, REST endpoints, and code examples                            |
-| **[Project Info](project/contributing.md)**  | Contributing guide, changelog, license (MIT), and GitHub repository                                                     |
-
-## Roadmap
-
-See the [Roadmap](project/roadmap.md) for planned features and upcoming milestones.
-
-## Contributing
-
-We welcome contributions! Please read our [Contributing Guide](project/contributing.md)
-to learn about our development process, coding standards, and how to submit pull
-requests.
-
-## License
-
-This project is licensed under the **MIT License**. See the [LICENSE](project/license.md)
-for details.
+</div>

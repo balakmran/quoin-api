@@ -1,3 +1,695 @@
 html {
   overflow-y: scroll;
 }
+
+/* Always show the Q logo in the header (Material hides it at narrow widths) */
+.md-header__button.md-logo {
+  display: flex !important;
+  align-items: center;
+  padding: 0.2rem 0.4rem;
+}
+
+.md-header__button.md-logo img {
+  height: 1.6rem;
+  width: auto;
+}
+
+/* Lock scroll on homepage — all sections fit in viewport */
+html:has(body.quoin-home-body) {
+  overflow: hidden;
+}
+
+/* ===================================================================
+   Homepage — modern dark, immersive 3D background.
+   Activated by home.js which adds .quoin-home-body to <body>.
+   =================================================================== */
+
+body.quoin-home-body {
+  background: #06111f;
+  color: #e2e8f0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Hide tabs, theme toggle, and GitHub source link on homepage */
+body.quoin-home-body .md-tabs,
+body.quoin-home-body .md-header__option,
+body.quoin-home-body .md-header__source,
+body.quoin-home-body .md-footer {
+  display: none;
+}
+
+body.quoin-home-body .md-header {
+  background: rgba(8, 15, 25, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: none;
+  border-bottom: none;
+  position: relative;
+}
+
+/* Gradient accent line under header */
+body.quoin-home-body .md-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(56, 189, 248, 0.45) 35%,
+    rgba(56, 189, 248, 0.45) 65%,
+    transparent 100%
+  );
+}
+
+/* Shrink title so injected nav can take remaining space */
+body.quoin-home-body .md-header__title {
+  flex: 0 0 auto;
+}
+
+/* ── Header nav (GitHub + Docs) injected by home.js ───────── */
+
+.quoin-header__nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  padding-right: 1rem;
+}
+
+.quoin-header__nav-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(148, 163, 184, 0.6);
+  transition: color 0.2s ease;
+}
+
+.quoin-header__nav-icon svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.quoin-header__nav-icon:hover {
+  color: #e2e8f0;
+}
+
+.quoin-header__nav-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(148, 163, 184, 0.65);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.quoin-header__nav-link:hover {
+  color: #e2e8f0;
+}
+
+/* Search button — match the copier pill aesthetic */
+body.quoin-home-body .md-search__button {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+  border-radius: 999px !important;
+  color: #64748b !important;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+body.quoin-home-body .md-search__button:hover {
+  border-color: rgba(56, 189, 248, 0.35) !important;
+  color: #94a3b8 !important;
+}
+
+body.quoin-home-body .md-main,
+body.quoin-home-body .md-main__inner,
+body.quoin-home-body .md-content {
+  background: transparent;
+  overflow: hidden;
+}
+
+body.quoin-home-body .md-content__inner {
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  height: 100%;
+}
+
+body.quoin-home-body .md-content__inner::before {
+  display: none;
+}
+
+/* 3D canvas */
+#quoin-bg-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
+/* Page wrapper — fits in viewport, no scroll */
+.quoin-home {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: calc(100vh - 48px);
+  padding: 2rem 1.5rem 5rem;
+  overflow: hidden;
+  gap: 1.75rem;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+
+.quoin-hero {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 820px;
+}
+
+/* Radial glow bloom centred behind the headline */
+.quoin-hero::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 680px;
+  height: 320px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(14, 165, 233, 0.13) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.quoin-hero__title {
+  font-size: clamp(3.8rem, 9vw, 7.5rem);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 0 0 0.85rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 40%, #64748b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: quoin-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.quoin-hero__tagline {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  font-weight: 300;
+  margin: 0 auto 1.5rem;
+  max-width: 36rem;
+  animation: quoin-fade-up 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* CTA area */
+
+.quoin-hero__cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  animation: quoin-fade-up 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Copy command pill */
+.quoin-cli {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 999px;
+  padding: 0.32rem 0.35rem 0.32rem 1.1rem;
+}
+
+.quoin-cli__cmd {
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  user-select: all;
+}
+
+.quoin-cli__copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 50%;
+  color: #38bdf8;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.quoin-cli__copy:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.quoin-cli__copy [hidden] {
+  display: none !important;
+}
+
+/* Button row */
+.quoin-hero__cta-buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+
+body.quoin-home-body .md-button--primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+  border: none;
+  color: #fff;
+  padding: 0.42rem 1.5rem;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+body.quoin-home-body .md-button--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(14, 165, 233, 0.45);
+  opacity: 0.92;
+}
+
+body.quoin-home-body .md-button:not(.md-button--primary) {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  padding: 0.42rem 1.5rem;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+body.quoin-home-body .md-button:not(.md-button--primary):hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+  transform: translateY(-1px);
+}
+
+/* ── Bento grid ───────────────────────────────────────────── */
+
+.quoin-bento {
+  flex: 1;
+  min-height: 0;
+  max-height: clamp(280px, 42vh, 380px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+  max-width: 1100px;
+  animation: quoin-fade-up 0.8s 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.quoin-bento__tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 0.9rem 1rem;
+  background: rgba(8, 15, 25, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.quoin-bento__tile--wide {
+  grid-column: span 2;
+}
+
+.quoin-bento__tile:hover {
+  border-color: rgba(56, 189, 248, 0.28);
+  transform: translateY(-2px);
+}
+
+/* Shimmer on hover */
+.quoin-bento__tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.055) 50%,
+    transparent 75%
+  );
+  transform: translateX(-110%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.quoin-bento__tile:hover::after {
+  animation: quoin-shimmer 0.7s ease forwards;
+}
+
+/* Faint corner glow */
+.quoin-bento__tile::before {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: -24px;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(
+    circle,
+    rgba(56, 189, 248, 0.3),
+    transparent 70%
+  );
+  filter: blur(12px);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Large watermark logo (bg decoration) */
+.quoin-bento__bg-logo {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 90px;
+  height: 90px;
+  opacity: 0.07;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+
+/* Medium icon logo (top of tile) */
+.quoin-bento__icon-logo {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 0.55rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tile label (eyebrow) */
+.quoin-bento__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(56, 189, 248, 0.7);
+  margin-bottom: 0.3rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tile heading */
+.quoin-bento__tile h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0 0 0.3rem;
+  line-height: 1.3;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tile body copy */
+.quoin-bento__tile p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #94a3b8;
+  margin: auto 0 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Astral SVG logos (uv, ty, ruff) — invert to white on dark bg */
+.quoin-bento__astral-logo {
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+/* Generic invert for logos that need white treatment on dark bg */
+.quoin-bento__invert-logo {
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+  opacity: 0.85;
+}
+
+
+/* ── Just recipes terminal ────────────────────────────────── */
+
+.quoin-cmds {
+  width: 100%;
+  max-width: 640px;
+  animation: quoin-fade-up 0.7s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.quoin-cmds__eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(56, 189, 248, 0.6);
+  text-align: center;
+  margin: 0 0 0.75rem;
+}
+
+.quoin-cmds__terminal {
+  background: rgba(4, 10, 18, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: 10px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.quoin-cmds__bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.07);
+}
+
+.quoin-cmds__bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.quoin-cmds__list {
+  list-style: none;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quoin-cmds__list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 13px;
+}
+
+.quoin-cmds__prompt {
+  color: rgba(56, 189, 248, 0.45);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.quoin-cmds__list code {
+  color: #e2e8f0;
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  min-width: 14ch;
+}
+
+.quoin-cmds__comment {
+  color: rgba(148, 163, 184, 0.38);
+  font-size: 12px;
+}
+
+/* ── Homepage footer ──────────────────────────────────────── */
+
+body.quoin-home-body .quoin-home__footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  text-align: center;
+  padding: 0.5rem 1.5rem 0.8rem;
+  background: linear-gradient(
+    to top,
+    rgba(6, 17, 31, 0.92) 0%,
+    rgba(6, 17, 31, 0.55) 55%,
+    transparent 100%
+  );
+  animation: quoin-footer-up 0.8s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+body.quoin-home-body .quoin-home__footer::before {
+  content: "";
+  display: block;
+  width: 220px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(56, 189, 248, 0.4),
+    transparent
+  );
+  margin: 0 auto 0.5rem;
+}
+
+/* Single copyright / social line */
+.quoin-home__footer-copy {
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.65);
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.quoin-home__footer-copy a {
+  color: rgba(148, 163, 184, 0.85);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.quoin-home__footer-copy a:hover {
+  color: #7dd3fc;
+}
+
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+/* Tablet & mobile: switch to 2-col bento */
+@media (max-width: 959px) {
+  .quoin-home {
+    padding: 2rem 1.25rem 8rem;
+    gap: 1.5rem;
+  }
+
+  .quoin-bento {
+    max-height: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: unset;
+    grid-auto-rows: minmax(130px, auto);
+  }
+
+  /* Hide Docs text nav link — hamburger handles navigation */
+  .quoin-header__nav-link {
+    display: none;
+  }
+}
+
+/* Mobile: compact everything */
+@media (max-width: 599px) {
+  .quoin-home {
+    padding: 1.25rem 0.875rem 8rem;
+    gap: 1rem;
+  }
+
+  .quoin-hero__title {
+    font-size: clamp(2rem, 10vw, 3rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .quoin-hero__tagline {
+    font-size: 0.875rem;
+    margin: 0 auto 1rem;
+  }
+
+  /* Truncate long command on narrow screens */
+  .quoin-cli {
+    max-width: 100%;
+  }
+
+  .quoin-cli__cmd {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 185px;
+  }
+
+  .quoin-bento {
+    gap: 0.4rem;
+    grid-auto-rows: minmax(110px, auto);
+  }
+
+  .quoin-bento__tile h2 {
+    font-size: 14px;
+  }
+
+  .quoin-bento__tile p {
+    font-size: 12px;
+  }
+
+
+  /* Hide GitHub icon from header on very narrow screens */
+  .quoin-header__nav {
+    display: none;
+  }
+
+  /* Footer: tighten on mobile */
+  body.quoin-home-body .quoin-home__footer {
+    padding: 0.4rem 1rem 0.65rem;
+  }
+}
+
+/* ── Keyframes ────────────────────────────────────────────── */
+
+@keyframes quoin-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes quoin-footer-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes quoin-shimmer {
+  to { transform: translateX(110%); }
+}
