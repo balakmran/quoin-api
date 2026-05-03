@@ -485,6 +485,15 @@ async def test_validate_token_no_uri(
         await validate_token("header.payload.signature")
 
 
+async def test_validate_token_no_audience(
+    mock_settings: MagicMock,
+) -> None:
+    """validate_token raises UnauthorizedError if audience is not set."""
+    mock_settings.OAUTH_AUDIENCE = ""
+    with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_AUDIENCE"):
+        await validate_token("header.payload.signature")
+
+
 async def test_validate_token_malformed(
     mock_settings: MagicMock,
 ) -> None:

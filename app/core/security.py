@@ -188,6 +188,10 @@ async def validate_token(token: str) -> dict[str, Any]:
         raise UnauthorizedError(
             "OAuth not configured — QUOIN_OAUTH_JWKS_URI is not set"
         )
+    if not settings.OAUTH_AUDIENCE:
+        raise UnauthorizedError(
+            "OAuth not configured — QUOIN_OAUTH_AUDIENCE is not set"
+        )
 
     try:
         header = jwt.get_unverified_header(token)
@@ -200,7 +204,7 @@ async def validate_token(token: str) -> dict[str, Any]:
 
     decode_options: dict[str, Any] = {
         "verify_exp": True,
-        "verify_aud": bool(settings.OAUTH_AUDIENCE),
+        "verify_aud": True,
     }
 
     try:
@@ -208,7 +212,7 @@ async def validate_token(token: str) -> dict[str, Any]:
             token,
             public_key,
             algorithms=["RS256", "ES256"],
-            audience=settings.OAUTH_AUDIENCE or None,
+            audience=settings.OAUTH_AUDIENCE,
             issuer=settings.OAUTH_ISSUER,
             options=decode_options,  # type: ignore
         )
