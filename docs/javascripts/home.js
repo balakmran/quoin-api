@@ -25,6 +25,43 @@
     if (!ctx) return;
 
     let w, h, dpr;
+
+    const PARTICLE_COUNT = 80;
+    const BLOCK_COUNT = 12;
+
+    const particles = [];
+    const blocks = [];
+
+    const initElements = () => {
+      particles.length = 0;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: 1 + Math.random() * 1.5,
+          speed: 0.15 + Math.random() * 0.3,
+          alpha: 0.3 + Math.random() * 0.5,
+        });
+      }
+      blocks.length = 0;
+      for (let i = 0; i < BLOCK_COUNT; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        const y = Math.random() * h;
+        blocks.push({
+          xRatio: 0.5 + side * (0.15 + Math.random() * 0.25),
+          y,
+          baseY: y,
+          size: 8 + Math.random() * 18,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.008,
+          floatOffset: Math.random() * Math.PI * 2,
+          floatSpeed: 0.3 + Math.random() * 0.4,
+          floatAmp: 8 + Math.random() * 14,
+          alpha: 0.12 + Math.random() * 0.18,
+        });
+      }
+    };
+
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio, 2);
       w = window.innerWidth;
@@ -34,45 +71,18 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
+    initElements();
     window.addEventListener("resize", resize);
-
-    const PARTICLE_COUNT = 80;
-    const BLOCK_COUNT = 12;
-
-    const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: 1 + Math.random() * 1.5,
-      speed: 0.15 + Math.random() * 0.3,
-      alpha: 0.3 + Math.random() * 0.5,
-    }));
-
-    const blocks = Array.from({ length: BLOCK_COUNT }, (_, i) => {
-      const side = i % 2 === 0 ? -1 : 1;
-      const size = 8 + Math.random() * 18;
-      return {
-        x: w / 2 + side * (200 + Math.random() * 300),
-        y: Math.random() * h,
-        baseY: 0,
-        size,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.008,
-        floatOffset: Math.random() * Math.PI * 2,
-        floatSpeed: 0.3 + Math.random() * 0.4,
-        floatAmp: 8 + Math.random() * 14,
-        alpha: 0.12 + Math.random() * 0.18,
-      };
-    });
-    blocks.forEach((b) => { b.baseY = b.y; });
 
     let mouseX = 0;
     let mouseY = 0;
     let camX = 0;
     let camY = 0;
-    document.addEventListener("mousemove", (e) => {
+    const onMouseMove = (e) => {
       mouseX = (e.clientX - w / 2) * 0.02;
       mouseY = (e.clientY - h / 2) * 0.02;
-    });
+    };
+    document.addEventListener("mousemove", onMouseMove);
 
     let rafId;
 
@@ -89,7 +99,7 @@
         b.y = b.baseY + Math.sin(t * b.floatSpeed + b.floatOffset) * b.floatAmp;
         b.rotation += b.rotSpeed;
 
-        const bx = b.x + camX * 1.5;
+        const bx = b.xRatio * w + camX * 1.5;
         const by = b.y + camY * 1.5;
 
         ctx.save();
@@ -125,6 +135,7 @@
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("mousemove", onMouseMove);
     };
   };
 

@@ -14,7 +14,6 @@ html {
   width: auto;
 }
 
-
 /* ===================================================================
    Homepage — modern dark, immersive 3D background.
    Activated by home.js which adds .quoin-home-body to <body>.
@@ -24,7 +23,6 @@ body.quoin-home-body {
   background: #06111f;
   color: #e2e8f0;
 }
-
 
 /* Hide tabs, theme toggle, and GitHub source link on homepage */
 body.quoin-home-body .md-tabs,
@@ -129,7 +127,6 @@ body.quoin-home-body .md-content {
   background: transparent;
 }
 
-
 body.quoin-home-body .md-content__inner {
   margin: 0;
   padding: 0;
@@ -162,20 +159,6 @@ body.quoin-home-body .md-content__inner::before {
   justify-content: flex-start;
   padding: 2rem 1.5rem 2rem;
   gap: 1.75rem;
-}
-
-/* Canvas is position:fixed — exclude from flex flow */
-.quoin-home > #quoin-bg-canvas {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-}
-
-@media (min-width: 960px) {
-  .quoin-home {
-    padding-bottom: 2rem;
-  }
 }
 
 /* ── Hero ─────────────────────────────────────────────────── */
@@ -344,7 +327,6 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
   animation: quoin-fade-up 0.8s 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-
 .quoin-bento__tile {
   position: relative;
   overflow: hidden;
@@ -476,7 +458,6 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
   opacity: 0.85;
 }
 
-
 /* ── Just recipes terminal ────────────────────────────────── */
 
 .quoin-cmds {
@@ -597,7 +578,6 @@ body.quoin-home-body .quoin-home__footer::before {
   color: #7dd3fc;
 }
 
-
 /* ── Responsive ──────────────────────────────────────────── */
 
 /* Tablet & mobile: switch to 2-col bento, allow scroll */
@@ -623,7 +603,7 @@ body.quoin-home-body .quoin-home__footer::before {
 /* Mobile: compact everything */
 @media (max-width: 599px) {
   .quoin-home {
-    padding: 1.25rem 0.875rem 5rem;
+    padding: 1.25rem 0.875rem 2rem;
     gap: 1rem;
   }
 
