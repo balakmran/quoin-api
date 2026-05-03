@@ -17,7 +17,11 @@ from app.core.exceptions import (
     InternalServerError,
     NotFoundError,
     QuoinError,
+    QuoinRequestValidationError,
     ServiceUnavailableError,
+)
+from app.core.exceptions import (
+    ValidationError as QuoinValidationError,
 )
 from app.core.schemas import ProblemDetail
 
@@ -208,12 +212,7 @@ def test_gateway_timeout_error_init() -> None:
 @pytest.mark.asyncio
 async def test_quoin_request_validation_error() -> None:
     """Test QuoinRequestValidationError initialization and errors method."""
-    from app.core.exceptions import (  # noqa: PLC0415
-        QuoinRequestValidationError,
-        ValidationError,
-    )
-
-    errors: list[ValidationError] = [
+    errors: list[QuoinValidationError] = [
         {
             "loc": ("field1",),
             "msg": "field required",
@@ -229,6 +228,9 @@ async def test_quoin_request_validation_error() -> None:
     ]
 
     err = QuoinRequestValidationError(errors=errors)
+
+    assert err.message == "Request validation failed"
+    assert err.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     pydantic_errors = err.errors()
     assert len(pydantic_errors) == 2  # noqa: PLR2004
@@ -306,6 +308,39 @@ async def test_fastapi_request_validation_handling() -> None:
     assert body["detail"] == "Request validation failed"
     assert isinstance(body["errors"], list)
     assert len(body["errors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_quoin_request_validation_handling() -> None:
+    """QuoinRequestValidationError produces RFC 9457 with errors array."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/internal-validation")
+    async def raise_validation_error() -> None:
+        raise QuoinRequestValidationError(
+            errors=[
+                {
+                    "loc": ("query", "name"),
+                    "msg": "field required",
+                    "type": "missing",
+                    "input": {},
+                }
+            ]
+        )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/internal-validation")
+
+    body = response.json()
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.headers["content-type"] == _PROBLEM_CONTENT_TYPE
+    assert body["type"] == "urn:quoin:error:validation_error"
+    assert body["status"] == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert body["detail"] == "Request validation failed"
+    assert body["errors"][0]["loc"] == ["query", "name"]
 
 
 @pytest.mark.asyncio

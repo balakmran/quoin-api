@@ -37,6 +37,7 @@ class QuoinRequestValidationError(QuoinError):
 
     def __init__(self, errors: Sequence[ValidationError]) -> None:
         """Initialize QuoinRequestValidationError."""
+        super().__init__("Request validation failed", status_code=422)
         self._errors = errors
 
     def errors(self) -> list[ErrorDetails]:
