@@ -19,179 +19,124 @@
   };
 
   const initBackground = () => {
-    if (typeof THREE === "undefined") return;
     const canvas = document.getElementById("quoin-bg-canvas");
     if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x06111f, 0.003);
+    let w, h, dpr;
 
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000,
-    );
-    camera.position.z = 220;
+    const PARTICLE_COUNT = 80;
+    const BLOCK_COUNT = 12;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    scene.add(new THREE.AmbientLight(0x0c4a6e, 3));
-    const spotlight = new THREE.PointLight(0x38bdf8, 14, 900);
-    spotlight.position.set(0, 60, 180);
-    scene.add(spotlight);
-
-    // Floating blocks scattered across the scene
-    const blockMat = new THREE.MeshStandardMaterial({
-      color: 0x0ea5e9,
-      emissive: 0x0ea5e9,
-      emissiveIntensity: 0.4,
-      metalness: 0.85,
-      roughness: 0.15,
-    });
-    const wireMat = new THREE.LineBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.7,
-    });
-
+    const particles = [];
     const blocks = [];
-    const sizes = [
-      [16, 7, 7],
-      [7, 16, 7],
-      [7, 7, 16],
-      [12, 12, 5],
-      [5, 12, 12],
-      [10, 5, 14],
-      [14, 6, 6],
-      [6, 14, 6],
-      [8, 8, 8],
-      [12, 4, 9],
-      [4, 12, 9],
-      [9, 9, 4],
-      [10, 5, 10],
-      [5, 10, 5],
-      [13, 5, 8],
-      [8, 13, 5],
-    ];
 
-    sizes.forEach((dims, i) => {
-      const geo = new THREE.BoxGeometry(...dims);
-      const mesh = new THREE.Mesh(geo, blockMat);
-      const wire = new THREE.LineSegments(
-        new THREE.EdgesGeometry(
-          new THREE.BoxGeometry(dims[0] + 0.5, dims[1] + 0.5, dims[2] + 0.5),
-        ),
-        wireMat,
-      );
+    const initElements = () => {
+      particles.length = 0;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: 1 + Math.random() * 1.5,
+          speed: 0.15 + Math.random() * 0.3,
+          alpha: 0.3 + Math.random() * 0.5,
+        });
+      }
+      blocks.length = 0;
+      for (let i = 0; i < BLOCK_COUNT; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        const y = Math.random() * h;
+        blocks.push({
+          xRatio: 0.5 + side * (0.15 + Math.random() * 0.25),
+          y,
+          baseY: y,
+          size: 8 + Math.random() * 18,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.008,
+          floatOffset: Math.random() * Math.PI * 2,
+          floatSpeed: 0.3 + Math.random() * 0.4,
+          floatAmp: 8 + Math.random() * 14,
+          alpha: 0.12 + Math.random() * 0.18,
+        });
+      }
+    };
 
-      const container = new THREE.Group();
-      container.add(mesh, wire);
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio, 2);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    initElements();
+    window.addEventListener("resize", resize);
 
-      // Spread across a wide area, slightly off-center to avoid hero text overlap
-      const side = i % 2 === 0 ? -1 : 1;
-      container.position.set(
-        side * (140 + Math.random() * 180),
-        (Math.random() - 0.5) * 220,
-        (Math.random() - 0.5) * 180 - 40,
-      );
-
-      container.userData = {
-        floatOffset: Math.random() * Math.PI * 2,
-        floatSpeed: 0.4 + Math.random() * 0.4,
-        floatAmp: 6 + Math.random() * 10,
-        rotSpeed: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.006,
-          (Math.random() - 0.5) * 0.006,
-          (Math.random() - 0.5) * 0.004,
-        ),
-        baseY: container.position.y,
-      };
-
-      scene.add(container);
-      blocks.push(container);
-    });
-
-    // Floating particles
-    const particleCount = 160;
-    const pPos = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-      pPos[i * 3] = (Math.random() - 0.5) * 420;
-      pPos[i * 3 + 1] = (Math.random() - 0.5) * 420 - 60;
-      pPos[i * 3 + 2] = (Math.random() - 0.5) * 420;
-    }
-    const pGeo = new THREE.BufferGeometry();
-    pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
-    scene.add(
-      new THREE.Points(
-        pGeo,
-        new THREE.PointsMaterial({
-          color: 0x0ea5e9,
-          size: 2.2,
-          transparent: true,
-          opacity: 0.7,
-          blending: THREE.AdditiveBlending,
-        }),
-      ),
-    );
-
-    let targetX = 0;
-    let targetY = 0;
-    document.addEventListener("mousemove", (e) => {
-      targetX = (e.clientX - window.innerWidth / 2) * 0.04;
-      targetY = (e.clientY - window.innerHeight / 2) * 0.04;
-    });
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    let mouseX = 0;
+    let mouseY = 0;
+    let camX = 0;
+    let camY = 0;
+    const onMouseMove = (e) => {
+      mouseX = (e.clientX - w / 2) * 0.02;
+      mouseY = (e.clientY - h / 2) * 0.02;
+    };
+    document.addEventListener("mousemove", onMouseMove);
 
     let rafId;
-    const cleanup = () => {
-      cancelAnimationFrame(rafId);
-      renderer.dispose();
-    };
 
-    const animate = () => {
-      rafId = requestAnimationFrame(animate);
-      const time = Date.now() * 0.001;
+    const draw = () => {
+      rafId = requestAnimationFrame(draw);
+      const t = Date.now() * 0.001;
 
-      blocks.forEach((b) => {
-        const d = b.userData;
-        b.position.y =
-          d.baseY + Math.sin(time * d.floatSpeed + d.floatOffset) * d.floatAmp;
-        b.rotation.x += d.rotSpeed.x;
-        b.rotation.y += d.rotSpeed.y;
-        b.rotation.z += d.rotSpeed.z;
-      });
+      camX += (mouseX - camX) * 0.05;
+      camY += (-mouseY - camY) * 0.05;
 
-      const pAttr = pGeo.attributes.position;
-      for (let i = 0; i < particleCount; i++) {
-        pAttr.array[i * 3 + 1] += 0.12;
-        if (pAttr.array[i * 3 + 1] > 220) pAttr.array[i * 3 + 1] = -220;
+      ctx.clearRect(0, 0, w, h);
+
+      for (const b of blocks) {
+        b.y = b.baseY + Math.sin(t * b.floatSpeed + b.floatOffset) * b.floatAmp;
+        b.rotation += b.rotSpeed;
+
+        const bx = b.xRatio * w + camX * 1.5;
+        const by = b.y + camY * 1.5;
+
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(b.rotation);
+        ctx.strokeStyle = `rgba(56, 189, 248, ${b.alpha})`;
+        ctx.lineWidth = 1;
+        const half = b.size / 2;
+        ctx.strokeRect(-half, -half, b.size, b.size);
+        ctx.fillStyle = `rgba(14, 165, 233, ${b.alpha * 0.3})`;
+        ctx.fillRect(-half, -half, b.size, b.size);
+        ctx.restore();
       }
-      pAttr.needsUpdate = true;
 
-      camera.position.x += (targetX - camera.position.x) * 0.05;
-      camera.position.y += (-targetY - camera.position.y) * 0.05;
-      camera.lookAt(scene.position);
+      for (const p of particles) {
+        p.y -= p.speed;
+        if (p.y < -5) {
+          p.y = h + 5;
+          p.x = Math.random() * w;
+        }
 
-      spotlight.position.x += (targetX * 10 - spotlight.position.x) * 0.08;
-      spotlight.position.y += (-targetY * 10 + 60 - spotlight.position.y) * 0.08;
+        const px = p.x + camX * 0.5;
+        const py = p.y + camY * 0.5;
 
-      renderer.render(scene, camera);
+        ctx.beginPath();
+        ctx.arc(px, py, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(14, 165, 233, ${p.alpha})`;
+        ctx.fill();
+      }
     };
-    animate();
+    draw();
 
-    return cleanup;
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", resize);
+      document.removeEventListener("mousemove", onMouseMove);
+    };
   };
 
   const initHeaderNav = () => {
@@ -203,7 +148,6 @@
 
     const ghSvgNS = "http://www.w3.org/2000/svg";
 
-    // GitHub icon link
     const ghLink = document.createElement("a");
     ghLink.href = "https://github.com/balakmran/quoin-api";
     ghLink.target = "_blank";
@@ -222,7 +166,6 @@
     const ghText = document.createTextNode("GitHub");
     ghLink.appendChild(ghText);
 
-    // Docs link
     const docsLink = document.createElement("a");
     docsLink.href = "docs/";
     docsLink.className = "quoin-header__nav-link";

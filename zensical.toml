@@ -54,7 +54,6 @@ nav = [
 ]
 extra_css = ["stylesheets/extra.css"]
 extra_javascript = [
-    "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js",
     "javascripts/home.js",
 ]
 

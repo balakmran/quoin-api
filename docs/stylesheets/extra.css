@@ -14,11 +14,6 @@ html {
   width: auto;
 }
 
-/* Lock scroll on homepage — all sections fit in viewport */
-html:has(body.quoin-home-body) {
-  overflow: hidden;
-}
-
 /* ===================================================================
    Homepage — modern dark, immersive 3D background.
    Activated by home.js which adds .quoin-home-body to <body>.
@@ -27,8 +22,6 @@ html:has(body.quoin-home-body) {
 body.quoin-home-body {
   background: #06111f;
   color: #e2e8f0;
-  overflow: hidden;
-  height: 100vh;
 }
 
 /* Hide tabs, theme toggle, and GitHub source link on homepage */
@@ -132,7 +125,6 @@ body.quoin-home-body .md-main,
 body.quoin-home-body .md-main__inner,
 body.quoin-home-body .md-content {
   background: transparent;
-  overflow: hidden;
 }
 
 body.quoin-home-body .md-content__inner {
@@ -157,7 +149,7 @@ body.quoin-home-body .md-content__inner::before {
   display: block;
 }
 
-/* Page wrapper — fits in viewport, no scroll */
+/* Page wrapper — fits in viewport on desktop, scrolls on mobile */
 .quoin-home {
   position: relative;
   z-index: 1;
@@ -165,9 +157,7 @@ body.quoin-home-body .md-content__inner::before {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  height: calc(100vh - 48px);
-  padding: 2rem 1.5rem 5rem;
-  overflow: hidden;
+  padding: 2rem 1.5rem 2rem;
   gap: 1.75rem;
 }
 
@@ -328,12 +318,9 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
 /* ── Bento grid ───────────────────────────────────────────── */
 
 .quoin-bento {
-  flex: 1;
-  min-height: 0;
-  max-height: clamp(280px, 42vh, 380px);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, auto);
   gap: 0.55rem;
   width: 100%;
   max-width: 1100px;
@@ -452,7 +439,7 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
   font-size: 13px;
   line-height: 1.55;
   color: #94a3b8;
-  margin: auto 0 0;
+  margin: 0;
   position: relative;
   z-index: 1;
 }
@@ -470,7 +457,6 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
   filter: brightness(0) invert(1);
   opacity: 0.85;
 }
-
 
 /* ── Just recipes terminal ────────────────────────────────── */
 
@@ -553,19 +539,10 @@ body.quoin-home-body .md-button:not(.md-button--primary):hover {
 /* ── Homepage footer ──────────────────────────────────────── */
 
 body.quoin-home-body .quoin-home__footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 20;
   text-align: center;
   padding: 0.5rem 1.5rem 0.8rem;
-  background: linear-gradient(
-    to top,
-    rgba(6, 17, 31, 0.92) 0%,
-    rgba(6, 17, 31, 0.55) 55%,
-    transparent 100%
-  );
   animation: quoin-footer-up 0.8s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -601,13 +578,12 @@ body.quoin-home-body .quoin-home__footer::before {
   color: #7dd3fc;
 }
 
-
 /* ── Responsive ──────────────────────────────────────────── */
 
-/* Tablet & mobile: switch to 2-col bento */
+/* Tablet & mobile: switch to 2-col bento, allow scroll */
 @media (max-width: 959px) {
   .quoin-home {
-    padding: 2rem 1.25rem 8rem;
+    padding: 2rem 1.25rem 2rem;
     gap: 1.5rem;
   }
 
@@ -627,7 +603,7 @@ body.quoin-home-body .quoin-home__footer::before {
 /* Mobile: compact everything */
 @media (max-width: 599px) {
   .quoin-home {
-    padding: 1.25rem 0.875rem 8rem;
+    padding: 1.25rem 0.875rem 2rem;
     gap: 1rem;
   }
 
@@ -653,9 +629,21 @@ body.quoin-home-body .quoin-home__footer::before {
     max-width: 185px;
   }
 
+  /* Single-column bento on mobile */
   .quoin-bento {
+    grid-template-columns: 1fr;
+    grid-template-rows: unset;
+    grid-auto-rows: auto;
+    max-height: none;
     gap: 0.4rem;
-    grid-auto-rows: minmax(110px, auto);
+  }
+
+  .quoin-bento__tile--wide {
+    grid-column: span 1;
+  }
+
+  .quoin-bento__tile {
+    padding: 0.75rem 0.875rem;
   }
 
   .quoin-bento__tile h2 {
@@ -666,13 +654,21 @@ body.quoin-home-body .quoin-home__footer::before {
     font-size: 12px;
   }
 
+  /* Terminal: wrap comments below command */
+  .quoin-cmds__list li {
+    flex-wrap: wrap;
+  }
+
+  .quoin-cmds__comment {
+    width: 100%;
+    padding-left: 1.2rem;
+  }
 
   /* Hide GitHub icon from header on very narrow screens */
   .quoin-header__nav {
     display: none;
   }
 
-  /* Footer: tighten on mobile */
   body.quoin-home-body .quoin-home__footer {
     padding: 0.4rem 1rem 0.65rem;
   }
