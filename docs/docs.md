@@ -24,7 +24,7 @@ New here? Start with the [Getting Started Guide](guides/getting-started.md).
 === "Using Copier (recommended)"
 
     ```bash
-    copier copy gh:balakmran/quoin-api my-api
+    uvx copier copy --trust gh:balakmran/quoin-api my-api
     cd my-api
     cp .env.example .env
     just setup

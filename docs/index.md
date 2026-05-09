@@ -11,6 +11,7 @@ hide:
 <canvas id="quoin-bg-canvas" aria-hidden="true"></canvas>
 
 <section class="quoin-hero">
+  <span class="quoin-hero__eyebrow">QuoinAPI</span>
   <h1 class="quoin-hero__title">The Foundation for your<br>Python backend API</h1>
 
   <p class="quoin-hero__tagline">
@@ -19,7 +20,7 @@ hide:
 
   <div class="quoin-hero__cta">
     <div class="quoin-cli">
-      <span class="quoin-cli__cmd">copier copy gh:balakmran/quoin-api my-api</span>
+      <span class="quoin-cli__cmd">uvx copier copy --trust gh:balakmran/quoin-api my-api</span>
       <button class="quoin-cli__copy" aria-label="Copy command">
         <svg class="quoin-cli__copy-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
@@ -88,7 +89,7 @@ hide:
 </section>
 
 <section class="quoin-cmds">
-  <p class="quoin-cmds__eyebrow">Recipes</p>
+  <p class="quoin-cmds__eyebrow">Quick start</p>
   <div class="quoin-cmds__terminal">
     <div class="quoin-cmds__bar">
       <span></span><span></span><span></span>

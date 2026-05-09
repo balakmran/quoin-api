@@ -1,488 +1,936 @@
 <!DOCTYPE html>
-<html lang="en" class="dark max-h-screen overflow-hidden">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ app_name }} - {{ app_description }}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name }} — {{ app_description }}</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Switching to Inter for an ultra-modern, crisp feel -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Favicon -->
-    <link rel="icon" href="/static/img/favicon/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon/favicon-16x16.png">
-    <link rel="manifest" href="/static/img/favicon/site.webmanifest">
+  <link rel="icon" href="/static/img/favicon/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/img/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/img/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/img/favicon/site.webmanifest">
 
-    <!-- Tailwind CSS (CDN for simple landing page) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        quoin: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
-                            950: '#082f49',
-                        }
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'led-pulse': 'ledPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-6px)' },
-                        },
-                        ledPulse: {
-                            '0%, 100%': { opacity: 1 },
-                            '50%': { opacity: .5 },
-                        },
-                        fadeInUp: {
-                            '0%': { opacity: 0, transform: 'translateY(30px)' },
-                            '100%': { opacity: 1, transform: 'translateY(0)' }
-                        },
-                        shimmer: {
-                            '0%': { transform: 'translateX(-100%)' },
-                            '100%': { transform: 'translateX(100%)' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
 
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    ::-webkit-scrollbar { display: none; }
+    * { -ms-overflow-style: none; scrollbar-width: none; }
 
-    <style>
-        /* Hide scrollbars since user requested no scroll bar */
-        ::-webkit-scrollbar { display: none; }
-        * { -ms-overflow-style: none; scrollbar-width: none; }
+    html {
+      overflow-x: clip;
+      overflow-y: scroll;
+    }
 
-        .glass-panel {
-            background: rgba(8, 15, 25, 0.6);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #06111f;
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: clip;
+      touch-action: pan-y;
+    }
 
-        body { margin: 0; overflow: hidden; height: 100vh; }
-        canvas { display: block; }
-    </style>
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+
+    .quoin-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      height: 52px;
+      background: rgba(8, 15, 25, 0.55);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .quoin-header::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 8%;
+      right: 8%;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(56, 189, 248, 0.45) 35%,
+        rgba(56, 189, 248, 0.45) 65%,
+        transparent 100%
+      );
+    }
+
+    .quoin-header__brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      text-decoration: none;
+    }
+
+    .quoin-header__nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .quoin-header__nav a {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(148, 163, 184, 0.65);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.2s ease;
+    }
+
+    .quoin-header__nav a:hover { color: #e2e8f0; }
+
+    /* ── Page wrapper ─────────────────────────────────────── */
+
+    .quoin-home {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1.5rem 4rem;
+      gap: 1.75rem;
+    }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+
+    .quoin-hero {
+      position: relative;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 820px;
+    }
+
+    .quoin-hero::before {
+      content: "";
+      position: absolute;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(680px, 100vw);
+      height: 320px;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(14, 165, 233, 0.13) 0%,
+        transparent 68%
+      );
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .quoin-hero__status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      padding: 0.28rem 0.75rem;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      background: rgba(56, 189, 248, 0.06);
+      color: rgba(56, 189, 248, 0.8);
+      transition: all 0.5s ease;
+      animation: quoin-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-hero__status--ok {
+      border-color: rgba(52, 211, 153, 0.3);
+      background: rgba(52, 211, 153, 0.08);
+      color: #34d399;
+    }
+
+    .quoin-hero__status--error {
+      border-color: rgba(244, 63, 94, 0.3);
+      background: rgba(244, 63, 94, 0.08);
+      color: #f43f5e;
+    }
+
+    .quoin-hero__status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .quoin-hero__title {
+      font-size: clamp(3.8rem, 9vw, 7.5rem);
+      line-height: 1.05;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      margin: 0 0 0.4rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 40%, #64748b 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: quoin-fade-up 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-hero__version {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+      animation: quoin-fade-up 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-hero__tagline {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: #94a3b8;
+      font-weight: 300;
+      margin: 0 auto 1.5rem;
+      max-width: 36rem;
+      animation: quoin-fade-up 0.8s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-hero__cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      animation: quoin-fade-up 0.8s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* CLI pill */
+
+    .quoin-cli {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-radius: 999px;
+      padding: 0.32rem 0.35rem 0.32rem 1.1rem;
+      max-width: 100%;
+    }
+
+    .quoin-cli__cmd {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12.5px;
+      color: #94a3b8;
+      white-space: nowrap;
+      user-select: all;
+    }
+
+    .quoin-cli__copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 50%;
+      color: #38bdf8;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .quoin-cli__copy:hover { background: rgba(56, 189, 248, 0.22); }
+
+    .quoin-cli__copy [hidden] { display: none !important; }
+
+    .quoin-btn-row {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .quoin-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.42rem 1.5rem;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .quoin-btn--primary {
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
+    }
+
+    .quoin-btn--primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(14, 165, 233, 0.45);
+      opacity: 0.92;
+    }
+
+    /* ── Bento grid ───────────────────────────────────────── */
+
+    .quoin-bento {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: repeat(2, auto);
+      gap: 0.55rem;
+      width: 100%;
+      max-width: 1100px;
+      animation: quoin-fade-up 0.8s 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-bento__tile {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 0.9rem 1rem;
+      background: rgba(8, 15, 25, 0.52);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      transition: border-color 0.25s ease, transform 0.25s ease;
+    }
+
+    .quoin-bento__tile--wide { grid-column: span 2; }
+
+    .quoin-bento__tile:hover {
+      border-color: rgba(56, 189, 248, 0.28);
+      transform: translateY(-2px);
+    }
+
+    .quoin-bento__tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        110deg,
+        transparent 25%,
+        rgba(255, 255, 255, 0.055) 50%,
+        transparent 75%
+      );
+      transform: translateX(-110%);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .quoin-bento__tile:hover::after { animation: quoin-shimmer 0.7s ease forwards; }
+
+    .quoin-bento__tile::before {
+      content: "";
+      position: absolute;
+      top: -24px;
+      left: -24px;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.3), transparent 70%);
+      filter: blur(12px);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .quoin-bento__icon-logo {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 0.55rem;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quoin-bento__label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(56, 189, 248, 0.7);
+      margin-bottom: 0.3rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quoin-bento__tile h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin: 0 0 0.3rem;
+      line-height: 1.3;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quoin-bento__tile p {
+      font-size: 13px;
+      line-height: 1.55;
+      color: #94a3b8;
+      margin: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Status row inside bento tile */
+
+    .quoin-bento__status-row {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-top: auto;
+      padding-top: 0.75rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quoin-bento__status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .quoin-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #475569;
+      border: 1px solid #64748b;
+      flex-shrink: 0;
+    }
+
+    .quoin-status-label {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    /* ── Terminal ─────────────────────────────────────────── */
+
+    .quoin-cmds {
+      width: 100%;
+      max-width: 640px;
+      animation: quoin-fade-up 0.7s 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-cmds__eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(56, 189, 248, 0.6);
+      text-align: center;
+      margin: 0 0 0.75rem;
+    }
+
+    .quoin-cmds__terminal {
+      background: rgba(4, 10, 18, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.14);
+      border-radius: 10px;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .quoin-cmds__bar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding: 9px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.07);
+    }
+
+    .quoin-cmds__bar span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.18);
+    }
+
+    .quoin-cmds__list {
+      list-style: none;
+      margin: 0;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .quoin-cmds__list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px;
+    }
+
+    .quoin-cmds__prompt {
+      color: rgba(56, 189, 248, 0.45);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .quoin-cmds__list code {
+      color: #e2e8f0;
+      background: none;
+      padding: 0;
+      font-size: inherit;
+      font-family: inherit;
+      min-width: 14ch;
+    }
+
+    .quoin-cmds__comment {
+      color: rgba(148, 163, 184, 0.38);
+      font-size: 12px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+
+    .quoin-home__footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      text-align: center;
+      padding: 0.55rem 1.5rem;
+      background: rgba(6, 17, 31, 0.7);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      animation: quoin-fade-up 0.8s 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .quoin-home__footer p {
+      font-size: 13px;
+      color: rgba(148, 163, 184, 0.65);
+      margin: 0;
+      letter-spacing: 0.03em;
+    }
+
+    .quoin-home__footer a {
+      color: rgba(148, 163, 184, 0.85);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .quoin-home__footer a:hover { color: #7dd3fc; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+
+    @media (max-width: 959px) {
+      .quoin-bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: unset;
+        grid-auto-rows: minmax(130px, auto);
+      }
+    }
+
+    @media (max-width: 599px) {
+      .quoin-home {
+        padding: 1.25rem 0.875rem 4rem;
+        gap: 1rem;
+      }
+
+      .quoin-hero__title {
+        font-size: clamp(2rem, 10vw, 3rem);
+        margin-bottom: 0.4rem;
+      }
+
+      .quoin-hero__tagline {
+        font-size: 0.875rem;
+        margin: 0 auto 1rem;
+      }
+
+      .quoin-cli__cmd {
+        font-size: 11px;
+      }
+
+      .quoin-bento {
+        grid-template-columns: 1fr;
+        grid-auto-rows: auto;
+        gap: 0.4rem;
+      }
+
+      .quoin-bento__tile--wide { grid-column: span 1; }
+
+      .quoin-bento__tile { padding: 0.75rem 0.875rem; }
+
+      .quoin-bento__tile h2 { font-size: 14px; }
+
+      .quoin-bento__tile p { font-size: 12px; }
+
+      .quoin-cmds__list li { flex-wrap: wrap; }
+
+      .quoin-cmds__comment {
+        width: 100%;
+        padding-left: 1.2rem;
+      }
+
+      .quoin-header__nav a:not(:last-child) { display: none; }
+    }
+
+    /* ── Keyframes ────────────────────────────────────────── */
+
+    @keyframes quoin-fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes quoin-shimmer {
+      to { transform: translateX(110%); }
+    }
+  </style>
 </head>
-<body class="bg-gray-950 text-slate-200 font-sans antialiased h-screen w-screen overflow-hidden flex flex-col relative selection:bg-quoin-500 selection:text-white">
+<body>
 
-    <!-- 3D Background Canvas -->
-    <canvas id="bg-canvas" class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none"></canvas>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
-    <!-- Floating Header -->
-    <header class="w-full max-w-5xl mx-auto flex justify-between items-center px-8 py-0 h-14 mt-6 z-50 glass-panel rounded-2xl relative">
-        <!-- Left: Branding -->
-        <div class="flex items-center">
-            <span class="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-quoin-400">QuoinAPI</span>
+  <header class="quoin-header">
+    <span class="quoin-header__brand">QuoinAPI</span>
+    <nav class="quoin-header__nav">
+      <a href="/docs" target="_blank" rel="noopener">Swagger</a>
+      <a href="https://balakmran.github.io/quoin-api/" target="_blank" rel="noopener">Docs</a>
+      <a href="https://balakmran.github.io/quoin-api/project/changelog/" target="_blank" rel="noopener">Changelog</a>
+      <a href="{{ repository_url }}" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <div class="quoin-home">
+
+    <section class="quoin-hero">
+      <div id="status-pill" class="quoin-hero__status" role="status" aria-live="polite">
+        <span class="quoin-hero__status-dot"></span>
+        <span id="status-text">INITIALIZING</span>
+      </div>
+
+      <h1 class="quoin-hero__title">{{ app_name }}</h1>
+
+      <div class="quoin-hero__version">v{{ app_version }}</div>
+
+      <p class="quoin-hero__tagline">{{ app_description }}</p>
+
+      <div class="quoin-hero__cta">
+        <div class="quoin-cli">
+          <span class="quoin-cli__cmd">git clone https://github.com/balakmran/quoin-api.git</span>
+          <button type="button" class="quoin-cli__copy" onclick="copyCloneCmd()" aria-label="Copy command">
+            <svg id="copy-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+            <svg id="check-icon" hidden xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </button>
         </div>
-
-        <!-- Right: Links -->
-        <nav class="flex items-center gap-8 text-[14px] font-semibold tracking-wide">
-            <a href="https://balakmran.github.io/quoin-api/" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Docs</a>
-            <a href="https://balakmran.github.io/quoin-api/project/changelog/" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Changelog</a>
-            <a href="/docs" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">Swagger UI</a>
-            <a href="{{ repository_url }}" target="_blank" class="text-slate-400 hover:text-white transition-all duration-300 transform hover:-translate-y-0.5">GitHub</a>
-        </nav>
-    </header>
-
-    <!-- Main Content Container -->
-    <div class="w-full max-w-[1400px] mx-auto px-6 lg:px-12 pt-6 pb-20 h-full flex flex-col justify-center items-center z-10 box-border">
-
-        <main class="flex flex-col items-center text-center w-full">
-
-            <!-- Message Pill -->
-            <div id="global-status-pill" class="opacity-0 animate-fade-in-up [animation-delay:0ms] inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-emerald-400 uppercase bg-emerald-900/30 border border-emerald-500/20 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-                <span id="global-status-text">INITIALIZING...</span>
-            </div>
-
-            <!-- Main Title -->
-            <h1 class="opacity-0 animate-fade-in-up [animation-delay:150ms] text-5xl md:text-6xl lg:text-[5.5rem] font-bold mb-4 tracking-[-0.04em] text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-500 py-1">
-                {{ app_name }}
-            </h1>
-
-            <!-- Green Pill Version -->
-            <div class="opacity-0 animate-fade-in-up [animation-delay:300ms] inline-flex items-center justify-center mb-6 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20">
-                v{{ app_version }}
-            </div>
-
-            <!-- Description -->
-            <p class="opacity-0 animate-fade-in-up [animation-delay:450ms] text-base md:text-lg text-slate-400 mb-8 max-w-2xl font-light leading-relaxed">
-                {{ app_description }}
-            </p>
-
-            <!-- Quick Start Terminal Snippet -->
-            <div class="opacity-0 animate-fade-in-up [animation-delay:600ms] relative flex items-center justify-between bg-black/40 border border-slate-700/50 rounded-xl px-5 py-3.5 mb-10 w-auto max-w-full shadow-2xl backdrop-blur-md group hover:border-quoin-500/40 transition-colors">
-                <div class="flex items-center gap-3 overflow-hidden w-full">
-                    <span class="text-quoin-500 font-mono text-sm select-none shrink-0">$</span>
-                    <code class="text-slate-300 font-mono text-[13px] whitespace-nowrap overflow-x-auto scrollbar-hide tracking-tight">git clone https://github.com/balakmran/quoin-api.git</code>
-                </div>
-                <button onclick="copyQuickStart()" class="ml-4 p-1.5 rounded-md bg-white/5 hover:bg-quoin-500/20 text-slate-400 hover:text-quoin-300 transition-all border border-transparent hover:border-quoin-500/50 focus:outline-none shrink-0 cursor-pointer" title="Copy to clipboard">
-                    <svg id="copy-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    </svg>
-                    <svg id="check-icon" class="w-4 h-4 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Unified System Status Console (Alternate Design replacing cards) -->
-            <div class="opacity-0 animate-fade-in-up [animation-delay:750ms] flex items-center gap-8 glass-panel px-8 py-3 rounded-2xl mb-12 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-500 cursor-default shadow-lg">
-                <div class="flex items-center gap-4">
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Health</span>
-                    <div class="relative flex items-center justify-center scale-90">
-                        <div id="health-glow" class="absolute w-4 h-4 rounded-full hidden"></div>
-                        <div id="health-dot" class="w-2.5 h-2.5 rounded-full bg-slate-600 border border-slate-500 shadow-inner"></div>
-                    </div>
-                    <span id="health-status" class="text-xs font-mono font-medium text-slate-400 w-28 text-left">WAIT</span>
-                </div>
-
-                <div class="h-5 w-px bg-white/10 rounded"></div>
-
-                <div class="flex items-center gap-4">
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Ready</span>
-                    <div class="relative flex items-center justify-center scale-90">
-                        <div id="ready-glow" class="absolute w-4 h-4 rounded-full hidden"></div>
-                        <div id="ready-dot" class="w-2.5 h-2.5 rounded-full bg-slate-600 border border-slate-500 shadow-inner"></div>
-                    </div>
-                    <span id="ready-status" class="text-xs font-mono font-medium text-slate-400 w-28 text-left">WAIT</span>
-                </div>
-            </div>
-
-            <!-- Features Grid Section -->
-            <div class="opacity-0 animate-fade-in-up [animation-delay:900ms] w-full text-center mb-6 mt-16">
-                <h2 class="text-lg md:text-xl font-semibold text-white tracking-wide">Core Features</h2>
-                <div class="w-12 h-1 bg-gradient-to-r from-quoin-500 to-transparent mx-auto mt-2 rounded"></div>
-            </div>
-
-            <!-- Features Grid (Compact 2x4 with 1 size bigger text) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full text-left max-w-6xl">
-                <!-- Feature 1: The Engine -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1050ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">⚡</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">High Performance</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">FastAPI and Pydantic async I/O.</p>
-                    </div>
-                </div>
-                <!-- Feature 2: The Data -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1150ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🗄️</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Database Batteries</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">PostgreSQL & Alembic migrations.</p>
-                    </div>
-                </div>
-                <!-- Feature 3: The Code Reliability -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1250ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🛡️</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Strict Quality</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Types by Ty, linted by Ruff, tested via Pytest.</p>
-                    </div>
-                </div>
-                <!-- Feature 4: The Architecture Security -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1350ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🔒</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Secure Defaults</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Structured secure config maps.</p>
-                    </div>
-                </div>
-                <!-- Feature 5: The Operability -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1450ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🔭</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Observable</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">OpenTelemetry tracing built-in.</p>
-                    </div>
-                </div>
-                <!-- Feature 6: The DevEx -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1550ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🧰</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Modern Tooling</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Powered by `uv` and `just` runner.</p>
-                    </div>
-                </div>
-                <!-- Feature 7: The Deployment -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1650ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">🐳</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Docker Ready</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Compose setup for deployment.</p>
-                    </div>
-                </div>
-                <!-- Feature 8: The Conclusion -->
-                <div class="relative overflow-hidden opacity-0 animate-fade-in-up [animation-delay:1750ms] glass-panel px-5 py-4 rounded-2xl hover:-translate-y-1 transition-transform duration-300 group flex items-start gap-4">
-                    <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/5 to-transparent group-hover:animate-[shimmer_1.5s_infinite] z-0"></div>
-                    <!-- Permanent glow on top-left corner -->
-                    <div class="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-quoin-400/60 to-transparent blur-xl rounded-full pointer-events-none z-0 mix-blend-screen"></div>
-                    <div class="relative w-10 h-10 flex-shrink-0 rounded-xl bg-quoin-500/10 flex items-center justify-center text-xl text-quoin-400 border border-quoin-500/20 group-hover:bg-quoin-500/20 transition-colors shadow-inner">📚</div>
-                    <div class="relative pt-0.5">
-                        <h3 class="text-base font-semibold text-white mb-1">Documented</h3>
-                        <p class="text-[15px] text-slate-400 leading-normal font-normal">Zensical & auto-gen OpenAPI specs.</p>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <!-- Floating Footer Centered -->
-    <footer class="w-full max-w-5xl mx-auto h-12 px-8 flex justify-between items-center text-slate-400 text-xs z-50 glass-panel rounded-t-2xl absolute bottom-0 left-1/2 -translate-x-1/2 bg-gray-950/40 border-b-0">
-        <div class="text-left font-medium">
-            <p>&copy; {{ copyright_year }} {{ copyright_owner }}</p>
+        <div class="quoin-btn-row">
+          <a href="https://balakmran.github.io/quoin-api/guides/getting-started/" target="_blank" rel="noopener" class="quoin-btn quoin-btn--primary">Get started</a>
         </div>
-        <div class="text-right">
-            <p class="license font-medium">MIT License</p>
+      </div>
+    </section>
+
+    <section class="quoin-bento">
+
+      <!-- Row 1, col 1-2: High Performance (wide) -->
+      <div class="quoin-bento__tile quoin-bento__tile--wide">
+        <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/fastapi/38bdf8" alt="FastAPI">
+        <span class="quoin-bento__label">Async-first</span>
+        <h2>High Performance</h2>
+        <p>FastAPI, asyncpg, and Pydantic v2 — built for production-grade throughput from day one.</p>
+      </div>
+
+      <!-- Row 1, col 3: Database Native -->
+      <div class="quoin-bento__tile">
+        <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/postgresql/38bdf8" alt="PostgreSQL">
+        <span class="quoin-bento__label">ORM · Migrations</span>
+        <h2>Database Native</h2>
+        <p>PostgreSQL with SQLModel ORM and Alembic migrations pre-wired.</p>
+      </div>
+
+      <!-- Row 1, col 4: Strict Quality -->
+      <div class="quoin-bento__tile">
+        <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/ruff/38bdf8" alt="Ruff">
+        <span class="quoin-bento__label">Zero compromise</span>
+        <h2>Strict Quality</h2>
+        <p>ty, Ruff, and Pytest enforced on every commit via pre-commit hooks.</p>
+      </div>
+
+      <!-- Row 2, col 1: Observable -->
+      <div class="quoin-bento__tile">
+        <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/opentelemetry/38bdf8" alt="OpenTelemetry">
+        <span class="quoin-bento__label">Built-in</span>
+        <h2>Observable</h2>
+        <p>Distributed tracing with OpenTelemetry and structured logs with Structlog.</p>
+      </div>
+
+      <!-- Row 2, col 2: Modern Tooling -->
+      <div class="quoin-bento__tile">
+        <img class="quoin-bento__icon-logo" src="https://cdn.simpleicons.org/uv/38bdf8" alt="uv">
+        <span class="quoin-bento__label">DX-first</span>
+        <h2>Modern Tooling</h2>
+        <p>uv, just, prek, and Docker — fast installs, task runner, hooks, and shipping.</p>
+      </div>
+
+      <!-- Row 2, col 3-4: System Status (wide) -->
+      <div class="quoin-bento__tile quoin-bento__tile--wide">
+        <svg class="quoin-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+        <span class="quoin-bento__label">Live</span>
+        <h2>System Status</h2>
+        <p>Real-time health and readiness of this running instance.</p>
+        <div class="quoin-bento__status-row">
+          <div class="quoin-bento__status-item">
+            <div id="health-dot" class="quoin-status-dot"></div>
+            <span class="quoin-status-label" id="health-status" aria-live="polite">Health</span>
+          </div>
+          <div class="quoin-bento__status-item">
+            <div id="ready-dot" class="quoin-status-dot"></div>
+            <span class="quoin-status-label" id="ready-status" aria-live="polite">Ready</span>
+          </div>
         </div>
+      </div>
+
+    </section>
+
+    <section class="quoin-cmds">
+      <p class="quoin-cmds__eyebrow">Quick start</p>
+      <div class="quoin-cmds__terminal">
+        <div class="quoin-cmds__bar">
+          <span></span><span></span><span></span>
+        </div>
+        <ul class="quoin-cmds__list">
+          <li>
+            <span class="quoin-cmds__prompt">$</span>
+            <code>just setup</code>
+            <span class="quoin-cmds__comment"># install deps &amp; wire commit hooks</span>
+          </li>
+          <li>
+            <span class="quoin-cmds__prompt">$</span>
+            <code>just dev</code>
+            <span class="quoin-cmds__comment"># DB + OAuth + migrations + server</span>
+          </li>
+          <li>
+            <span class="quoin-cmds__prompt">$</span>
+            <code>just new order</code>
+            <span class="quoin-cmds__comment"># scaffold a complete DDD module</span>
+          </li>
+          <li>
+            <span class="quoin-cmds__prompt">$</span>
+            <code>just check</code>
+            <span class="quoin-cmds__comment"># format → lint → typecheck → test</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="quoin-home__footer">
+      <p>Built by <a href="https://github.com/balakmran" target="_blank" rel="noopener">balakmran</a> &nbsp;&middot;&nbsp; Open Source &nbsp;&middot;&nbsp; MIT License</p>
     </footer>
 
-    <!-- Logic -->
-    <script>
-        const copyQuickStart = () => {
-            navigator.clipboard.writeText("git clone https://github.com/balakmran/quoin-api.git");
-            const copyIcon = document.getElementById('copy-icon');
-            const checkIcon = document.getElementById('check-icon');
-            copyIcon.classList.add('hidden');
-            checkIcon.classList.remove('hidden');
-            setTimeout(() => {
-                checkIcon.classList.add('hidden');
-                copyIcon.classList.remove('hidden');
-            }, 2000);
-        };
+  </div>
 
-        let healthOK = true;
-        let readyOK = true;
+  <script>
+    // Canvas 2D background — matches docs home.js exactly
+    (() => {
+      const canvas = document.getElementById('bg-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-        const updateGlobalStatus = () => {
-            const pill = document.getElementById('global-status-pill');
-            const text = document.getElementById('global-status-text');
+      let w, h, dpr;
+      const PARTICLE_COUNT = 80;
+      const BLOCK_COUNT = 12;
+      const particles = [];
+      const blocks = [];
 
-            if (healthOK && readyOK) {
-                text.textContent = "ALL SYSTEMS OPERATIONAL";
-                pill.className = "inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-emerald-400 uppercase bg-emerald-900/30 border border-emerald-500/20 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]";
-            } else {
-                text.textContent = "SYSTEM DEGRADED";
-                pill.className = "inline-block mb-3 px-3 py-1 text-[10px] font-bold tracking-widest text-rose-400 uppercase bg-rose-900/30 border border-rose-500/30 rounded-full glass-panel animate-float transition-all duration-500 shadow-[0_0_15px_rgba(244,63,94,0.2)]";
-            }
-        };
-
-        // Fetch Statuses - LED design
-        const updateStatusLED = async (endpoint, prefix) => {
-            const glow = document.getElementById(`${prefix}-glow`);
-            const dot = document.getElementById(`${prefix}-dot`);
-            const textEl = document.getElementById(`${prefix}-status`);
-
-            try {
-                const startTime = performance.now();
-                const response = await fetch(endpoint);
-                const endTime = performance.now();
-
-                if (response.ok) {
-                    const latency = Math.round(endTime - startTime);
-                    // Success state
-                    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-300 shadow-[0_0_8px_#34d399]';
-                    glow.className = 'absolute w-4 h-4 bg-emerald-500/40 rounded-full animate-ping';
-                    textEl.innerHTML = `ONLINE <span class="text-[10px] text-emerald-600/80 ml-1 drop-shadow-none">[${latency}ms]</span>`;
-                    textEl.className = 'text-xs font-mono font-bold text-emerald-400 w-28 text-left drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] transition-all';
-
-                    if (prefix === 'health') healthOK = true;
-                    if (prefix === 'ready') readyOK = true;
-                } else {
-                    throw new Error('Not OK');
-                }
-            } catch (error) {
-                // Error state
-                dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 border border-rose-400 shadow-[0_0_8px_#f43f5e]';
-                glow.className = 'absolute w-4 h-4 bg-rose-500/40 rounded-full animate-ping';
-                textEl.innerHTML = `ERROR <span class="text-[10px] text-rose-700/80 ml-1 drop-shadow-none">[FAIL]</span>`;
-                textEl.className = 'text-xs font-mono font-bold text-rose-500 w-28 text-left drop-shadow-[0_0_8px_rgba(244,63,94,0.5)] transition-all';
-
-                if (prefix === 'health') healthOK = false;
-                if (prefix === 'ready') readyOK = false;
-            }
-            updateGlobalStatus();
-        };
-
-        // Delay slighty for effect
-        setTimeout(() => {
-            updateStatusLED('/health', 'health');
-            updateStatusLED('/ready', 'ready');
-        }, 800);
-
-        // Active telemetry polling every 10 seconds for coolness factor
-        setInterval(() => {
-            updateStatusLED('/health', 'health');
-            updateStatusLED('/ready', 'ready');
-        }, 10000);
-
-        const initBackground = () => {
-            const canvas = document.getElementById('bg-canvas');
-            const scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x06111f, 0.003);
-
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 220;
-
-            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-            scene.add(new THREE.AmbientLight(0x0c4a6e, 3));
-            const spotlight = new THREE.PointLight(0x38bdf8, 14, 900);
-            spotlight.position.set(0, 60, 180);
-            scene.add(spotlight);
-
-            const blockMat = new THREE.MeshStandardMaterial({
-                color: 0x0ea5e9, emissive: 0x0ea5e9, emissiveIntensity: 0.4,
-                metalness: 0.85, roughness: 0.15,
-            });
-            const wireMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
-
-            const sizes = [
-                [40,16,16],[16,40,16],[16,16,40],[28,28,12],[12,28,28],
-                [22,12,34],[34,14,14],[14,34,14],[18,18,18],[28,10,20],
-                [10,28,20],[20,20,10],[24,12,24],[12,24,12],[30,12,18],[18,30,12],
-            ];
-
-            const blocks = sizes.map((dims, i) => {
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(...dims), blockMat);
-                const wire = new THREE.LineSegments(
-                    new THREE.EdgesGeometry(new THREE.BoxGeometry(dims[0]+0.5, dims[1]+0.5, dims[2]+0.5)),
-                    wireMat
-                );
-                const c = new THREE.Group();
-                c.add(mesh, wire);
-                const side = i % 2 === 0 ? -1 : 1;
-                c.position.set(
-                    side * (80 + Math.random() * 150),
-                    (Math.random() - 0.5) * 200,
-                    (Math.random() - 0.5) * 200 - 40
-                );
-                c.userData = {
-                    floatOffset: Math.random() * Math.PI * 2,
-                    floatSpeed: 0.4 + Math.random() * 0.4,
-                    floatAmp: 6 + Math.random() * 10,
-                    rotSpeed: new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.006,
-                        (Math.random() - 0.5) * 0.006,
-                        (Math.random() - 0.5) * 0.004
-                    ),
-                    baseY: c.position.y,
-                };
-                scene.add(c);
-                return c;
-            });
-
-            const particleCount = 140;
-            const pPos = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount; i++) {
-                pPos[i*3]   = (Math.random() - 0.5) * 420;
-                pPos[i*3+1] = (Math.random() - 0.5) * 420 - 60;
-                pPos[i*3+2] = (Math.random() - 0.5) * 420;
-            }
-            const pGeo = new THREE.BufferGeometry();
-            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({
-                color: 0x0ea5e9, size: 2.5, transparent: true, opacity: 0.8,
-                blending: THREE.AdditiveBlending,
-            })));
-
-            let targetX = 0, targetY = 0;
-            document.addEventListener('mousemove', (e) => {
-                targetX = (e.clientX - window.innerWidth / 2) * 0.04;
-                targetY = (e.clientY - window.innerHeight / 2) * 0.04;
-            });
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            const animate = () => {
-                requestAnimationFrame(animate);
-                const time = Date.now() * 0.001;
-
-                blocks.forEach(b => {
-                    const d = b.userData;
-                    b.position.y = d.baseY + Math.sin(time * d.floatSpeed + d.floatOffset) * d.floatAmp;
-                    b.rotation.x += d.rotSpeed.x;
-                    b.rotation.y += d.rotSpeed.y;
-                    b.rotation.z += d.rotSpeed.z;
-                });
-
-                const pAttr = pGeo.attributes.position;
-                for (let i = 0; i < particleCount; i++) {
-                    pAttr.array[i*3+1] += 0.12;
-                    if (pAttr.array[i*3+1] > 220) pAttr.array[i*3+1] = -220;
-                }
-                pAttr.needsUpdate = true;
-
-                camera.position.x += (targetX - camera.position.x) * 0.05;
-                camera.position.y += (-targetY - camera.position.y) * 0.05;
-                camera.lookAt(scene.position);
-
-                spotlight.position.x += (targetX * 10 - spotlight.position.x) * 0.08;
-                spotlight.position.y += (-targetY * 10 + 60 - spotlight.position.y) * 0.08;
-
-                renderer.render(scene, camera);
-            };
-            animate();
-        };
-
-        if (document.readyState === 'complete') {
-            initBackground();
-        } else {
-            window.addEventListener('DOMContentLoaded', initBackground);
+      const initElements = () => {
+        particles.length = 0;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: 1 + Math.random() * 1.5,
+            speed: 0.15 + Math.random() * 0.3,
+            alpha: 0.3 + Math.random() * 0.5,
+          });
         }
-    </script>
+        blocks.length = 0;
+        for (let i = 0; i < BLOCK_COUNT; i++) {
+          const side = i % 2 === 0 ? -1 : 1;
+          const y = Math.random() * h;
+          blocks.push({
+            xRatio: 0.5 + side * (0.15 + Math.random() * 0.25),
+            y,
+            baseY: y,
+            size: 8 + Math.random() * 18,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.008,
+            floatOffset: Math.random() * Math.PI * 2,
+            floatSpeed: 0.3 + Math.random() * 0.4,
+            floatAmp: 8 + Math.random() * 14,
+            alpha: 0.12 + Math.random() * 0.18,
+          });
+        }
+      };
+
+      const resize = () => {
+        dpr = Math.min(window.devicePixelRatio, 2);
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+      resize();
+      initElements();
+      window.addEventListener('resize', resize);
+
+      let mouseX = 0, mouseY = 0, camX = 0, camY = 0;
+      document.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX - w / 2) * 0.02;
+        mouseY = (e.clientY - h / 2) * 0.02;
+      });
+
+      const draw = () => {
+        requestAnimationFrame(draw);
+        const t = Date.now() * 0.001;
+        camX += (mouseX - camX) * 0.05;
+        camY += (-mouseY - camY) * 0.05;
+        ctx.clearRect(0, 0, w, h);
+
+        for (const b of blocks) {
+          b.y = b.baseY + Math.sin(t * b.floatSpeed + b.floatOffset) * b.floatAmp;
+          b.rotation += b.rotSpeed;
+          const bx = b.xRatio * w + camX * 1.5;
+          const by = b.y + camY * 1.5;
+          ctx.save();
+          ctx.translate(bx, by);
+          ctx.rotate(b.rotation);
+          ctx.strokeStyle = `rgba(56, 189, 248, ${b.alpha})`;
+          ctx.lineWidth = 1;
+          const half = b.size / 2;
+          ctx.strokeRect(-half, -half, b.size, b.size);
+          ctx.fillStyle = `rgba(14, 165, 233, ${b.alpha * 0.3})`;
+          ctx.fillRect(-half, -half, b.size, b.size);
+          ctx.restore();
+        }
+
+        for (const p of particles) {
+          p.y -= p.speed;
+          if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+          ctx.beginPath();
+          ctx.arc(p.x + camX * 0.5, p.y + camY * 0.5, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(14, 165, 233, ${p.alpha})`;
+          ctx.fill();
+        }
+      };
+      draw();
+    })();
+
+    // Copy CLI command
+    const copyCloneCmd = () => {
+      navigator.clipboard.writeText('git clone https://github.com/balakmran/quoin-api.git');
+      const copyIcon = document.getElementById('copy-icon');
+      const checkIcon = document.getElementById('check-icon');
+      copyIcon.hidden = true;
+      checkIcon.hidden = false;
+      setTimeout(() => { copyIcon.hidden = false; checkIcon.hidden = true; }, 1800);
+    };
+
+    // Status LEDs
+    let healthOK = true, readyOK = true;
+
+    const setDot = (prefix, ok, latency) => {
+      const dot = document.getElementById(`${prefix}-dot`);
+      const label = document.getElementById(`${prefix}-status`);
+      const name = prefix === 'health' ? 'Health' : 'Ready';
+      if (ok) {
+        dot.style.cssText = 'background:#34d399;border-color:#6ee7b7;box-shadow:0 0 6px rgba(52,211,153,0.8)';
+        label.style.color = '#34d399';
+        label.textContent = latency != null ? `${name} · ${latency}ms` : name;
+      } else {
+        dot.style.cssText = 'background:#f43f5e;border-color:#fb7185;box-shadow:0 0 6px rgba(244,63,94,0.8)';
+        label.style.color = '#f43f5e';
+        label.textContent = `${name} · Error`;
+      }
+    };
+
+    const syncPill = () => {
+      const pill = document.getElementById('status-pill');
+      const text = document.getElementById('status-text');
+      if (healthOK && readyOK) {
+        pill.className = 'quoin-hero__status quoin-hero__status--ok';
+        text.textContent = 'ALL SYSTEMS OPERATIONAL';
+      } else {
+        pill.className = 'quoin-hero__status quoin-hero__status--error';
+        text.textContent = 'SYSTEM DEGRADED';
+      }
+    };
+
+    const pollStatus = async (endpoint, prefix) => {
+      try {
+        const t0 = performance.now();
+        const res = await fetch(endpoint);
+        const latency = Math.round(performance.now() - t0);
+        const ok = res.ok;
+        setDot(prefix, ok, ok ? latency : null);
+        if (prefix === 'health') healthOK = ok;
+        if (prefix === 'ready') readyOK = ok;
+      } catch {
+        setDot(prefix, false, null);
+        if (prefix === 'health') healthOK = false;
+        if (prefix === 'ready') readyOK = false;
+      }
+      syncPill();
+    };
+
+    setTimeout(() => {
+      pollStatus('/health', 'health');
+      pollStatus('/ready', 'ready');
+    }, 800);
+
+    setInterval(() => {
+      pollStatus('/health', 'health');
+      pollStatus('/ready', 'ready');
+    }, 10000);
+  </script>
 </body>
 </html>

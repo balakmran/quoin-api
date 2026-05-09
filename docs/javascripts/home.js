@@ -173,8 +173,8 @@
 
     const nav = document.createElement("div");
     nav.className = "quoin-header__nav";
-    nav.appendChild(ghLink);
     nav.appendChild(docsLink);
+    nav.appendChild(ghLink);
 
     title.insertAdjacentElement("afterend", nav);
   };
