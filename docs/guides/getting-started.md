@@ -1,6 +1,27 @@
 # Getting Started
 
-Welcome to the **QuoinAPI** project! This guide will help you set up your development environment and get the application running locally.
+## Start a new project
+
+Use QuoinAPI as a [Copier](https://copier.readthedocs.io/) template to
+scaffold a production-ready API. Only `uv` needs to be installed — `uvx`
+runs Copier without a separate install step:
+
+```bash
+uvx copier copy --trust gh:balakmran/quoin-api my-api
+cd my-api
+cp .env.example .env
+just setup
+just dev
+```
+
+Visit [http://localhost:8000](http://localhost:8000) once the server is up.
+
+---
+
+## Develop QuoinAPI itself
+
+The rest of this guide covers working on QuoinAPI directly — cloning the
+repo, running the test suite, and contributing changes.
 
 ## Prerequisites
 
@@ -31,22 +52,11 @@ just setup
 just dev
 ```
 
-The application will be available at [http://localhost:8000](http://localhost:8000).
-
-- **API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Redoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
-## Application Home Page
-
-When you visit [http://localhost:8000](http://localhost:8000), you'll see the application's home page:
+Visit [http://localhost:8000](http://localhost:8000) — the home page confirms
+the app is up. API docs are at [/docs](http://localhost:8000/docs) (Swagger UI)
+and [/redoc](http://localhost:8000/redoc).
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
-
-This confirms the application is running correctly. The page includes:
-
-- Application name, version, and description
-- Quick links to API documentation (Swagger UI and ReDoc)
-- Health check endpoint status
 
 ## Project Structure
 
@@ -83,7 +93,7 @@ Now that the app is running, here are the logical next steps:
 | Change environment settings | [Configuration](configuration.md) |
 | Add a database column | [Database Migrations](database-migrations.md) |
 | Write tests | [Testing](testing.md) |
-| Explore the live API | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| Explore the live API | [localhost:8000/docs](http://localhost:8000/docs) |
 
 ---
 

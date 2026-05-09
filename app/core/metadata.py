@@ -1,10 +1,7 @@
 from app import __version__
 
 APP_NAME = "QuoinAPI"
-APP_DESCRIPTION = (
-    "The architectural cornerstone for high-performance, "
-    "scalable Python services."
-)
+APP_DESCRIPTION = "The Foundation for your Python backend API"
 REPOSITORY_URL = "https://github.com/balakmran/quoin-api"
 COPYRIGHT_OWNER = "Balakumaran Manoharan"
 

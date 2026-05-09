@@ -32,17 +32,12 @@ just setup
 just dev
 ```
 
-## 📸 Application Home Page
+## Application Home Page
 
-After running the server, you can visit [http://localhost:8000](http://localhost:8000) to see the application's home page:
+Visit [http://localhost:8000](http://localhost:8000) — the home page confirms
+the app is running:
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
-
-This confirms the application is running correctly. The page includes:
-
-- **Project Status**: Real-time health indicators for the application and its
-  dependencies.
-- **Quick Links**: Direct access to API documentation and other resources.
 
 ## 🤝 Contribution Workflow
 

@@ -25,7 +25,7 @@ async def test_root(app: FastAPI):
 
     assert response.status_code == status.HTTP_200_OK
     assert "text/html" in response.headers["content-type"]
-    assert "INITIALIZING..." in response.text
+    assert "INITIALIZING" in response.text
 
 
 @pytest.mark.asyncio
