@@ -58,7 +58,7 @@ class UserRepository:
         result = await self.session.exec(statement)  # type: ignore
         return result.scalars().first()
 
-    async def list(self, skip: int = 0, limit: int = 100) -> list[User]:
+    async def list(self, skip: int = 0, limit: int = 100) -> list[User]:  # type: ignore
         """Fetch a paginated slice of all User records.
 
         Args:

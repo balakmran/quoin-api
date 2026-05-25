@@ -42,6 +42,19 @@
 
 ### Changed
 
+- **Dependencies**: Bumped runtime deps — `fastapi` 0.135.3 → 0.136.3,
+  `psycopg` 3.3.3 → 3.3.4, `greenlet` 3.4.0 → 3.5.1, `pydantic-settings`
+  ≥2.14.1, `opentelemetry-*` 1.41.0 → 1.42.1 + instrumentation 0.62b0 →
+  0.63b1, `PyJWT` ≥2.13.0. Tooling: `ruff` 0.15.14, `ty` 0.0.39, `prek`
+  0.4.1, `zensical` 0.0.43.
+- **Python**: Upgraded runtime from 3.12 → **3.14** (3.14.5 stable bugfix
+  release). Updated `.python-version`, `Dockerfile`, `pyproject.toml`
+  `requires-python` and `ruff` `target-version`. Adjusted one `# type:
+  ignore` in `UserRepository.list` for a `ty` 0.0.39 name-resolution quirk
+  with methods named after builtins.
+- **Infrastructure**: `mock-oauth2-server` Docker image 3.0.1 → 4.0.0.
+  HTTP 422 phrase updated from `"Unprocessable Entity"` to `"Unprocessable
+  Content"` per RFC 9110 (propagated in tests and error-handling).
 - **Errors**: `quoin_exception_handler` now emits a structured `warning` log
   (`event="quoin_error"`) before returning; previously it returned silently.
 - **Observability**: Observability guide rewritten to be vendor-neutral —

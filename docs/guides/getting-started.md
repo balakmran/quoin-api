@@ -28,7 +28,7 @@ repo, running the test suite, and contributing changes.
 Ensure you have the following tools installed:
 
 - **[Git](https://git-scm.com/)**: Version control system.
-- **[Python 3.12+](https://www.python.org/downloads/)**: The programming language used.
+- **[Python 3.14+](https://www.python.org/downloads/)**: The programming language used.
 - **[uv](https://github.com/astral-sh/uv)**: A fast Python package installer and manager.
 - **[just](https://github.com/casey/just)**: A handy command runner for project tasks.
 - **[Docker](https://www.docker.com/)**: Required for running the database and services.

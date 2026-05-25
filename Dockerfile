@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
@@ -12,7 +12,7 @@ COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
 
 # Stage 2: Final
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 WORKDIR /app
 

@@ -13,7 +13,7 @@ from app.main import app as fastapi_app
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def initialize_db() -> AsyncGenerator[None, None]:
+async def initialize_db() -> AsyncGenerator[None]:
     """Initialize the database engine for the test session."""
     # Connect to the default 'postgres' database safely to avoid dropping
     # tables from the main development 'app_db' database.
@@ -39,7 +39,7 @@ async def initialize_db() -> AsyncGenerator[None, None]:
 
 
 @pytest.fixture
-async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession]:
     """Fixture that returns a SQLAlchemy session with a SAVEPOINT.
 
     The rollback happens after the test completes. This guarantees that the
@@ -68,7 +68,7 @@ async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     """Fixture that returns an HTTP client for the application.
 
     It overrides the get_session dependency to use the test session.
@@ -109,7 +109,7 @@ def caller_admin() -> ServicePrincipal:
 async def read_client(
     client: AsyncClient,
     caller_read: ServicePrincipal,
-) -> AsyncGenerator[AsyncClient, None]:
+) -> AsyncGenerator[AsyncClient]:
     """HTTP client authenticated as a service with users.read role."""
     fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_read
     yield client
@@ -120,7 +120,7 @@ async def read_client(
 async def admin_client(
     client: AsyncClient,
     caller_admin: ServicePrincipal,
-) -> AsyncGenerator[AsyncClient, None]:
+) -> AsyncGenerator[AsyncClient]:
     """HTTP client authenticated as a service with users.read + users.write."""
     fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_admin
     yield client

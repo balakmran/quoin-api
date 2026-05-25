@@ -51,14 +51,14 @@ The `Dockerfile` uses a **multi-stage build**:
 
 ```dockerfile
 # Stage 1: Builder — install dependencies only
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
 
 # Stage 2: Final — lean production image
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY app/ app/
