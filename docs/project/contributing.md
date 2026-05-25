@@ -9,7 +9,7 @@ project structure.
 Ensure you have the following tools installed:
 
 - [Git](https://git-scm.com/) - Version control
-- [Python 3.12+](https://www.python.org/downloads/)
+- [Python 3.14+](https://www.python.org/downloads/)
 - [uv](https://github.com/astral-sh/uv) - Python package manager
 - [just](https://github.com/casey/just) - Command runner
 - [OrbStack](https://orbstack.dev/) (recommended) or
@@ -32,12 +32,17 @@ just setup
 just dev
 ```
 
-## Application Home Page
+## 📸 Application Home Page
 
-Visit [http://localhost:8000](http://localhost:8000) — the home page confirms
-the app is running:
+After running the server, you can visit [http://localhost:8000](http://localhost:8000) to see the application's home page:
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
+
+This confirms the application is running correctly. The page includes:
+
+- **Project Status**: Real-time health indicators for the application and its
+  dependencies.
+- **Quick Links**: Direct access to API documentation and other resources.
 
 ## 🤝 Contribution Workflow
 

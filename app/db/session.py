@@ -49,7 +49,7 @@ def create_session_factory(
 
 async def get_session(
     request: Request,
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     """Yield a database session for the duration of the request.
 
     Reads the session factory from app.state, which is initialised

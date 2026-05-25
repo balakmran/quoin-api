@@ -3,7 +3,7 @@ name = "quoin-api"
 version = "0.6.0"
 description = "The architectural cornerstone for high-performance, scalable Python services"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 authors = [
     { name = "Balakumaran Manoharan", email = "bala@balakmran.dev" }
 ]
@@ -11,20 +11,20 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
-    "fastapi[standard]==0.135.3",
+    "fastapi[standard]==0.136.3",
     "sqlmodel==0.0.38",
-    "psycopg[binary]==3.3.3",
+    "psycopg[binary]==3.3.4",
     "structlog>=25.5.0",
-    "pydantic-settings>=2.13.1",
+    "pydantic-settings>=2.14.1",
     "alembic>=1.18.4",
-    "greenlet==3.4.0",
+    "greenlet==3.5.1",
     "asyncpg>=0.31.0",
     "jinja2>=3.1.6",
-    "opentelemetry-api>=1.41.0",
-    "opentelemetry-sdk>=1.41.0",
-    "opentelemetry-exporter-otlp>=1.41.0",
-    "opentelemetry-instrumentation-fastapi>=0.62b0",
-    "PyJWT[crypto]>=2.12.1",
+    "opentelemetry-api>=1.42.1",
+    "opentelemetry-sdk>=1.42.1",
+    "opentelemetry-exporter-otlp>=1.42.1",
+    "opentelemetry-instrumentation-fastapi>=0.63b1",
+    "PyJWT[crypto]>=2.13.0",
     "httpx>=0.28.1",
 ]
 
@@ -39,9 +39,9 @@ dev = [
     { include-group = "docs" },
 ]
 tooling = [
-    "ruff==0.15.11",
-    "ty==0.0.31",
-    "prek==0.3.8",
+    "ruff==0.15.14",
+    "ty==0.0.39",
+    "prek==0.4.1",
 ]
 test = [
     "pytest>=9.0.3",
@@ -49,13 +49,13 @@ test = [
     "pytest-cov>=7.1.0",
 ]
 docs = [
-    "zensical==0.0.32",
+    "zensical==0.0.43",
     "mkdocstrings-python>=2.0.3",
 ]
 
 [tool.ruff]
 line-length = 80
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "PL", "RUF", "D"]

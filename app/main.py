@@ -19,7 +19,7 @@ def create_app() -> FastAPI:
     setup_logging()
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         """Create DB engine and session factory on startup; dispose on shutdown.
 
         Args:

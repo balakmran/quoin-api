@@ -105,7 +105,7 @@ def test_problem_title_standard_codes() -> None:
     assert _problem_title(400) == "Bad Request"
     assert _problem_title(404) == "Not Found"
     assert _problem_title(409) == "Conflict"
-    assert _problem_title(422) == "Unprocessable Entity"
+    assert _problem_title(422) == "Unprocessable Content"
     assert _problem_title(500) == "Internal Server Error"
     assert _problem_title(503) == "Service Unavailable"
 
@@ -303,7 +303,7 @@ async def test_fastapi_request_validation_handling() -> None:
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert response.headers["content-type"] == _PROBLEM_CONTENT_TYPE
     assert body["type"] == "urn:quoin:error:validation_error"
-    assert body["title"] == "Unprocessable Entity"
+    assert body["title"] == "Unprocessable Content"
     assert body["status"] == 422  # noqa: PLR2004
     assert body["detail"] == "Request validation failed"
     assert isinstance(body["errors"], list)

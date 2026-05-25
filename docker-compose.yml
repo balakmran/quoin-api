@@ -40,7 +40,7 @@ services:
       start_period: 10s
 
   oauth:
-    image: ghcr.io/navikt/mock-oauth2-server:3.0.1
+    image: ghcr.io/navikt/mock-oauth2-server:4.0.0
     ports:
       - "8080:8080"
     healthcheck:
