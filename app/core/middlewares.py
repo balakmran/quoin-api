@@ -192,6 +192,7 @@ async def _send_413(send: Send, path: str, limit: int) -> None:
 
 
 def _has_wildcard(values: list[str]) -> bool:
+    """Return True if any value in the list is a bare wildcard ``*``."""
     return any(v.strip() == "*" for v in values)
 
 
