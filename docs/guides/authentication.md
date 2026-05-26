@@ -206,7 +206,7 @@ Because QuoinAPI supports the `api.superuser` bypass flag natively in the `requi
 
 ```bash
 # Generate a master bypass token
-just token roles="api.superuser"
+just token --roles="api.superuser"
 ```
 
 **Testing Explicit Constraints**:
@@ -214,7 +214,7 @@ If you want to ensure your `users.read` role is getting blocked on the `/delete`
 
 ```bash
 # 1. Get a standard token strictly limited to `users.read`
-TOKEN=$(just token roles="users.read")
+TOKEN=$(just token --roles="users.read")
 
 # 2. Call a protected Read endpoint (e.g. fetching users) -> 200 OK
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/

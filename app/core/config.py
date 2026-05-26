@@ -74,6 +74,44 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:8000",
     ]
+    BACKEND_CORS_ALLOW_METHODS: list[str] = [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ]
+    BACKEND_CORS_ALLOW_HEADERS: list[str] = [
+        "Authorization",
+        "Content-Type",
+        "X-Request-ID",
+    ]
+    BACKEND_CORS_ALLOW_CREDENTIALS: bool = True
+
+    # Security headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    SECURITY_HSTS_MAX_AGE: int = 31_536_000
+    SECURITY_HSTS_INCLUDE_SUBDOMAINS: bool = True
+    SECURITY_HSTS_PRELOAD: bool = False
+    SECURITY_CSP: str = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+        " https://cdn.jsdelivr.net; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' https://cdn.simpleicons.org"
+        " https://fastapi.tiangolo.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'"
+    )
+    SECURITY_REFERRER_POLICY: str = "strict-origin-when-cross-origin"
+    SECURITY_PERMISSIONS_POLICY: str = (
+        "geolocation=(), camera=(), microphone=()"
+    )
+
+    # Request size limit (in bytes); <=0 disables the cap
+    MAX_REQUEST_BODY_BYTES: int = 1_048_576  # 1 MiB
 
     # OAuth 2.0 / OIDC
     OAUTH_JWKS_URI: str | None = None

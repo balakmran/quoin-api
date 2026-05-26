@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Security**: `SecurityHeadersMiddleware` emits HSTS, CSP,
+  X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and
+  Permissions-Policy on every response. All values configurable via
+  `QUOIN_SECURITY_*` settings; toggle with
+  `QUOIN_SECURITY_HEADERS_ENABLED`.
+- **Security**: `RequestSizeLimitMiddleware` rejects oversize bodies
+  before they reach route handlers by checking the advertised
+  `Content-Length`. Returns 413 RFC 9457 `payload_too_large`.
+  Configurable via `QUOIN_MAX_REQUEST_BODY_BYTES` (default 1 MiB; `<=0`
+  disables). Conforming clients always send `Content-Length`; the
+  uvicorn/h11 layer caps raw protocol buffers for the chunked edge
+  case.
+
+### Changed
+
+- **Security**: CORS configuration now requires explicit allowlists for
+  methods and headers (`QUOIN_BACKEND_CORS_ALLOW_METHODS`,
+  `QUOIN_BACKEND_CORS_ALLOW_HEADERS`,
+  `QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS`). Wildcard methods/headers
+  combined with `allow_credentials=True` outside `development` are
+  rejected at startup — that combination is silently ignored by
+  browsers and was a credentialed-CORS footgun.
+
 ## [0.7.0] - 2026-05-25
 
 ### Added

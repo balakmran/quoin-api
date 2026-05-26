@@ -98,7 +98,18 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_REQUEST_TIMEOUT_SECONDS` | Per-request wall-clock timeout (0 = disabled)    | `30.0`                                              |
 | `QUOIN_REQUEST_ID_HEADER`    | Header name for request ID propagation              | `X-Request-ID`                                      |
 | `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
-| `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins                                | `["http://localhost:3000", "http://localhost:8000"]` |
+| `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins (empty = CORS disabled)        | `["http://localhost:3000", "http://localhost:8000"]` |
+| `QUOIN_BACKEND_CORS_ALLOW_METHODS` | Allowed HTTP methods for CORS                 | `["GET","POST","PUT","PATCH","DELETE","OPTIONS"]`    |
+| `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | Allowed request headers for CORS             | `["Authorization","Content-Type","X-Request-ID"]`   |
+| `QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS` | Allow cookies/credentials in CORS requests | `true`                                          |
+| `QUOIN_SECURITY_HEADERS_ENABLED` | Enable security response headers middleware     | `true`                                              |
+| `QUOIN_SECURITY_HSTS_MAX_AGE` | HSTS `max-age` in seconds (`0` = disabled)         | `31536000`                                          |
+| `QUOIN_SECURITY_HSTS_INCLUDE_SUBDOMAINS` | Add `includeSubDomains` to HSTS         | `true`                                              |
+| `QUOIN_SECURITY_HSTS_PRELOAD` | Add `preload` to HSTS header                       | `false`                                             |
+| `QUOIN_SECURITY_CSP`         | `Content-Security-Policy` header value              | See [Security guide](security.md#content-security-policy) |
+| `QUOIN_SECURITY_REFERRER_POLICY` | `Referrer-Policy` header value                  | `strict-origin-when-cross-origin`                   |
+| `QUOIN_SECURITY_PERMISSIONS_POLICY` | `Permissions-Policy` header value            | `geolocation=(), camera=(), microphone=()`          |
+| `QUOIN_MAX_REQUEST_BODY_BYTES` | Max request body size in bytes (`<=0` = disabled) | `1048576` (1 MiB)                                   |
 
 ## Core Settings Module
 
