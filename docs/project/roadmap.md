@@ -6,7 +6,7 @@ feedback and shifting priorities.
 
 !!! note
     This is a living document. Completed items are moved to
-    [CHANGELOG.md](CHANGELOG.md).
+    [CHANGELOG.md](changelog.md).
 
 ## Status Legend
 
@@ -131,5 +131,5 @@ not "it would be nice to have".
 1. Check if an issue already exists for the feature you want to work on.
 2. Open a **Discussion** to align on approach before writing code.
 3. Reference this roadmap item in your PR description.
-4. Follow the [Contributing Guide](CONTRIBUTING.md) and ensure
+4. Follow the [Contributing Guide](contributing.md) and ensure
    `just check` passes before requesting review.

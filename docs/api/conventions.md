@@ -142,5 +142,5 @@ GET /health
 
 - [app/api.py](https://github.com/balakmran/quoin-api/blob/main/app/api.py) — API router configuration
 - [app/main.py](https://github.com/balakmran/quoin-api/blob/main/app/main.py) — Application entry point
-- [Error Handling](error-handling.md) — API error responses
-- [Testing Guide](testing.md) — API integration tests
+- [Error Handling](../guides/error-handling.md) — API error responses
+- [Testing Guide](../guides/testing.md) — API integration tests
