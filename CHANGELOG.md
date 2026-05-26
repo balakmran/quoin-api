@@ -41,6 +41,17 @@
 - **Errors**: `quoin_exception_handler` now emits a structured warning log
   (`event="quoin_error"`) before returning.
 - **Observability**: Guide rewritten to be vendor-neutral (Jaeger/CNCF only).
+- **UI**: Homepage redesigned to match documentation site styling; mobile
+  overflow on small screens resolved.
+- **CI**: GitHub Actions workflows upgraded to latest versions with Node 24
+  support.
+
+### Fixed
+
+- **Auth**: OAuth audience validation now enforced — `aud` claim is verified
+  against `QUOIN_OAUTH_AUDIENCE`; previously the check was skipped.
+- **Core**: `datetime.now()` replaced with `datetime.now(UTC)` in system
+  routes; request validation error handling hardened.
 
 ## [0.6.0] - 2026-04-18
 
