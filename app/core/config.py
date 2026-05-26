@@ -96,10 +96,12 @@ class Settings(BaseSettings):
     SECURITY_HSTS_PRELOAD: bool = False
     SECURITY_CSP: str = (
         "default-src 'self'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+        " https://cdn.jsdelivr.net; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' https://cdn.simpleicons.org; "
-        "script-src 'self' 'unsafe-inline'; "
+        "img-src 'self' https://cdn.simpleicons.org"
+        " https://fastapi.tiangolo.com; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "frame-ancestors 'none'; "
         "base-uri 'self'"
     )

@@ -423,7 +423,7 @@ async def test_request_size_limit_allows_under_cap(
 async def test_request_size_limit_invalid_content_length(
     size_limit_app: FastAPI,
 ) -> None:
-    """A non-numeric Content-Length is treated as oversize and rejected."""
+    """A non-numeric Content-Length is passed through unchanged."""
     with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
         async with AsyncClient(
             transport=ASGITransport(app=size_limit_app),

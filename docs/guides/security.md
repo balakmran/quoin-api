@@ -78,19 +78,26 @@ simpleicons CDN, and inline styles/scripts):
 
 ```
 default-src 'self';
-style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-font-src 'self' https://fonts.gstatic.com;
-img-src 'self' https://cdn.simpleicons.org;
-script-src 'self' 'unsafe-inline';
+style-src  'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+font-src   'self' https://fonts.gstatic.com;
+img-src    'self' https://cdn.simpleicons.org https://fastapi.tiangolo.com;
+script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
 frame-ancestors 'none';
 base-uri 'self'
 ```
 
+The default covers two built-in UIs:
+
+- **Homepage** — Google Fonts (`fonts.googleapis.com` / `fonts.gstatic.com`)
+  and tech-logo icons (`cdn.simpleicons.org`).
+- **Swagger UI** (`/docs`) — FastAPI loads its UI assets and favicon from
+  `cdn.jsdelivr.net` and `fastapi.tiangolo.com`.
+
 !!! note "unsafe-inline"
     Both `style-src` and `script-src` include `'unsafe-inline'` because
-    the homepage uses inline `<style>` and `<script>` blocks. If you
-    replace those with static files, you can drop `'unsafe-inline'` for
-    a stricter policy.
+    the homepage uses inline `<style>` and `<script>` blocks. Moving those
+    to static files would let you drop `'unsafe-inline'` for a stricter
+    policy.
 
 Override it for your own frontend:
 
