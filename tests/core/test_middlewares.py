@@ -8,10 +8,13 @@ from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from httpx import ASGITransport, AsyncClient
+from starlette.types import Message, Receive, Scope, Send
 
-from app.core.config import settings
+from app.core.config import Environment, settings
 from app.core.middlewares import (
     RequestIDMiddleware,
+    RequestSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
     TimeoutMiddleware,
     configure_cors,
     configure_middlewares,
@@ -167,11 +170,19 @@ def test_configure_middlewares() -> None:
         has_timeout = any(
             m.cls == TimeoutMiddleware for m in app.user_middleware
         )
+        has_security_headers = any(
+            m.cls == SecurityHeadersMiddleware for m in app.user_middleware
+        )
+        has_size_limit = any(
+            m.cls == RequestSizeLimitMiddleware for m in app.user_middleware
+        )
 
         assert has_cors
         assert has_trusted_host
         assert has_request_id
         assert has_timeout
+        assert has_security_headers
+        assert has_size_limit
 
 
 @pytest.fixture
@@ -260,3 +271,250 @@ async def test_request_id_middleware_binds_and_clears_structlog(
         )
 
     assert captured["request_id"] == "ctx-test-id"
+
+
+def test_configure_cors_rejects_wildcard_with_credentials_in_prod() -> None:
+    """In production, wildcard methods/headers + credentials must error."""
+    app = FastAPI()
+    with (
+        patch.object(settings, "ENV", Environment.production),
+        patch.object(settings, "BACKEND_CORS_ORIGINS", ["https://example.com"]),
+        patch.object(settings, "BACKEND_CORS_ALLOW_METHODS", ["*"]),
+        patch.object(settings, "BACKEND_CORS_ALLOW_CREDENTIALS", True),
+    ):
+        with pytest.raises(RuntimeError, match="CORS misconfiguration"):
+            configure_cors(app)
+
+
+def test_configure_cors_allows_wildcard_in_development() -> None:
+    """Development should still accept wildcard methods for convenience."""
+    app = FastAPI()
+    with (
+        patch.object(settings, "ENV", Environment.development),
+        patch.object(
+            settings, "BACKEND_CORS_ORIGINS", ["http://localhost:3000"]
+        ),
+        patch.object(settings, "BACKEND_CORS_ALLOW_METHODS", ["*"]),
+        patch.object(settings, "BACKEND_CORS_ALLOW_CREDENTIALS", True),
+    ):
+        configure_cors(app)
+    assert any(m.cls == CORSMiddleware for m in app.user_middleware)
+
+
+@pytest.fixture
+def security_headers_app() -> FastAPI:
+    """Minimal app with SecurityHeadersMiddleware."""
+    app = FastAPI()
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    @app.get("/x")
+    async def endpoint() -> dict[str, str]:
+        return {}
+
+    return app
+
+
+@pytest.mark.asyncio
+async def test_security_headers_emitted(
+    security_headers_app: FastAPI,
+) -> None:
+    """All configured security headers are present on responses."""
+    async with AsyncClient(
+        transport=ASGITransport(app=security_headers_app),
+        base_url="http://test",
+    ) as ac:
+        response = await ac.get("/x")
+
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "Referrer-Policy" in response.headers
+    assert "Permissions-Policy" in response.headers
+    assert "Content-Security-Policy" in response.headers
+    hsts = response.headers["Strict-Transport-Security"]
+    assert "max-age=" in hsts
+    assert "includeSubDomains" in hsts
+
+
+@pytest.mark.asyncio
+async def test_security_headers_disabled(
+    security_headers_app: FastAPI,
+) -> None:
+    """When disabled, the middleware does not set any headers."""
+    with patch.object(settings, "SECURITY_HEADERS_ENABLED", False):
+        async with AsyncClient(
+            transport=ASGITransport(app=security_headers_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/x")
+
+    assert "X-Frame-Options" not in response.headers
+    assert "Content-Security-Policy" not in response.headers
+
+
+@pytest.mark.asyncio
+async def test_security_headers_hsts_disabled_when_max_age_zero(
+    security_headers_app: FastAPI,
+) -> None:
+    """HSTS is omitted when max-age is 0."""
+    with patch.object(settings, "SECURITY_HSTS_MAX_AGE", 0):
+        async with AsyncClient(
+            transport=ASGITransport(app=security_headers_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/x")
+
+    assert "Strict-Transport-Security" not in response.headers
+
+
+@pytest.fixture
+def size_limit_app() -> FastAPI:
+    """Minimal app with RequestSizeLimitMiddleware."""
+    app = FastAPI()
+    app.add_middleware(RequestSizeLimitMiddleware)
+
+    @app.post("/echo")
+    async def echo(payload: dict[str, str]) -> dict[str, str]:
+        return payload
+
+    return app
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_rejects_oversize_content_length(
+    size_limit_app: FastAPI,
+) -> None:
+    """An advertised Content-Length over the cap returns 413."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
+        body = b'{"a":"' + b"x" * 64 + b'"}'
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post(
+                "/echo",
+                content=body,
+                headers={"Content-Type": "application/json"},
+            )
+
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE
+    assert response.headers["content-type"] == "application/problem+json"
+    payload = response.json()
+    assert payload["type"] == "urn:quoin:error:payload_too_large"
+    assert payload["status"] == status.HTTP_413_CONTENT_TOO_LARGE
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_allows_under_cap(
+    size_limit_app: FastAPI,
+) -> None:
+    """Requests under the cap pass through normally."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 1024):
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post("/echo", json={"a": "b"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"a": "b"}
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_invalid_content_length(
+    size_limit_app: FastAPI,
+) -> None:
+    """A non-numeric Content-Length is treated as oversize and rejected."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post(
+                "/echo",
+                content=b'{"a":"b"}',
+                headers={
+                    "Content-Type": "application/json",
+                    "Content-Length": "not-a-number",
+                },
+            )
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_ignores_non_http_scope() -> None:
+    """Lifespan / websocket scopes pass through untouched."""
+    seen: list[str] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        seen.append(scope["type"])
+
+    middleware = RequestSizeLimitMiddleware(downstream)
+
+    async def empty_recv() -> Message:
+        return {"type": "lifespan.startup"}
+
+    async def noop_send(_: Message) -> None:
+        return None
+
+    await middleware({"type": "lifespan"}, empty_recv, noop_send)
+    assert seen == ["lifespan"]
+
+
+@pytest.mark.asyncio
+async def test_security_headers_optional_directives_can_be_disabled(
+    security_headers_app: FastAPI,
+) -> None:
+    """Empty CSP/Referrer/Permissions strings suppress those headers."""
+    with (
+        patch.object(settings, "SECURITY_CSP", ""),
+        patch.object(settings, "SECURITY_REFERRER_POLICY", ""),
+        patch.object(settings, "SECURITY_PERMISSIONS_POLICY", ""),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=security_headers_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/x")
+
+    assert "Content-Security-Policy" not in response.headers
+    assert "Referrer-Policy" not in response.headers
+    assert "Permissions-Policy" not in response.headers
+    # Non-optional headers still present
+    assert response.headers["X-Frame-Options"] == "DENY"
+
+
+@pytest.mark.asyncio
+async def test_security_headers_hsts_minimal(
+    security_headers_app: FastAPI,
+) -> None:
+    """HSTS without subdomains, with preload — exercises both flag paths."""
+    with (
+        patch.object(settings, "SECURITY_HSTS_INCLUDE_SUBDOMAINS", False),
+        patch.object(settings, "SECURITY_HSTS_PRELOAD", True),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=security_headers_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/x")
+
+    hsts = response.headers["Strict-Transport-Security"]
+    assert "includeSubDomains" not in hsts
+    assert "preload" in hsts
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_disabled_when_zero(
+    size_limit_app: FastAPI,
+) -> None:
+    """Setting the cap to <=0 disables the limit."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 0):
+        body = {"a": "x" * 4096}
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post("/echo", json=body)
+
+    assert response.status_code == status.HTTP_200_OK

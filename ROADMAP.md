@@ -45,9 +45,9 @@ security fixes land first.
 
 | Status | Feature |
 | :----- | :------ |
-| 📋 | **CORS hardening** — Explicit allowlist, credentials policy, no `allow_methods=["*"]` / `allow_headers=["*"]` with credentials in non-dev environments (closes the wildcard footgun currently in `app/core/middlewares.py`) |
-| 📋 | **Security headers middleware** — HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
-| 📋 | **Request size caps** — Starlette middleware enforcing a configurable max request body size; returns 413 RFC 9457 |
+| ✅ | **CORS hardening** — Explicit allowlist, credentials policy, no `allow_methods=["*"]` / `allow_headers=["*"]` with credentials in non-dev environments (closes the wildcard footgun currently in `app/core/middlewares.py`) |
+| ✅ | **Security headers middleware** — HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| ✅ | **Request size caps** — Starlette middleware enforcing a configurable max request body size; returns 413 RFC 9457 |
 | 📋 | **Graceful shutdown** — In-flight request drain on SIGTERM; in-app counter middleware + lifespan wait with `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` |
 | 📋 | **Outbound HTTP client** — Shared `httpx.AsyncClient` lifecycle-managed in lifespan; retries with exponential backoff; circuit breaker; OTel-instrumented. Foundational — every later integration sits on this. |
 | 📋 | **Zero-downtime migration playbook** — Expand/contract patterns documented; `migrate-gen` guard flags destructive operations for review |
