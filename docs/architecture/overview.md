@@ -133,24 +133,27 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    FastAPIInstrumentor.instrument_app(app)
-    SQLAlchemyInstrumentor().instrument()
+    resource = Resource(attributes={SERVICE_NAME: metadata.APP_NAME})
+    provider = TracerProvider(resource=resource)
+    trace.set_tracer_provider(provider)
+    # OTLP exporter if endpoint set, otherwise console
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
 ```
 
-Auto-instruments HTTP requests and database queries.
+Auto-instruments FastAPI HTTP requests. Exports via OTLP when
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set, otherwise prints to console.
 
 #### Middlewares (`middlewares.py`)
 
-Configures CORS and other middleware:
+Configures CORS, trusted hosts, request ID, and timeout middleware:
 
 ```python
 def configure_middlewares(app: FastAPI) -> None:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    configure_cors(app)           # CORS from settings.BACKEND_CORS_ORIGINS
+    configure_trusted_hosts(app)  # TrustedHostMiddleware
+    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(TimeoutMiddleware)  # outermost — added last
 ```
 
 ---
@@ -395,15 +398,12 @@ See [Testing Guide](../guides/testing.md) for patterns.
 
 1. **Input Validation** — Pydantic schema validation on all inputs
 2. **SQL Injection Protection** — SQLAlchemy parameterized queries
-3. **CORS Configuration** — Restrictive CORS policy in production
-4. **Environment Variables** — Secrets loaded from `.env` (not committed)
-
-### Future Enhancements
-
-- [ ] JWT authentication
-- [ ] Rate limiting
-- [ ] API key management
-- [ ] Field-level encryption for PII
+3. **OAuth 2.0 / 2.1 Authentication** — JWT validation via JWKS with
+   `require_roles()` per-route; `ServicePrincipal` identity injection
+4. **CORS Configuration** — Allowlist-driven; no wildcard in production
+5. **Environment Variables** — Secrets loaded from `.env` (not committed)
+6. **Request Timeouts** — Per-request wall-clock limit via
+   `TimeoutMiddleware`; returns 504 on breach
 
 ---
 

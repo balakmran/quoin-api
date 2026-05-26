@@ -184,8 +184,8 @@ Test the full request-response cycle:
 # tests/modules/user/test_routes.py
 import pytest
 
-async def test_create_user(client: AsyncClient):
-    response = await client.post("/api/v1/users/", json={
+async def test_create_user(admin_client: AsyncClient):
+    response = await admin_client.post("/api/v1/users/", json={
         "email": "test@example.com",
         "full_name": "Test User",
     })
@@ -196,15 +196,15 @@ async def test_create_user(client: AsyncClient):
     assert "id" in data
     assert "created_at" in data
 
-async def test_create_user_duplicate_email(client: AsyncClient):
+async def test_create_user_duplicate_email(admin_client: AsyncClient):
     # First user succeeds
-    await client.post("/api/v1/users/", json={
+    await admin_client.post("/api/v1/users/", json={
         "email": "duplicate@example.com",
         "full_name": "First User",
     })
 
     # Second user with same email fails
-    response = await client.post("/api/v1/users/", json={
+    response = await admin_client.post("/api/v1/users/", json={
         "email": "duplicate@example.com",
         "full_name": "Second User",
     })
@@ -326,12 +326,12 @@ def create_user_data(email: str | None = None) -> dict:
         "full_name": "Test User",
     }
 
-async def test_list_users(client: AsyncClient):
+async def test_list_users(admin_client: AsyncClient):
     # Create multiple users
     for _ in range(5):
-        await client.post("/api/v1/users/", json=create_user_data())
+        await admin_client.post("/api/v1/users/", json=create_user_data())
 
-    response = await client.get("/api/v1/users/")
+    response = await admin_client.get("/api/v1/users/")
     assert len(response.json()) == 5
 ```
 

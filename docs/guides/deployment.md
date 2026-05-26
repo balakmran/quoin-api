@@ -67,10 +67,10 @@ COPY alembic.ini .
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 # Non-root user for security
-RUN addgroup --system --gid 1001 fastapi && \
-    adduser --system --uid 1001 --ingroup fastapi fastapi
-RUN chown -R fastapi:fastapi /app
-USER fastapi
+RUN addgroup --system --gid 1001 quoin && \
+    adduser --system --uid 1001 --ingroup quoin quoin
+RUN chown -R quoin:quoin /app
+USER quoin
 CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
