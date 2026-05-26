@@ -42,6 +42,12 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **80-char line limit** for Python and Markdown. Tables and code blocks are exempt.
 - **Async-first** — every DB call, repository method, and service method is `async def`.
 - **Google-style docstrings** on public functions and classes.
+- **Docs coverage on every feature change.** When adding or changing any
+  user-visible behaviour (new settings, new middleware, new endpoints,
+  changed defaults), update the relevant guide in `docs/guides/` — or
+  create one if none exists — and add/update the settings table in
+  `docs/guides/configuration.md`. Run `just docb` to verify the build.
+  Don't leave docs as a follow-up; do it in the same turn as the code.
 - **Never raise `HTTPException`** in service or repository code. Raise a domain exception (`NotFoundError`, `ConflictError`, `BadRequestError`, `ForbiddenError`, `InternalServerError` from `app/core/exceptions`) and let the global handler translate it.
 - **Never modify the schema by hand.** Update the SQLModel, then `just migrate-gen "<msg>"`, review the generated script, then `just migrate-up`.
 - **All endpoints under `/api/v1/`.** The prefix is applied centrally in `app/api.py`; declare module routers as `APIRouter(prefix="/<module>", ...)`.
