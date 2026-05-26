@@ -95,7 +95,13 @@ class Settings(BaseSettings):
     SECURITY_HSTS_INCLUDE_SUBDOMAINS: bool = True
     SECURITY_HSTS_PRELOAD: bool = False
     SECURITY_CSP: str = (
-        "default-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+        "default-src 'self'; "
+        "style-src 'self' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' https://cdn.simpleicons.org; "
+        "script-src 'self' 'unsafe-inline'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'"
     )
     SECURITY_REFERRER_POLICY: str = "strict-origin-when-cross-origin"
     SECURITY_PERMISSIONS_POLICY: str = (
