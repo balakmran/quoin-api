@@ -27,6 +27,7 @@ nav = [
             { "AI-Assisted Development" = "guides/ai-setup.md" },
         ]},
         { "Operations" = [
+            { "Security" = "guides/security.md" },
             { "Observability" = "guides/observability.md" },
             { "Deployment" = "guides/deployment.md" },
             { "Release Workflow" = "guides/release-workflow.md" },
