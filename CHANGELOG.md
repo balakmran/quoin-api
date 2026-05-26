@@ -2,65 +2,56 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-25
+
 ### Added
 
-- **Operability**: `TimeoutMiddleware` — per-request wall-clock timeout
-  using `anyio.fail_after()`; configurable via
+- **Observability**: `RequestIDMiddleware` propagates `X-Request-ID`
+  (configurable via `QUOIN_REQUEST_ID_HEADER`) and binds it to every
+  structlog event.
+- **Observability**: OpenTelemetry trace/log correlation — `trace_id` and
+  `span_id` injected into structlog events when an active span exists.
+  Vendor-neutral OTLP/Jaeger setup documented.
+- **Operability**: `TimeoutMiddleware` enforces a per-request wall-clock
+  timeout via `anyio.fail_after()`; configurable via
   `QUOIN_REQUEST_TIMEOUT_SECONDS` (default 30 s); returns 504 RFC 9457
-  `GatewayTimeoutError` on breach. `anyio` cancel scopes are used
-  instead of `asyncio.wait_for()` to guarantee cancellation of nested
-  async calls.
-- **Errors**: `GatewayTimeoutError` (504) domain exception.
-- **Errors**: RFC 9457 Problem Details — all error responses now return
-  `Content-Type: application/problem+json` with `type` (URN derived from
-  the exception class), `title` (standard HTTP phrase), `status`, `detail`,
-  `instance` (request path), and an `errors` array on 422 responses.
-  `ProblemDetail` Pydantic model in `app/core/schemas.py`; `ErrorResponse`
-  replaced throughout.
-- **Errors**: `ServiceUnavailableError` (503) domain exception; `/ready`
-  endpoint now raises it instead of `HTTPException` when the database is
-  unreachable.
-- **Observability**: `RequestIDMiddleware` — generates or propagates a
-  request ID header (default `X-Request-ID`, configurable via
-  `QUOIN_REQUEST_ID_HEADER`), binds it to every structlog event for the
-  request, and echoes it on the response.
-- **Observability**: OpenTelemetry trace/log correlation — `_add_otel_context`
-  structlog processor injects `trace_id` and `span_id` into every log event
-  when an active OTel span exists. Vendor-neutral OTLP setup documented with
-  Jaeger local quickstart.
-- **Developer Experience**: First-class Claude Code setup — 5 workflow skills
-  (`quoin-new-module`, `quoin-db-migration`, `quoin-auth-route`,
-  `quoin-write-tests`, `quoin-release`, `quoin-pre-pr`) loaded on-demand from
-  `.claude/skills/`; `Stop` hook runs `just format && just lint &&
-  just typecheck` after every dirty turn; `PreToolUse` hook blocks edits to
-  `.env` credential files, `uv.lock`, and applied Alembic migrations; 5
-  Claude plugins enabled (`commit-commands`, `pr-review-toolkit`,
-  `security-guidance`, `claude-md-management`, `claude-code-setup`);
-  `context7` MCP server committed in `.mcp.json` for live SDK docs.
-- **Quality**: Pre-push pytest gate added to `prek.toml`; `just setup` now
-  installs both commit and pre-push hooks.
+  `GatewayTimeoutError`. Uses `anyio` cancel scopes for nested-task safety.
+- **Errors**: RFC 9457 Problem Details — all error responses use
+  `application/problem+json` with `type`, `title`, `status`, `detail`,
+  `instance`, and an `errors` array on 422. `ProblemDetail` model in
+  `app/core/schemas.py` replaces `ErrorResponse`.
+- **Errors**: `GatewayTimeoutError` (504) and `ServiceUnavailableError`
+  (503) domain exceptions; `/ready` now raises the latter on DB failure.
+- **Developer Experience**: Claude Code workflow integration — 6 skills in
+  `.claude/skills/`, `Stop` hook running `just format && just lint && just
+  typecheck` after dirty turns, `PreToolUse` hook blocking edits to `.env`,
+  `uv.lock`, and applied migrations, 5 plugins, and `context7` MCP server.
+- **Quality**: Pre-push pytest gate in `prek.toml`; `just setup` installs
+  both commit and pre-push hooks.
 
 ### Changed
 
-- **Dependencies**: Bumped runtime deps — `fastapi` 0.135.3 → 0.136.3,
-  `psycopg` 3.3.3 → 3.3.4, `greenlet` 3.4.0 → 3.5.1, `pydantic-settings`
-  ≥2.14.1, `opentelemetry-*` 1.41.0 → 1.42.1 + instrumentation 0.62b0 →
-  0.63b1, `PyJWT` ≥2.13.0. Tooling: `ruff` 0.15.14, `ty` 0.0.39, `prek`
-  0.4.1, `zensical` 0.0.43.
-- **Python**: Upgraded runtime from 3.12 → **3.14** (3.14.5 stable bugfix
-  release). Updated `.python-version`, `Dockerfile`, `pyproject.toml`
-  `requires-python` and `ruff` `target-version`. Adjusted one `# type:
-  ignore` in `UserRepository.list` for a `ty` 0.0.39 name-resolution quirk
-  with methods named after builtins.
-- **Infrastructure**: `mock-oauth2-server` Docker image 3.0.1 → 4.0.0.
-  HTTP 422 phrase updated from `"Unprocessable Entity"` to `"Unprocessable
-  Content"` per RFC 9110 (propagated in tests and error-handling).
-- **Errors**: `quoin_exception_handler` now emits a structured `warning` log
-  (`event="quoin_error"`) before returning; previously it returned silently.
-- **Observability**: Observability guide rewritten to be vendor-neutral —
-  Jaeger/CNCF only, commercial backends removed.
-- **Documentation**: `docs/guides/ai-setup.md` covering the full Claude Code
-  setup with invocation patterns, first-time setup, and extension guide.
+- **Python**: Runtime upgraded 3.12 → 3.14 (3.14.5).
+- **Dependencies**: FastAPI 0.135.3 → 0.136.3, OpenTelemetry 1.41.0 →
+  1.42.1 (instrumentation 0.62b0 → 0.63b1), plus `psycopg`, `greenlet`,
+  `PyJWT`, `pydantic-settings`. Tooling: `ruff` 0.15.14, `ty` 0.0.39,
+  `prek` 0.4.1, `zensical` 0.0.43.
+- **Infrastructure**: `mock-oauth2-server` 3.0.1 → 4.0.0. HTTP 422 phrase
+  updated to `"Unprocessable Content"` per RFC 9110.
+- **Errors**: `quoin_exception_handler` now emits a structured warning log
+  (`event="quoin_error"`) before returning.
+- **Observability**: Guide rewritten to be vendor-neutral (Jaeger/CNCF only).
+- **UI**: Homepage redesigned to match documentation site styling; mobile
+  overflow on small screens resolved.
+- **CI**: GitHub Actions workflows upgraded to latest versions with Node 24
+  support.
+
+### Fixed
+
+- **Auth**: OAuth audience validation now enforced — `aud` claim is verified
+  against `QUOIN_OAUTH_AUDIENCE`; previously the check was skipped.
+- **Core**: `datetime.now()` replaced with `datetime.now(UTC)` in system
+  routes; request validation error handling hardened.
 
 ## [0.6.0] - 2026-04-18
 
@@ -270,7 +261,8 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/balakmran/quoin-api/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/balakmran/quoin-api/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/balakmran/quoin-api/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/balakmran/quoin-api/compare/v0.3.1...v0.4.0

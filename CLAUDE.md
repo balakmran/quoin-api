@@ -11,6 +11,7 @@ QuoinAPI (pronounced "koyn") — FastAPI + SQLModel + PostgreSQL backend. Double
 - `app/main.py` — app factory; lifecycle, middleware, exception handlers
 - `app/api.py` — router registration; everything user-facing under `/api/v1/`
 - `app/core/` — infrastructure: `config`, `logging`, `security` (JWT + `require_roles`), `exceptions` (`QuoinError` base), `exception_handlers`, `middlewares`, `telemetry`
+- `app/db/` — `session.py` provides `get_session` dependency and `app.state.engine`; used by every repository
 - `app/modules/<feature>/` — DDD modules; each has `models, schemas, repository, service, routes, exceptions, __init__`
 - `tests/` — integration tests over a real DB; per-test SAVEPOINT rollback; fixtures in `tests/conftest.py`
 
@@ -26,6 +27,8 @@ Request flow: **route → `require_roles` → service → repository → SQLMode
 - `just migrate-gen "<msg>"` / `just migrate-up` / `just migrate-down`
 - `just new <module>` — scaffold a DDD module skeleton
 - `just token` — mint a signed JWT against the local mock OAuth
+- `just docb` — sync root docs into `docs/project/` and verify the
+  docs build; **required before opening a PR**
 
 Single test: `uv run pytest tests/modules/user/test_routes.py::test_create_user -v`.
 

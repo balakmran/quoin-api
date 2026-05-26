@@ -71,8 +71,8 @@ This confirms the application is running correctly. The page includes:
 
 We enforce strict coding standards to maintain a high-quality codebase.
 
-- **AI Agents**: Please refer to [AGENTS.md](AGENTS.md) for detailed
-  architectural and stylistic rules.
+- **AI Agents**: Please refer to [CLAUDE.md](https://github.com/balakmran/quoin-api/blob/main/CLAUDE.md)
+  for architectural and stylistic rules (also symlinked as `AGENTS.md`).
 - **Style**: We use [Ruff](https://github.com/astral-sh/ruff) for formatting and
   linting.
 - **Types**: 100% type coverage is required.

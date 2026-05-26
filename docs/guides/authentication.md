@@ -255,12 +255,37 @@ async def test_get_resource(read_client: AsyncClient) -> None:
 
 ## Error Responses
 
-| Status | When | Response |
-| :--- | :--- | :--- |
-| `401 Unauthorized` | No token, expired token, invalid signature | `{"detail": "Unauthorized"}` |
-| `403 Forbidden` | Valid token, but missing required role | `{"detail": "Forbidden"}` |
+All error responses use `Content-Type: application/problem+json`
+(RFC 9457). The `401` includes `WWW-Authenticate: Bearer` per RFC 6750.
 
-The `401` response includes a `WWW-Authenticate: Bearer` header per RFC 6750.
+| Status | When |
+| :--- | :--- |
+| `401 Unauthorized` | No token, expired token, invalid signature |
+| `403 Forbidden` | Valid token, but missing required role |
+
+Example 401:
+
+```json
+{
+  "type": "urn:quoin:error:unauthorized_error",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Unauthorized",
+  "instance": "/api/v1/users/"
+}
+```
+
+Example 403:
+
+```json
+{
+  "type": "urn:quoin:error:forbidden_error",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "Forbidden",
+  "instance": "/api/v1/users/"
+}
+```
 
 ---
 

@@ -65,7 +65,7 @@ Validation errors include an `errors` array (RFC 9457 extension):
 ```json
 {
   "type": "urn:quoin:error:validation_error",
-  "title": "Unprocessable Entity",
+  "title": "Unprocessable Content",
   "status": 422,
   "detail": "Request validation failed",
   "instance": "/api/v1/users/",
@@ -278,7 +278,7 @@ async def validation_exception_handler(
 ) -> Response:
     problem = ProblemDetail(
         type="urn:quoin:error:validation_error",
-        title="Unprocessable Entity",
+        title=_problem_title(422),  # "Unprocessable Content" per RFC 9110
         status=422,
         detail="Request validation failed",
         instance=request.url.path,
