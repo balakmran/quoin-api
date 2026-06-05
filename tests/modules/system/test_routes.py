@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import FastAPI, status
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_session
 from app.main import create_app
@@ -68,7 +69,7 @@ async def test_ready_failure(app: FastAPI):
     async def mock_get_session():
         mock_session = AsyncMock()
         mock_session.exec = AsyncMock(
-            side_effect=Exception("DB Connection Error")
+            side_effect=SQLAlchemyError("DB Connection Error")
         )
         yield mock_session
 
@@ -109,3 +110,23 @@ async def test_ready_reports_503_during_shutdown(app: FastAPI):
     assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert body["type"] == "urn:quoin:error:service_unavailable_error"
     assert body["detail"] == "Service is shutting down"
+
+
+@pytest.mark.asyncio
+async def test_ready_misconfigured_without_lifecycle(app: FastAPI):
+    """Readiness returns 500 if app.state.lifecycle is missing."""
+
+    async def mock_get_session():
+        yield AsyncMock()
+
+    app.dependency_overrides[get_session] = mock_get_session
+    del app.state.lifecycle
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/ready")
+
+    body = response.json()
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert body["type"] == "urn:quoin:error:internal_server_error"

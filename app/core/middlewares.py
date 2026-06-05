@@ -180,7 +180,13 @@ class InFlightRequestMiddleware:
             await self.app(scope, receive, send)
             return
 
-        lifecycle = scope["app"].state.lifecycle
+        lifecycle = getattr(scope["app"].state, "lifecycle", None)
+        if lifecycle is None:
+            raise RuntimeError(
+                "InFlightRequestMiddleware requires app.state.lifecycle. "
+                "Ensure create_app() sets it before "
+                "configure_middlewares()."
+            )
         lifecycle.acquire()
         try:
             await self.app(scope, receive, send)
@@ -279,12 +285,14 @@ def configure_middlewares(app: FastAPI) -> None:
     LIFO). TimeoutMiddleware is added last so it becomes the outermost
     layer and wraps the entire request lifecycle; the size limit sits
     just inside it so oversize bodies are rejected before any
-    downstream work. The in-flight counter is added first so it sits
-    innermost and brackets only requests that reach a handler.
+    downstream work. The in-flight counter is added first of all so it
+    sits innermost — closest to the router — and brackets only requests
+    that pass the outer layers (CORS, TrustedHost, etc.) and reach a
+    handler.
     """
+    app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
     configure_cors(app)
     configure_trusted_hosts(app)
-    app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware)

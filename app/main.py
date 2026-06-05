@@ -43,15 +43,28 @@ def create_app() -> FastAPI:
         lifecycle: Lifecycle = app.state.lifecycle
         lifecycle.begin_shutdown()
         timeout = settings.SHUTDOWN_DRAIN_TIMEOUT
-        if await lifecycle.drain(timeout):
-            logger.info("shutdown_drained")
-        else:
-            logger.warning(
-                "shutdown_drain_timeout",
-                timeout=timeout,
+        try:
+            if await lifecycle.drain(timeout):
+                logger.info("shutdown_drained")
+            else:
+                logger.warning(
+                    "shutdown_drain_timeout",
+                    timeout=timeout,
+                    in_flight=lifecycle.in_flight,
+                )
+        except BaseException as exc:
+            # Catch BaseException so an unexpected drain failure — most
+            # importantly CancelledError when the server's own graceful
+            # timeout fires — never skips engine disposal. Re-raise to
+            # preserve the server's cancellation protocol.
+            logger.error(
+                "shutdown_drain_error",
+                error=repr(exc),
                 in_flight=lifecycle.in_flight,
             )
-        await app.state.engine.dispose()
+            raise
+        finally:
+            await app.state.engine.dispose()
 
     app = FastAPI(lifespan=lifespan, **OPENAPI_PARAMETERS)
     app.state.lifecycle = Lifecycle()

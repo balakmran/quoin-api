@@ -4,6 +4,7 @@ import anyio
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from starlette.types import Message, Receive, Scope, Send
 
 from app.core.lifecycle import Lifecycle
 from app.core.middlewares import InFlightRequestMiddleware
@@ -100,6 +101,15 @@ async def test_drain_zero_timeout_does_not_wait() -> None:
     assert await lifecycle.drain(timeout=0) is False
 
 
+@pytest.mark.asyncio
+async def test_drain_negative_timeout_does_not_wait() -> None:
+    """A negative timeout is treated the same as zero — no waiting."""
+    lifecycle = Lifecycle()
+    lifecycle.acquire()
+
+    assert await lifecycle.drain(timeout=-1.0) is False
+
+
 @pytest.fixture
 def in_flight_app() -> FastAPI:
     """Minimal app wiring the in-flight middleware to a lifecycle."""
@@ -147,3 +157,41 @@ async def test_middleware_excludes_probe_paths(
         response = await ac.get("/health")
 
     assert response.json()["in_flight"] == 0
+
+
+async def _noop_receive() -> Message:
+    """Minimal ASGI receive callable for direct middleware calls."""
+    return {"type": "http.request"}
+
+
+async def _noop_send(message: Message) -> None:
+    """Minimal ASGI send callable that discards messages."""
+
+
+@pytest.mark.asyncio
+async def test_middleware_requires_lifecycle() -> None:
+    """A missing lifecycle raises a clear RuntimeError, not AttributeError."""
+    bare = FastAPI()  # create_app() never ran, so no app.state.lifecycle
+    middleware = InFlightRequestMiddleware(bare)
+    scope: Scope = {"type": "http", "path": "/users", "app": bare}
+
+    with pytest.raises(RuntimeError, match="requires app"):
+        await middleware(scope, _noop_receive, _noop_send)
+
+
+@pytest.mark.asyncio
+async def test_middleware_passes_through_non_http_scope() -> None:
+    """Non-HTTP scopes bypass the counter without touching app state."""
+    called = False
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        nonlocal called
+        called = True
+
+    middleware = InFlightRequestMiddleware(downstream)
+    # No "app" key: a KeyError here would prove the counter path ran.
+    scope: Scope = {"type": "websocket", "path": "/ws"}
+
+    await middleware(scope, _noop_receive, _noop_send)
+
+    assert called is True

@@ -11,10 +11,10 @@ class Lifecycle:
     ``InFlightRequestMiddleware``; the shutdown drain is driven by the
     lifespan handler in :mod:`app.main`.
 
-    All mutation happens on the single asyncio event loop, so the
-    counter needs no lock. The ``_idle`` event is set whenever no
-    requests are in flight, letting :meth:`drain` await the moment the
-    server is quiet.
+    All mutation happens on the single asyncio event loop from
+    coroutines (never from thread-pool workers), so the counter needs no
+    lock. The ``_idle`` event is set whenever no requests are in flight,
+    letting :meth:`drain` await the moment the server is quiet.
     """
 
     def __init__(self) -> None:
@@ -63,8 +63,15 @@ class Lifecycle:
 
         Returns:
             True if the server drained to idle within the timeout (or
-            was already idle); False if the timeout elapsed with
-            requests still in flight.
+            was already idle); False if waiting was skipped
+            (``timeout <= 0``) or the timeout elapsed with requests
+            still in flight.
+
+        Note:
+            This relies on the ASGI server having stopped accepting new
+            connections before shutdown runs (uvicorn closes the
+            listening socket before the lifespan shutdown), so no new
+            request can be acquired after the count reaches zero.
         """
         if self._in_flight == 0:
             return True

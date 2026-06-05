@@ -193,9 +193,10 @@ resources. The sequence in the lifespan handler is:
    in-flight request loses its connection mid-query.
 
 The in-flight gauge is maintained by `InFlightRequestMiddleware`, which
-brackets every request that reaches a handler. The `/health` and
+brackets every HTTP request that reaches a handler. The `/health` and
 `/ready` probe paths are excluded so orchestrator polling never keeps
-the gauge from reaching zero.
+the gauge from reaching zero. WebSocket connections are outside the
+gauge and are not drained.
 
 ### Relationship to the uvicorn server
 
@@ -232,10 +233,18 @@ readiness flip and the drain:
   `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` so the pod is not force-killed
   mid-drain.
 - Keep the server's `--timeout-graceful-shutdown` greater than or equal
-  to `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` so the connection drain does not cut
-  requests short before the lifespan drain runs.
+  to `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`. If it is shorter, uvicorn cancels
+  in-flight tasks before the lifespan drain runs; cancellation still
+  releases the in-flight counter (via the `finally` in
+  `InFlightRequestMiddleware`), so the drain reports immediate success —
+  but those requests were terminated, not gracefully finished.
 - Point the readiness probe at `/ready`; once it returns 503 the
-  Endpoints controller removes the pod from Service rotation.
+  Endpoints controller removes the pod from Service rotation. Readiness
+  probes poll at `periodSeconds` and need `failureThreshold` consecutive
+  failures first, so with the Kubernetes defaults (10s x 3) new traffic
+  can still arrive for up to ~30s after `/ready` begins failing. Size
+  `terminationGracePeriodSeconds` to cover both this probe delay and the
+  drain timeout.
 
 ---
 
