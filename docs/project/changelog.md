@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Reliability**: graceful shutdown drains in-flight requests before
+  the database engine is disposed. On shutdown the readiness probe
+  flips to 503 (so orchestrators stop routing new traffic),
+  `InFlightRequestMiddleware` tracks active requests, and the lifespan
+  handler waits for them to drain — bounded by
+  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default 30s; `<=0` skips the wait) —
+  before disposing the engine. See the Graceful Shutdown section in the
+  deployment guide for the uvicorn relationship and Kubernetes wiring.
 - **Security**: `SecurityHeadersMiddleware` emits HSTS, CSP,
   X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and
   Permissions-Policy on every response. All values configurable via

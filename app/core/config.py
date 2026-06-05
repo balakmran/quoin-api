@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     OTEL_ENABLED: bool = True
     REQUEST_ID_HEADER: str = "X-Request-ID"
     REQUEST_TIMEOUT_SECONDS: float = 30.0
+    SHUTDOWN_DRAIN_TIMEOUT: float = 30.0
 
     # Database
     POSTGRES_DRIVER: str = "postgresql+asyncpg"

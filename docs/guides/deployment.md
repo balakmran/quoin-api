@@ -166,13 +166,85 @@ Expected response (HTTP 200 OK):
 }
 ```
 
-If the database is unavailable, it returns an HTTP 503 error.
+It returns an HTTP 503 error if the database is unavailable, or once
+graceful shutdown has begun (see below) so orchestrators stop routing
+new traffic to the draining instance.
 
 Use these endpoints for:
 
 - **Docker health checks** - `HEALTHCHECK` directive
 - **Load balancer probes** - Kubernetes liveness/readiness
 - **Monitoring systems** - Uptime tracking
+
+---
+
+## Graceful Shutdown
+
+On shutdown the application drains in-flight requests before releasing
+resources. The sequence in the lifespan handler is:
+
+1. The readiness probe flips to **503** (`is_shutting_down`), so load
+   balancers and Kubernetes stop routing new traffic to the instance.
+2. In-flight requests are awaited until the in-flight counter reaches
+   zero, bounded by `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default `30.0`
+   seconds; `<=0` skips the wait). A clean drain logs `shutdown_drained`;
+   a timeout logs `shutdown_drain_timeout` with the residual count.
+3. The database engine is disposed — only after the drain — so no
+   in-flight request loses its connection mid-query.
+
+The in-flight gauge is maintained by `InFlightRequestMiddleware`, which
+brackets every HTTP request that reaches a handler. The `/health` and
+`/ready` probe paths are excluded so orchestrator polling never keeps
+the gauge from reaching zero. WebSocket connections are outside the
+gauge and are not drained.
+
+### Relationship to the uvicorn server
+
+The server matters here. `fastapi run` (uvicorn) **already drains
+connection-level in-flight requests before it runs the lifespan
+shutdown**: on `SIGTERM` it stops accepting new connections, waits for
+open connections to finish their responses (bounded by
+`--timeout-graceful-shutdown`), and only then triggers the lifespan
+shutdown where the steps above execute. In that default setup the
+application-level drain is largely a **safety net** rather than the
+primary drain mechanism.
+
+The application-level drain still earns its place:
+
+- **Server-agnostic behaviour** — the same drain semantics hold under
+  uvicorn, Gunicorn with uvicorn workers, Hypercorn, or any ASGI
+  server, without per-launcher graceful-timeout flags.
+- **Safe engine disposal ordering** — the engine is guaranteed disposed
+  *after* in-flight work completes, so a request never has its database
+  connection torn out from under it.
+- **A single, app-controlled timeout** — `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`
+  is the one knob, with structured `shutdown_drained` /
+  `shutdown_drain_timeout` logs for observability.
+- **Explicit readiness signalling** — the 503 flip is what actually
+  removes the instance from a load balancer's rotation; uvicorn's
+  connection drain does not change what `/ready` reports.
+
+### Kubernetes wiring
+
+For zero-downtime rollouts, give the orchestrator room to react to the
+readiness flip and the drain:
+
+- Set `terminationGracePeriodSeconds` greater than or equal to
+  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` so the pod is not force-killed
+  mid-drain.
+- Keep the server's `--timeout-graceful-shutdown` greater than or equal
+  to `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`. If it is shorter, uvicorn cancels
+  in-flight tasks before the lifespan drain runs; cancellation still
+  releases the in-flight counter (via the `finally` in
+  `InFlightRequestMiddleware`), so the drain reports immediate success —
+  but those requests were terminated, not gracefully finished.
+- Point the readiness probe at `/ready`; once it returns 503 the
+  Endpoints controller removes the pod from Service rotation. Readiness
+  probes poll at `periodSeconds` and need `failureThreshold` consecutive
+  failures first, so with the Kubernetes defaults (10s x 3) new traffic
+  can still arrive for up to ~30s after `/ready` begins failing. Size
+  `terminationGracePeriodSeconds` to cover both this probe delay and the
+  drain timeout.
 
 ---
 

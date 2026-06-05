@@ -158,6 +158,45 @@ class RequestSizeLimitMiddleware:
         await self.app(scope, receive, send)
 
 
+class InFlightRequestMiddleware:
+    """Track in-flight HTTP requests for graceful-shutdown draining.
+
+    Pure ASGI middleware that increments the ``app.state.lifecycle``
+    in-flight counter while a request is being processed and decrements
+    it once the response is complete. The ``/health`` and ``/ready``
+    probe paths are excluded so orchestrator polling does not perturb
+    the gauge the shutdown drain waits on.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Bracket the request in the in-flight counter, probes aside."""
+        if scope["type"] != "http" or scope.get("path", "") in _PROBE_PATHS:
+            await self.app(scope, receive, send)
+            return
+
+        lifecycle = getattr(scope["app"].state, "lifecycle", None)
+        if lifecycle is None:
+            raise RuntimeError(
+                "InFlightRequestMiddleware requires app.state.lifecycle. "
+                "Ensure create_app() sets it before "
+                "configure_middlewares()."
+            )
+        lifecycle.acquire()
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            lifecycle.release()
+
+
+_PROBE_PATHS = frozenset({"/health", "/ready"})
+
+
 def _header_value(scope: Scope, name: bytes) -> str | None:
     """Return the first matching request header value, or None."""
     for key, value in scope.get("headers", []):
@@ -246,8 +285,12 @@ def configure_middlewares(app: FastAPI) -> None:
     LIFO). TimeoutMiddleware is added last so it becomes the outermost
     layer and wraps the entire request lifecycle; the size limit sits
     just inside it so oversize bodies are rejected before any
-    downstream work.
+    downstream work. The in-flight counter is added first of all so it
+    sits innermost — closest to the router — and brackets only requests
+    that pass the outer layers (CORS, TrustedHost, etc.) and reach a
+    handler.
     """
+    app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
     configure_cors(app)
     configure_trusted_hosts(app)
     app.add_middleware(SecurityHeadersMiddleware)
@@ -257,6 +300,7 @@ def configure_middlewares(app: FastAPI) -> None:
 
 
 __all__ = [
+    "InFlightRequestMiddleware",
     "RequestIDMiddleware",
     "RequestSizeLimitMiddleware",
     "SecurityHeadersMiddleware",
