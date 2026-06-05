@@ -86,3 +86,26 @@ async def test_ready_failure(app: FastAPI):
     assert body["status"] == status.HTTP_503_SERVICE_UNAVAILABLE
     assert body["detail"] == "Database connection failed"
     assert body["instance"] == "/ready"
+
+
+@pytest.mark.asyncio
+async def test_ready_reports_503_during_shutdown(app: FastAPI):
+    """Readiness flips to 503 once graceful shutdown has begun."""
+
+    # The engine is still alive while draining, so the session resolves;
+    # the shutdown flag is what trips the 503.
+    async def mock_get_session():
+        yield AsyncMock()
+
+    app.dependency_overrides[get_session] = mock_get_session
+    app.state.lifecycle.begin_shutdown()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/ready")
+
+    body = response.json()
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert body["type"] == "urn:quoin:error:service_unavailable_error"
+    assert body["detail"] == "Service is shutting down"

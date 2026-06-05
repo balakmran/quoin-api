@@ -41,8 +41,17 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/ready", include_in_schema=False)
-async def ready(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
-    """Readiness probe endpoint."""
+async def ready(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    """Readiness probe endpoint.
+
+    Returns 503 once graceful shutdown has begun so orchestrators stop
+    routing new traffic, then verifies the database connection.
+    """
+    if request.app.state.lifecycle.is_shutting_down:
+        raise ServiceUnavailableError("Service is shutting down")
     try:
         await session.exec(text("SELECT 1"))  # type: ignore
         return {"status": "ready"}

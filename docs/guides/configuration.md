@@ -96,6 +96,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password                                 | `postgres`                                           |
 | `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
 | `QUOIN_REQUEST_TIMEOUT_SECONDS` | Per-request wall-clock timeout (0 = disabled)    | `30.0`                                              |
+| `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` | Max seconds to drain in-flight requests on shutdown (`<=0` = no wait) | `30.0`                          |
 | `QUOIN_REQUEST_ID_HEADER`    | Header name for request ID propagation              | `X-Request-ID`                                      |
 | `QUOIN_ALLOWED_HOSTS`        | Trusted host list                                   | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
 | `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins (empty = CORS disabled)        | `["http://localhost:3000", "http://localhost:8000"]` |

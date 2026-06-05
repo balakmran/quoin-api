@@ -4,6 +4,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.main import create_app
 
 
@@ -25,3 +26,17 @@ def test_lifespan():
     with TestClient(app, base_url="http://test") as client:
         response = client.get("/health")
         assert response.status_code == status.HTTP_200_OK
+
+
+def test_lifespan_shutdown_drain_timeout(monkeypatch: pytest.MonkeyPatch):
+    """Shutdown takes the timeout branch when a request stays in flight."""
+    monkeypatch.setattr(settings, "SHUTDOWN_DRAIN_TIMEOUT", 0.01)
+    app = create_app()
+
+    with TestClient(app, base_url="http://test") as client:
+        client.get("/health")
+        # Leave a request in flight so the drain cannot reach idle and
+        # the lifespan takes the shutdown_drain_timeout branch on exit.
+        app.state.lifecycle.acquire()
+
+    assert app.state.lifecycle.is_shutting_down is True
