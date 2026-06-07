@@ -22,11 +22,12 @@ Request flow: **route → `require_roles` → service → repository → SQLMode
 `just` is the task runner; `.env` auto-loads. Run `just --list` for the full menu. The ones you'll reach for most:
 
 - `just dev` — DB + OAuth + migrations + dev server
-- `just db` — start Postgres only (required for tests)
+- `just db` — start Postgres only (`just test`/`just check` auto-start it)
 - `just check` — format → lint → typecheck → test
 - `just migrate-gen "<msg>"` / `just migrate-up` / `just migrate-down`
 - `just new <module>` — scaffold a DDD module skeleton
 - `just token` — mint a signed JWT against the local mock OAuth
+- `just sync-main` — after a merge: switch to `main`, pull, prune gone branches
 - `just docb` — sync root docs into `docs/project/` and verify the
   docs build; **required before opening a PR**
 
@@ -58,7 +59,7 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 
 This repo enforces quality at three points — assume they exist when reasoning about what's safe to ship:
 
-- **End of every Claude turn** — a `Stop` hook in `.claude/settings.json` runs `just format && just lint && just typecheck` whenever the working tree is dirty. Failures block the turn until fixed. Tests are deliberately excluded here (too slow per turn).
+- **End of every Claude turn** — a `Stop` hook in `.claude/settings.json` runs `just format && just lint && just typecheck` whenever the working tree is dirty. Failures block the turn until fixed. Tests are deliberately excluded here (too slow per turn). Two further **advisory** `Stop` hooks warn (without blocking): one when `app/core/config.py` changed but `.env.example` / `docs/guides/configuration.md` didn't, and one when a `models.py` changed but no new `alembic/versions/` script was added.
 - **`git commit`** — `prek` runs ruff format, ruff check, and `ty` on changed files (configured in `prek.toml`).
 - **`git push`** — `prek` runs the full pytest suite. **Postgres must be running** (`just db`) or the push aborts. Use `git push --no-verify` only in emergencies; it defeats the gate.
 

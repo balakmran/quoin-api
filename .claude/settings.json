@@ -21,6 +21,18 @@
             "command": "bash -c 'cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; if [ -z \"$(git status --porcelain)\" ]; then exit 0; fi; if ! output=$({ just format && just lint && just typecheck; } 2>&1); then printf \"Quality checks failed before ending turn. Fix the issues below, then continue:\\n%s\\n\" \"$output\" >&2; exit 2; fi; exit 0'",
             "timeout": 60,
             "statusMessage": "Running format, lint, typecheck..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/config-drift.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking config/docs drift..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/migration-reminder.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking for missing migration..."
           }
         ]
       }

@@ -56,6 +56,17 @@ prek-run:
     uv run prek run --all-files
 
 # =============================================================================
+# Git
+# =============================================================================
+
+# Switch to main, pull, and delete local branches whose remote is gone
+sync-main:
+    @git checkout main
+    @git pull --prune
+    @git branch -vv | awk '/: gone]/{print $1}' | xargs -r git branch -D
+    @echo "On main, up to date, stale branches pruned."
+
+# =============================================================================
 # Scaffolding
 # =============================================================================
 
@@ -82,12 +93,12 @@ new module:
 db:
     docker compose up -d --wait db
 
-# Check that the database container is running (internal guard)
+# Ensure the database container is running (internal guard; auto-starts it)
 _db-check:
-    @# Skip docker compose check in GitHub Actions/CI (where services spin up natively)
+    @# Skip in GitHub Actions/CI, where Postgres is provisioned natively
     @if [ "${CI:-}" != "true" ]; then \
         docker compose ps db --format json 2>/dev/null | grep -q 'running' \
-            || (echo "" && echo "Database is not running. Start it with: just db" && echo "" && exit 1); \
+            || (echo "" && echo "Database not running; starting it..." && echo "" && docker compose up -d --wait db); \
     fi
 
 # Generate a new migration
@@ -149,7 +160,7 @@ format:
 typecheck:
     @uv run ty check
 
-# Run tests with coverage (requires DB to be running)
+# Run tests with coverage (auto-starts the DB if needed)
 test: _db-check
     @uv run pytest -q --cov=app --cov-report=html --cov-report=term:skip-covered --tb=line tests/
 

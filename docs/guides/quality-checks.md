@@ -164,6 +164,7 @@ The project maintains strict quality standards:
 | Run tests      | `just test`      |
 | Install hooks  | `just pi`        |
 | Run hooks      | `just pr`        |
+| Sync `main` after a merge | `just sync-main` |
 
 ---
 

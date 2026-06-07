@@ -12,9 +12,23 @@ description: Use this skill whenever the user is about to open a pull request,
 
 # Pre-PR Checklist
 
-Two steps must happen before opening a PR. Neither is optional.
+Three steps must happen before opening a PR. None is optional.
 
-## 1. Update `CHANGELOG.md`
+## 1. Pass the full quality gate
+
+```bash
+just check
+```
+
+This runs format → lint → typecheck → tests **with coverage**. `just test`
+auto-starts Postgres if it isn't running, so there's no separate `just db`
+step. The PR must not be opened until this is green.
+
+Coverage is **100%** on this project — every feature ships fully covered. If
+`just check` reports a gap, close it before continuing; the
+[quoin-coverage](../quoin-coverage/SKILL.md) skill covers the gap-closing loop.
+
+## 2. Update `CHANGELOG.md`
 
 Open `CHANGELOG.md` and add a concise entry under `## [Unreleased]`.
 
@@ -28,7 +42,7 @@ sub-label when it helps scanning (see existing entries for the style).
 
 If `[Unreleased]` already has an accurate entry for this work, skip ahead.
 
-## 2. Run the docs build
+## 3. Run the docs build
 
 ```bash
 just docb
@@ -44,8 +58,8 @@ synced files** — they are checked-in build artifacts, not gitignored.
 
 If `just docb` fails, fix the docs issue before continuing.
 
-## 3. Create the PR
+## 4. Create the PR
 
-Once both steps are green, open the PR normally (via `gh pr create` or the
+Once all steps are green, open the PR normally (via `gh pr create` or the
 `commit-commands` plugin). The PR description should reference the changelog
 entry — reviewers read the PR body, not the diff, to understand what shipped.
