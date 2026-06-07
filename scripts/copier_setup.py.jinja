@@ -46,52 +46,59 @@ def process_file(file_path: Path) -> None:
         return  # Skip binary or non-utf-8 files
 
     original_content = content
+    name = file_path.name
 
-    # 1. Replace specific long descriptions first (avoid partial overlaps)
-    # metadata.py APP_DESCRIPTION
-    content = re.sub(
-        r"APP_DESCRIPTION\s*=\s*\([^)]+\)",
-        f'APP_DESCRIPTION = "{DESCRIPTION}"',
-        content,
-    )
-    # metadata.py APP_LONG_DESCRIPTION
-    content = re.sub(
-        r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
-        f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
-        content,
-    )
-    # pyproject.toml: description field
-    content = re.sub(
-        r'description\s*=\s*"The architectural cornerstone.*?"',
-        f'description = "{DESCRIPTION}"',
-        content,
-        flags=re.DOTALL,
-    )
-    # pyproject.toml: authors email
-    content = re.sub(
-        r'email\s*=\s*"[^"]*"',
-        f'email = "{AUTHOR_EMAIL}"',
-        content,
-    )
-    # pyproject.toml/zensical: Documentation URL using old github_username
+    # 1. File-specific replacements. These are scoped by filename because the
+    # patterns are deliberately loose (e.g. a bare `email = "..."`); applied
+    # globally they would corrupt unrelated files such as test fixtures.
+    if name == "metadata.py":
+        # APP_DESCRIPTION is a single-line string literal.
+        content = re.sub(
+            r'APP_DESCRIPTION\s*=\s*"[^"]*"',
+            f'APP_DESCRIPTION = "{DESCRIPTION}"',
+            content,
+        )
+        # APP_LONG_DESCRIPTION is a triple-quoted block.
+        content = re.sub(
+            r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
+            f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
+            content,
+        )
+    elif name == "pyproject.toml":
+        # Project description field.
+        content = re.sub(
+            r'description\s*=\s*"The architectural cornerstone.*?"',
+            f'description = "{DESCRIPTION}"',
+            content,
+            flags=re.DOTALL,
+        )
+        # authors[].email — only the project metadata, never fixture data.
+        content = re.sub(
+            r'email\s*=\s*"[^"]*"',
+            f'email = "{AUTHOR_EMAIL}"',
+            content,
+        )
+    elif name == "zensical.toml":
+        # Google Analytics property value. Always keep the section; set an
+        # empty string when no ID is provided.
+        content = re.sub(
+            r'(property\s*=\s*")[^"]*(")',
+            rf'\g<1>{GOOGLE_ANALYTICS_ID}\g<2>',
+            content,
+        )
+
+    # 2. Documentation URL (appears in pyproject.toml and zensical.toml).
     content = content.replace(
         "https://balakmran.github.io/quoin-api/",
         f"https://{GITHUB_USERNAME}.github.io/{PROJECT_SLUG}/",
     )
 
-    # 2. Google Analytics: replace property value in zensical.toml
-    # Always keep the section; set empty string if no ID provided
-    content = re.sub(
-        r'(property\s*=\s*")[^"]*(")',
-        rf'\g<1>{GOOGLE_ANALYTICS_ID}\g<2>',
-        content,
-    )
-
-    # 3. General string replacements (order matters: longest first)
-    # The two urn:* entries must precede "quoin_" so the error-type URN
-    # namespace is rebranded as a whole. The first one is special-cased:
-    # its suffix is the snake_case of the QuoinError base (renamed AppError),
-    # so it maps to app_error rather than the generic "quoin_" -> prefix rule.
+    # 3. General string replacements applied to every file. Order matters:
+    # more specific keys must precede the keys they contain. In particular the
+    # two urn:* keys come before "quoin_": the special-cased
+    # urn:quoin:error:quoin_error maps to app_error (the snake_case of the
+    # QuoinError base, which is renamed AppError above) rather than letting the
+    # generic "quoin_" -> prefix rule turn it into "<prefix>_error".
     replacements = {
         "QuoinAPI": PROJECT_NAME,
         "QuoinError": "AppError",
@@ -212,8 +219,10 @@ def clean_zensical() -> None:
     # Surgically drop only the nav entries for the pages removed above,
     # leaving the rest of the (source-controlled) nav untouched so it can't
     # drift from zensical.toml as guides/sections are added over time.
-    # The [{] / [}] classes match literal braces without doubling them,
-    # which Jinja would otherwise try to render in this .jinja template.
+    # [{] / [}] match a literal brace defensively: should this pattern ever be
+    # edited so two braces sit adjacent, a bare "{{"/"}}" would form a Jinja
+    # token in this .jinja template. As written there is no adjacency, so the
+    # class form is precautionary.
     removed_nav_pages = (
         "docs.md",
         "architecture/decision-log.md",
@@ -243,6 +252,15 @@ def clean_zensical() -> None:
             rf'icon = "fontawesome/brands/{brand}"\nlink = "[^"]*"',
             "",
             content,
+        )
+
+    # Fail loudly rather than silently leaking the author's personal handles
+    # if the social-link block above is ever reformatted past these patterns.
+    leaked = [d for d in ("x.com", "x-twitter", "linkedin") if d in content]
+    if leaked:
+        raise RuntimeError(
+            f"zensical.toml still references personal socials {leaked}; "
+            "the social-link removal in clean_zensical() needs updating."
         )
 
     zensical_path.write_text(content, encoding="utf-8")

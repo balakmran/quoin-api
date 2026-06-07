@@ -65,6 +65,17 @@
   `urn:<project-slug>:error:*`. The guides, architecture overview, and
   full API reference (including the `user` module) are retained.
 
+### Fixed
+
+- **Template**: scoped the Copier post-generation substitutions by
+  filename so they can no longer corrupt unrelated files. The author
+  email rewrite was previously applied to every file and overwrote
+  `email = "..."` values in test fixtures, breaking a freshly generated
+  project's test suite; the `APP_DESCRIPTION` rewrite matched only a
+  parenthesised form the source never used, so the default API
+  description leaked into generated projects. Both now target their
+  intended file.
+
 ## [0.7.0] - 2026-05-25
 
 ### Added
