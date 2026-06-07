@@ -46,51 +46,64 @@ def process_file(file_path: Path) -> None:
         return  # Skip binary or non-utf-8 files
 
     original_content = content
+    name = file_path.name
 
-    # 1. Replace specific long descriptions first (avoid partial overlaps)
-    # metadata.py APP_DESCRIPTION
-    content = re.sub(
-        r"APP_DESCRIPTION\s*=\s*\([^)]+\)",
-        f'APP_DESCRIPTION = "{DESCRIPTION}"',
-        content,
-    )
-    # metadata.py APP_LONG_DESCRIPTION
-    content = re.sub(
-        r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
-        f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
-        content,
-    )
-    # pyproject.toml: description field
-    content = re.sub(
-        r'description\s*=\s*"The architectural cornerstone.*?"',
-        f'description = "{DESCRIPTION}"',
-        content,
-        flags=re.DOTALL,
-    )
-    # pyproject.toml: authors email
-    content = re.sub(
-        r'email\s*=\s*"[^"]*"',
-        f'email = "{AUTHOR_EMAIL}"',
-        content,
-    )
-    # pyproject.toml/zensical: Documentation URL using old github_username
+    # 1. File-specific replacements. These are scoped by filename because the
+    # patterns are deliberately loose (e.g. a bare `email = "..."`); applied
+    # globally they would corrupt unrelated files such as test fixtures.
+    if name == "metadata.py":
+        # APP_DESCRIPTION is a single-line string literal.
+        content = re.sub(
+            r'APP_DESCRIPTION\s*=\s*"[^"]*"',
+            f'APP_DESCRIPTION = "{DESCRIPTION}"',
+            content,
+        )
+        # APP_LONG_DESCRIPTION is a triple-quoted block.
+        content = re.sub(
+            r'APP_LONG_DESCRIPTION\s*=\s*"""[\s\S]*?"""',
+            f'APP_LONG_DESCRIPTION = """\n{LONG_DESCRIPTION}\n"""',
+            content,
+        )
+    elif name == "pyproject.toml":
+        # Project description field.
+        content = re.sub(
+            r'description\s*=\s*"The architectural cornerstone.*?"',
+            f'description = "{DESCRIPTION}"',
+            content,
+            flags=re.DOTALL,
+        )
+        # authors[].email — only the project metadata, never fixture data.
+        content = re.sub(
+            r'email\s*=\s*"[^"]*"',
+            f'email = "{AUTHOR_EMAIL}"',
+            content,
+        )
+    elif name == "zensical.toml":
+        # Google Analytics property value. Always keep the section; set an
+        # empty string when no ID is provided.
+        content = re.sub(
+            r'(property\s*=\s*")[^"]*(")',
+            rf'\g<1>{GOOGLE_ANALYTICS_ID}\g<2>',
+            content,
+        )
+
+    # 2. Documentation URL (appears in pyproject.toml and zensical.toml).
     content = content.replace(
         "https://balakmran.github.io/quoin-api/",
         f"https://{GITHUB_USERNAME}.github.io/{PROJECT_SLUG}/",
     )
 
-    # 2. Google Analytics: replace property value in zensical.toml
-    # Always keep the section; set empty string if no ID provided
-    content = re.sub(
-        r'(property\s*=\s*")[^"]*(")',
-        rf'\g<1>{GOOGLE_ANALYTICS_ID}\g<2>',
-        content,
-    )
-
-    # 3. General string replacements (order matters: longest first)
+    # 3. General string replacements applied to every file. Order matters:
+    # more specific keys must precede the keys they contain. In particular the
+    # two urn:* keys come before "quoin_": the special-cased
+    # urn:quoin:error:quoin_error maps to app_error (the snake_case of the
+    # QuoinError base, which is renamed AppError above) rather than letting the
+    # generic "quoin_" -> prefix rule turn it into "<prefix>_error".
     replacements = {
         "QuoinAPI": PROJECT_NAME,
         "QuoinError": "AppError",
+        "urn:quoin:error:quoin_error": f"urn:{PROJECT_SLUG}:error:app_error",
+        "urn:quoin:error": f"urn:{PROJECT_SLUG}:error",
         "quoin-api": PROJECT_SLUG,
         "quoin_": f"{ENV_PREFIX.lower()}_",
         "QUOIN_": f"{ENV_PREFIX.upper()}_",
@@ -139,16 +152,161 @@ def run_replacements() -> None:
             # Skip this script and copier config (handled separately)
             if file_name in {"copier_setup.py", "copier.yml"}:
                 continue
-            # CHANGELOG is rewritten fresh - skip in general pass
-            if file_name == "CHANGELOG.md":
+            # CHANGELOG and README are rewritten fresh - skip general pass
+            if file_name in {"CHANGELOG.md", "README.md"}:
                 continue
             process_file(file_path)
+
+
+def reset_readme() -> None:
+    """Overwrite README.md with a clean starter template."""
+    readme_path = BASE_DIR / "README.md"
+    content = f"""# {PROJECT_NAME}
+
+{DESCRIPTION}
+
+## Quickstart
+
+```bash
+cp .env.example .env
+just setup
+just dev
+```
+
+The API runs at http://localhost:8000; interactive docs are served at
+http://localhost:8000/docs.
+
+## Documentation
+
+See the [Getting Started guide](docs/guides/getting-started.md) for setup,
+architecture, and development workflows.
+
+## License
+
+Released under the terms of the [LICENSE](LICENSE) file.
+"""
+    readme_path.write_text(content, encoding="utf-8")
+    print("Wrote clean README.md")
+
+
+def clean_index() -> None:
+    """Replace the marketing home page with a minimal starter page."""
+    index_path = BASE_DIR / "docs" / "index.md"
+    if not index_path.exists():
+        return
+    content = f"""---
+title: Home
+---
+
+# {PROJECT_NAME}
+
+{DESCRIPTION}
+
+New here? Start with the
+[Getting Started guide](guides/getting-started.md).
+"""
+    index_path.write_text(content, encoding="utf-8")
+    print("Wrote minimal docs/index.md")
+
+
+def clean_zensical() -> None:
+    """Trim the docs site config: nav, home JS, and personal social links."""
+    zensical_path = BASE_DIR / "zensical.toml"
+    if not zensical_path.exists():
+        return
+    content = zensical_path.read_text(encoding="utf-8")
+
+    # Surgically drop only the nav entries for the pages removed above,
+    # leaving the rest of the (source-controlled) nav untouched so it can't
+    # drift from zensical.toml as guides/sections are added over time.
+    # [{] / [}] match a literal brace defensively: should this pattern ever be
+    # edited so two braces sit adjacent, a bare "{{"/"}}" would form a Jinja
+    # token in this .jinja template. As written there is no adjacency, so the
+    # class form is precautionary.
+    removed_nav_pages = (
+        "docs.md",
+        "architecture/decision-log.md",
+        "project/roadmap.md",
+    )
+    for page in removed_nav_pages:
+        content = re.sub(
+            r'^[ \t]*[{][ \t]*"[^"]+"[ \t]*=[ \t]*"'
+            + re.escape(page)
+            + r'"[ \t]*[}],\n',
+            "",
+            content,
+            flags=re.MULTILINE,
+        )
+
+    # Drop the custom home-page JavaScript include.
+    content = re.sub(
+        r'extra_javascript = \[\n    "javascripts/home\.js",\n\]\n',
+        "",
+        content,
+    )
+
+    # Drop personal (X / LinkedIn) social links; keep the GitHub one.
+    for brand in ("x-twitter", "linkedin"):
+        content = re.sub(
+            r'\n\n\[\[project\.extra\.social\]\]\n'
+            rf'icon = "fontawesome/brands/{brand}"\nlink = "[^"]*"',
+            "",
+            content,
+        )
+
+    # Fail loudly rather than silently leaking the author's personal handles
+    # if the social-link block above is ever reformatted past these patterns.
+    leaked = [d for d in ("x.com", "x-twitter", "linkedin") if d in content]
+    if leaked:
+        raise RuntimeError(
+            f"zensical.toml still references personal socials {leaked}; "
+            "the social-link removal in clean_zensical() needs updating."
+        )
+
+    zensical_path.write_text(content, encoding="utf-8")
+    print("Trimmed zensical.toml")
+
+
+def strip_removed_links() -> None:
+    """Remove cross-references to docs pages that were dropped."""
+    overview_path = BASE_DIR / "docs" / "architecture" / "overview.md"
+    if not overview_path.exists():
+        return
+    content = overview_path.read_text(encoding="utf-8")
+    content = re.sub(
+        r"- \[Decision Log\]\(decision-log\.md\)[^\n]*\n",
+        "",
+        content,
+    )
+    overview_path.write_text(content, encoding="utf-8")
+    print("Stripped dropped-page links from architecture/overview.md")
+
+
+def prune_sync_docs() -> None:
+    """Drop the ROADMAP entry from the docs sync script."""
+    sync_path = BASE_DIR / "scripts" / "sync_docs.py"
+    if not sync_path.exists():
+        return
+    content = sync_path.read_text(encoding="utf-8")
+    content = re.sub(
+        r'        \(root / "ROADMAP\.md", docs_project / "roadmap\.md", '
+        r"False\),\n",
+        "",
+        content,
+    )
+    sync_path.write_text(content, encoding="utf-8")
+    print("Pruned ROADMAP from scripts/sync_docs.py")
 
 
 if __name__ == "__main__":
     print(f"Running post-generation setup for {PROJECT_NAME}...")
     run_replacements()
     write_clean_changelog()
+    reset_readme()
+    clean_index()
+    clean_zensical()
+    strip_removed_links()
+    prune_sync_docs()
 
     # Self-destruct copier files from the generated project
     try:
