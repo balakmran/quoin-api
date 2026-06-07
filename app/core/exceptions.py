@@ -14,7 +14,15 @@ class QuoinError(Exception):
         status_code: int = 500,
         headers: dict[str, str] | None = None,
     ) -> None:
-        """Initialize QuoinError."""
+        """Initialize QuoinError.
+
+        Args:
+            message: Human-readable error detail, surfaced in the
+                response body.
+            status_code: HTTP status code for the response.
+            headers: Optional extra response headers (e.g.
+                ``WWW-Authenticate``).
+        """
         super().__init__(message)
         self.message = message
         self.status_code = status_code
