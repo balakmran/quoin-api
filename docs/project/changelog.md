@@ -55,6 +55,15 @@
   `just test`/`just check` now auto-start Postgres instead of failing.
   `quoin-pre-pr` now gates on `just check` passing at 100% coverage.
   `.env.example` now documents the `QUOIN_ALLOWED_HOSTS` setting.
+- **Template**: `copier copy` now produces a clean, de-branded starter.
+  QuoinAPI-specific docs are excluded at copy time (the marketing
+  `docs.md`, the architecture decision log, the roadmap, and the custom
+  home-page JavaScript), and the post-generation script rewrites the
+  remaining chrome — a fresh `README.md` and minimal `docs/index.md`, a
+  trimmed documentation nav with the personal social links removed, and
+  the error-type URN namespace rebranded from `urn:quoin:error:*` to
+  `urn:<project-slug>:error:*`. The guides, architecture overview, and
+  full API reference (including the `user` module) are retained.
 
 ## [0.7.0] - 2026-05-25
 
