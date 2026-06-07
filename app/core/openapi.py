@@ -10,11 +10,15 @@ from app.core.config import Environment, settings
 
 
 class OpenAPIExternalDoc(TypedDict):
+    """External documentation link for an OpenAPI tag."""
+
     description: NotRequired[str]
     url: str
 
 
 class OpenAPITag(TypedDict):
+    """OpenAPI tag entry grouping related endpoints."""
+
     name: str
     description: NotRequired[str]
     externalDocs: NotRequired[dict[str, str]]

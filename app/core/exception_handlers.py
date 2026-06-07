@@ -36,6 +36,7 @@ def _problem_response(
     status_code: int,
     headers: dict[str, str] | None = None,
 ) -> Response:
+    """Serialize a ProblemDetail into an application/problem+json response."""
     return Response(
         content=problem.model_dump_json(exclude_none=True),
         status_code=status_code,
