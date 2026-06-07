@@ -209,56 +209,25 @@ def clean_zensical() -> None:
         return
     content = zensical_path.read_text(encoding="utf-8")
 
-    # Replace the full nav block: drops the marketing "Docs" page, the
-    # Architecture "Decision Log", and the Project "Roadmap" entries.
-    new_nav = '''nav = [
-    { "Home" = "index.md" },
-    { "Guides" = [
-        { "Setup" = [
-            { "Getting Started" = "guides/getting-started.md" },
-            { "Configuration" = "guides/configuration.md" },
-        ]},
-        { "Development" = [
-            { "Creating a Module" = "guides/creating-a-module.md" },
-            { "Database Migrations" = "guides/database-migrations.md" },
-            { "Authentication" = "guides/authentication.md" },
-            { "Error Handling" = "guides/error-handling.md" },
-            { "Testing" = "guides/testing.md" },
-            { "Quality Checks" = "guides/quality-checks.md" },
-            { "AI-Assisted Development" = "guides/ai-setup.md" },
-        ]},
-        { "Operations" = [
-            { "Security" = "guides/security.md" },
-            { "Observability" = "guides/observability.md" },
-            { "Deployment" = "guides/deployment.md" },
-            { "Release Workflow" = "guides/release-workflow.md" },
-        ]},
-        { "Support" = [
-            { "Troubleshooting" = "guides/troubleshooting.md" },
-        ]},
-    ]},
-    { "Architecture" = [
-        { "Overview" = "architecture/overview.md" },
-    ]},
-    { "Reference" = [
-        { "Conventions" = "api/conventions.md" },
-        { "Overview" = "api/overview.md" },
-        { "Core" = "api/core.md" },
-        { "User" = "api/user.md" },
-    ]},
-    { "Project" = [
-        { "Changelog" = "project/changelog.md" },
-        { "Contributing" = "project/contributing.md" },
-        { "License" = "project/license.md" },
-    ]},
-]
-'''
-    content = re.sub(
-        r"nav = \[.*?\n\]\n(?=extra_css)",
-        new_nav,
-        content,
-        flags=re.DOTALL,
+    # Surgically drop only the nav entries for the pages removed above,
+    # leaving the rest of the (source-controlled) nav untouched so it can't
+    # drift from zensical.toml as guides/sections are added over time.
+    # The [{] / [}] classes match literal braces without doubling them,
+    # which Jinja would otherwise try to render in this .jinja template.
+    removed_nav_pages = (
+        "docs.md",
+        "architecture/decision-log.md",
+        "project/roadmap.md",
     )
+    for page in removed_nav_pages:
+        content = re.sub(
+            r'^[ \t]*[{][ \t]*"[^"]+"[ \t]*=[ \t]*"'
+            + re.escape(page)
+            + r'"[ \t]*[}],\n',
+            "",
+            content,
+            flags=re.MULTILINE,
+        )
 
     # Drop the custom home-page JavaScript include.
     content = re.sub(
