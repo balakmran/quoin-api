@@ -83,6 +83,14 @@ Common issues to check:
 - Index creation on large tables (consider `CONCURRENTLY`)
 - Foreign key constraints
 
+!!! note "SQLModel string columns"
+    SQLModel `str` fields render as
+    `sqlmodel.sql.sqltypes.AutoString(...)`. The `render_item` hook in
+    [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py)
+    automatically adds the matching `import sqlmodel.sql.sqltypes` to any
+    migration that needs it, so generated scripts apply cleanly. You do
+    not need to add this import by hand.
+
 ### 4. Apply the Migration
 
 ```bash
@@ -304,6 +312,17 @@ Common causes:
 from app.modules.user.models import User
 from app.modules.product.models import Product  # Add new models here
 ```
+
+### "NameError: name 'sqlmodel' is not defined"
+
+A migration that adds or alters a SQLModel `str` column references
+`sqlmodel.sql.sqltypes.AutoString(...)` and fails on `just migrate-up`.
+
+**Solution**: This is handled automatically by the `render_item` hook in
+[`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py),
+which emits the required `import sqlmodel.sql.sqltypes`. If you hit this,
+your `env.py` predates the hook — re-add it, or add the import to the
+affected migration by hand.
 
 ---
 
