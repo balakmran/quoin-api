@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def DATABASE_URL(self) -> PostgresDsn:
+    def DATABASE_URL(self) -> PostgresDsn:  # noqa: N802
         """Assemble the database URL."""
         return MultiHostUrl.build(  # type: ignore
             scheme=self.POSTGRES_DRIVER,

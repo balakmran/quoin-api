@@ -11,21 +11,21 @@ license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
-    "fastapi[standard]==0.136.3",
-    "sqlmodel==0.0.38",
-    "psycopg[binary]==3.3.4",
-    "structlog>=25.5.0",
-    "pydantic-settings>=2.14.1",
     "alembic>=1.18.4",
-    "greenlet==3.5.1",
     "asyncpg>=0.31.0",
+    "fastapi[standard]==0.136.3",
+    "greenlet==3.5.1",
+    "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "opentelemetry-api>=1.42.1",
-    "opentelemetry-sdk>=1.42.1",
     "opentelemetry-exporter-otlp>=1.42.1",
     "opentelemetry-instrumentation-fastapi>=0.63b1",
+    "opentelemetry-sdk>=1.42.1",
+    "psycopg[binary]==3.3.4",
+    "pydantic-settings>=2.14.1",
     "PyJWT[crypto]>=2.13.0",
-    "httpx>=0.28.1",
+    "sqlmodel==0.0.38",
+    "structlog>=25.5.0",
 ]
 
 [project.urls]
@@ -34,52 +34,24 @@ Documentation = "https://balakmran.github.io/quoin-api/"
 
 [dependency-groups]
 dev = [
-    { include-group = "tooling" },
-    { include-group = "test" },
     { include-group = "docs" },
+    { include-group = "test" },
+    { include-group = "tooling" },
 ]
-tooling = [
-    "ruff==0.15.14",
-    "ty==0.0.39",
-    "prek==0.4.1",
+docs = [
+    "mkdocstrings-python>=2.0.3",
+    "zensical==0.0.43",
 ]
 test = [
     "pytest>=9.0.3",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.1.0",
 ]
-docs = [
-    "zensical==0.0.43",
-    "mkdocstrings-python>=2.0.3",
+tooling = [
+    "prek==0.4.1",
+    "ruff==0.15.14",
+    "ty==0.0.39",
 ]
-
-[tool.ruff]
-line-length = 80
-target-version = "py314"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "PL", "RUF", "D"]
-ignore = ["D100", "D104"] # Ignore missing docstring in public module/package
-pydocstyle.convention = "google"
-
-[tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = [
-    "fastapi.Depends",
-    "fastapi.params.Depends",
-    "fastapi.Query",
-    "fastapi.Path",
-    "fastapi.Body",
-    "fastapi.Security",
-    "fastapi.Header",
-]
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
-asyncio_default_test_loop_scope = "session"
-testpaths = ["tests"]
-pythonpath = ["."]
-python_files = ["test_*.py"]
 
 [tool.coverage.run]
 source = ["app"]
@@ -95,3 +67,38 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 show_missing = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 80
+target-version = "py314"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "PL", "RUF", "D", "N"]
+ignore = ["D100", "D104"] # Ignore missing docstring in public module/package
+pydocstyle.convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Security",
+    "fastapi.Header",
+]
+
+[tool.uv]
+required-version = ">=0.11.19"
+exclude-newer = "7 days"

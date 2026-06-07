@@ -34,6 +34,14 @@
   combined with `allow_credentials=True` outside `development` are
   rejected at startup — that combination is silently ignored by
   browsers and was a credentialed-CORS footgun.
+- **Tooling**: `uv` resolution is now bounded by a 7-day dependency
+  cooldown (`exclude-newer = "7 days"`) for more reproducible installs,
+  and `required-version` pins the minimum `uv` version so contributors
+  and CI stay in sync. Ruff now lints naming conventions (`N` /
+  pep8-naming) and formats code samples embedded in docstrings
+  (`docstring-code-format`). `pyproject.toml`'s dependency lists and
+  tool sections are sorted alphabetically for easier scanning and
+  fewer merge conflicts.
 
 ## [0.7.0] - 2026-05-25
 
