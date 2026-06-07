@@ -88,9 +88,15 @@ def process_file(file_path: Path) -> None:
     )
 
     # 3. General string replacements (order matters: longest first)
+    # The two urn:* entries must precede "quoin_" so the error-type URN
+    # namespace is rebranded as a whole. The first one is special-cased:
+    # its suffix is the snake_case of the QuoinError base (renamed AppError),
+    # so it maps to app_error rather than the generic "quoin_" -> prefix rule.
     replacements = {
         "QuoinAPI": PROJECT_NAME,
         "QuoinError": "AppError",
+        "urn:quoin:error:quoin_error": f"urn:{PROJECT_SLUG}:error:app_error",
+        "urn:quoin:error": f"urn:{PROJECT_SLUG}:error",
         "quoin-api": PROJECT_SLUG,
         "quoin_": f"{ENV_PREFIX.lower()}_",
         "QUOIN_": f"{ENV_PREFIX.upper()}_",
@@ -139,16 +145,181 @@ def run_replacements() -> None:
             # Skip this script and copier config (handled separately)
             if file_name in {"copier_setup.py", "copier.yml"}:
                 continue
-            # CHANGELOG is rewritten fresh - skip in general pass
-            if file_name == "CHANGELOG.md":
+            # CHANGELOG and README are rewritten fresh - skip general pass
+            if file_name in {"CHANGELOG.md", "README.md"}:
                 continue
             process_file(file_path)
+
+
+def reset_readme() -> None:
+    """Overwrite README.md with a clean starter template."""
+    readme_path = BASE_DIR / "README.md"
+    content = f"""# {PROJECT_NAME}
+
+{DESCRIPTION}
+
+## Quickstart
+
+```bash
+cp .env.example .env
+just setup
+just dev
+```
+
+The API runs at http://localhost:8000; interactive docs are served at
+http://localhost:8000/docs.
+
+## Documentation
+
+See the [Getting Started guide](docs/guides/getting-started.md) for setup,
+architecture, and development workflows.
+
+## License
+
+Released under the terms of the [LICENSE](LICENSE) file.
+"""
+    readme_path.write_text(content, encoding="utf-8")
+    print("Wrote clean README.md")
+
+
+def clean_index() -> None:
+    """Replace the marketing home page with a minimal starter page."""
+    index_path = BASE_DIR / "docs" / "index.md"
+    if not index_path.exists():
+        return
+    content = f"""---
+title: Home
+---
+
+# {PROJECT_NAME}
+
+{DESCRIPTION}
+
+New here? Start with the
+[Getting Started guide](guides/getting-started.md).
+"""
+    index_path.write_text(content, encoding="utf-8")
+    print("Wrote minimal docs/index.md")
+
+
+def clean_zensical() -> None:
+    """Trim the docs site config: nav, home JS, and personal social links."""
+    zensical_path = BASE_DIR / "zensical.toml"
+    if not zensical_path.exists():
+        return
+    content = zensical_path.read_text(encoding="utf-8")
+
+    # Replace the full nav block: drops the marketing "Docs" page, the
+    # Architecture "Decision Log", and the Project "Roadmap" entries.
+    new_nav = '''nav = [
+    { "Home" = "index.md" },
+    { "Guides" = [
+        { "Setup" = [
+            { "Getting Started" = "guides/getting-started.md" },
+            { "Configuration" = "guides/configuration.md" },
+        ]},
+        { "Development" = [
+            { "Creating a Module" = "guides/creating-a-module.md" },
+            { "Database Migrations" = "guides/database-migrations.md" },
+            { "Authentication" = "guides/authentication.md" },
+            { "Error Handling" = "guides/error-handling.md" },
+            { "Testing" = "guides/testing.md" },
+            { "Quality Checks" = "guides/quality-checks.md" },
+            { "AI-Assisted Development" = "guides/ai-setup.md" },
+        ]},
+        { "Operations" = [
+            { "Security" = "guides/security.md" },
+            { "Observability" = "guides/observability.md" },
+            { "Deployment" = "guides/deployment.md" },
+            { "Release Workflow" = "guides/release-workflow.md" },
+        ]},
+        { "Support" = [
+            { "Troubleshooting" = "guides/troubleshooting.md" },
+        ]},
+    ]},
+    { "Architecture" = [
+        { "Overview" = "architecture/overview.md" },
+    ]},
+    { "Reference" = [
+        { "Conventions" = "api/conventions.md" },
+        { "Overview" = "api/overview.md" },
+        { "Core" = "api/core.md" },
+        { "User" = "api/user.md" },
+    ]},
+    { "Project" = [
+        { "Changelog" = "project/changelog.md" },
+        { "Contributing" = "project/contributing.md" },
+        { "License" = "project/license.md" },
+    ]},
+]
+'''
+    content = re.sub(
+        r"nav = \[.*?\n\]\n(?=extra_css)",
+        new_nav,
+        content,
+        flags=re.DOTALL,
+    )
+
+    # Drop the custom home-page JavaScript include.
+    content = re.sub(
+        r'extra_javascript = \[\n    "javascripts/home\.js",\n\]\n',
+        "",
+        content,
+    )
+
+    # Drop personal (X / LinkedIn) social links; keep the GitHub one.
+    for brand in ("x-twitter", "linkedin"):
+        content = re.sub(
+            r'\n\n\[\[project\.extra\.social\]\]\n'
+            rf'icon = "fontawesome/brands/{brand}"\nlink = "[^"]*"',
+            "",
+            content,
+        )
+
+    zensical_path.write_text(content, encoding="utf-8")
+    print("Trimmed zensical.toml")
+
+
+def strip_removed_links() -> None:
+    """Remove cross-references to docs pages that were dropped."""
+    overview_path = BASE_DIR / "docs" / "architecture" / "overview.md"
+    if not overview_path.exists():
+        return
+    content = overview_path.read_text(encoding="utf-8")
+    content = re.sub(
+        r"- \[Decision Log\]\(decision-log\.md\)[^\n]*\n",
+        "",
+        content,
+    )
+    overview_path.write_text(content, encoding="utf-8")
+    print("Stripped dropped-page links from architecture/overview.md")
+
+
+def prune_sync_docs() -> None:
+    """Drop the ROADMAP entry from the docs sync script."""
+    sync_path = BASE_DIR / "scripts" / "sync_docs.py"
+    if not sync_path.exists():
+        return
+    content = sync_path.read_text(encoding="utf-8")
+    content = re.sub(
+        r'        \(root / "ROADMAP\.md", docs_project / "roadmap\.md", '
+        r"False\),\n",
+        "",
+        content,
+    )
+    sync_path.write_text(content, encoding="utf-8")
+    print("Pruned ROADMAP from scripts/sync_docs.py")
 
 
 if __name__ == "__main__":
     print(f"Running post-generation setup for {PROJECT_NAME}...")
     run_replacements()
     write_clean_changelog()
+    reset_readme()
+    clean_index()
+    clean_zensical()
+    strip_removed_links()
+    prune_sync_docs()
 
     # Self-destruct copier files from the generated project
     try:

@@ -59,6 +59,15 @@ _exclude:
   - ".idea"
   - ".vscode"
   - "uv.lock"
+  # QuoinAPI-specific docs/meta pages — not relevant to a fresh project.
+  # (index.md, zensical.toml nav, and README are rewritten by the
+  # post-generation script in scripts/copier_setup.py.jinja.)
+  - "docs/docs.md"
+  - "docs/architecture/decision-log.md"
+  - "docs/project/roadmap.md"
+  - "docs/project/changelog.md"
+  - "docs/javascripts/home.js"
+  - "ROADMAP.md"
 
 _tasks:
   - "python3 scripts/copier_setup.py"
