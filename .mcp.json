@@ -3,6 +3,14 @@
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "${QUOIN_MCP_DATABASE_URI:-postgresql://postgres:postgres@localhost:5432/app_db}"
+      ]
     }
   }
 }

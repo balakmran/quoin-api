@@ -101,6 +101,9 @@ async def products_admin_client(client, caller_products_admin):
 
 **Don't** mutate the shared fixtures — they're used across many tests.
 
+> Driving an *existing* module to 100% from a coverage report is a different
+> loop — see [quoin-coverage](../quoin-coverage/SKILL.md).
+
 ## What to test
 
 For a new module, aim for **≥95% coverage** with these cases:

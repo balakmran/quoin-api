@@ -1,6 +1,8 @@
 import asyncio
 from logging.config import fileConfig
+from typing import Any, Literal
 
+from alembic.autogenerate.api import AutogenContext
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -33,6 +35,36 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 
+def render_item(
+    type_: str, obj: Any, autogen_context: AutogenContext
+) -> Literal[False]:
+    """Ensure ``import sqlmodel`` is emitted for sqlmodel column types.
+
+    Alembic autogenerate renders SQLModel string columns as
+    ``sqlmodel.sql.sqltypes.AutoString(...)`` but does not add the
+    corresponding import, so generated migrations would fail at runtime
+    with ``NameError: name 'sqlmodel' is not defined``. Registering the
+    needed import here populates the template's ``${imports}`` block only
+    when a sqlmodel type is actually used.
+
+    Args:
+        type_: The kind of object being rendered (e.g. ``"type"``).
+        obj: The object being rendered.
+        autogen_context: The active autogenerate context.
+
+    Returns:
+        ``False`` to fall back to Alembic's default rendering.
+
+    """
+    module = obj.__class__.__module__
+    if type_ == "type" and module.startswith("sqlmodel"):
+        # Import the concrete submodule (e.g. ``sqlmodel.sql.sqltypes``)
+        # so the rendered ``sqlmodel.sql.sqltypes.AutoString(...)``
+        # reference resolves cleanly for both runtime and type checking.
+        autogen_context.imports.add(f"import {module}")
+    return False
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -54,6 +86,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_item=render_item,
     )
 
     with context.begin_transaction():
@@ -62,7 +95,11 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Run migrations using the connection."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_item=render_item,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
