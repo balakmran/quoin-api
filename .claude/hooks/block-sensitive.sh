@@ -31,6 +31,18 @@ case "$base" in
     deny "Refusing to edit uv.lock — change dependencies via 'uv add', 'uv remove', or 'uv sync' instead of hand-editing." ;;
 esac
 
+# Copier template config
+case "$base" in
+  copier.yml|copier.yaml)
+    deny "Refusing to edit $base — Copier template config. Edit intentionally outside Claude." ;;
+esac
+
+# Copier Jinja templates
+case "$f" in
+  *.jinja)
+    deny "Refusing to edit Jinja template $base — this is a Copier template file." ;;
+esac
+
 # Applied alembic migrations
 case "$f" in
   *alembic/versions/*.py)
