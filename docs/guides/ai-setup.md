@@ -58,6 +58,21 @@ Walks through the full DDD module scaffold:
 exceptions → register router → generate and review migration → write tests
 → `just check`.
 
+### `quoin-add-endpoint`
+
+**Triggers on:** "add an endpoint to the user module", "add a GET
+/users/by-email route", "expose a search endpoint on products", "add a
+deactivate action to users"
+
+The single-endpoint counterpart to `quoin-new-module`: adds one route plus
+its plumbing to a module that already exists, working up the layers
+schema → repository → service → route against the `app/modules/user/`
+reference. Covers the route-ordering gotcha (declare `/count` before
+`/{user_id}`), the `response_model` vs return-type convention, reusing the
+module's `get_<module>_service` dependency, and the required auth/domain-error
+test cases. For a brand-new module use `quoin-new-module`; for a schema change
+behind the endpoint use `quoin-db-migration` first.
+
 ### `quoin-db-migration`
 
 **Triggers on:** "add a column", "add a field to", "make X nullable",
@@ -168,6 +183,16 @@ under `alembic/versions/`, it emits a **non-blocking** reminder to run
 `just migrate-gen`. Like the config-drift hook it is advisory — some
 `models.py` edits (a docstring, a non-mapped attribute) need no migration.
 
+### PostToolUse hook — auto-format Python (automatic)
+
+Configured in `.claude/settings.json`. Fires after any
+`Edit` / `Write` / `MultiEdit` tool call.
+
+When the edited file is a `.py` file, it runs `ruff format` on just that
+file, so formatting stays clean mid-turn instead of accumulating drift until
+the Stop hook runs at the end. It never blocks — it only reformats — and is a
+no-op for non-Python files.
+
 ### PreToolUse hook — block sensitive files (automatic)
 
 Script at `.claude/hooks/block-sensitive.sh`. Fires before any
@@ -180,6 +205,8 @@ Refuses edits to:
 | `.env`, `.env.*` (except `.env.example`) | Credential leak risk |
 | `uv.lock` | Must change via `uv add` / `uv remove` / `uv sync` |
 | `alembic/versions/*.py` | Applied migrations must not be rewritten |
+| `copier.yml`, `copier.yaml` | Copier template config — edit deliberately |
+| `*.jinja` | Copier template files — break consumers if changed |
 
 ### prek git hooks (automatic on commit / push)
 
