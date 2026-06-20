@@ -4,6 +4,16 @@
 
 ### Added
 
+- **Integrations**: a shared, resilient outbound HTTP client
+  (`app.http`). A single `httpx.AsyncClient` is lifecycle-managed in the
+  lifespan and injected via `HTTPClientDep`. Every call is guarded by a
+  per-host circuit breaker (purgatory) wrapping a retry loop with
+  exponential backoff (stamina), and is OpenTelemetry-instrumented when
+  `QUOIN_OTEL_ENABLED`. Transport failures map to `BadGatewayError`
+  (502), `GatewayTimeoutError` (504), and `ServiceUnavailableError`
+  (503, circuit open); response status codes are left for callers to
+  interpret. Tunable via `QUOIN_HTTP_TIMEOUT_SECONDS` and
+  `QUOIN_HTTP_RETRY_ATTEMPTS`. See the Outbound HTTP Client guide.
 - **Reliability**: graceful shutdown drains in-flight requests before
   the database engine is disposed. On shutdown the readiness probe
   flips to 503 (so orchestrators stop routing new traffic),

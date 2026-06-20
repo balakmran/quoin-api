@@ -111,6 +111,13 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_SECURITY_REFERRER_POLICY` | `Referrer-Policy` header value                  | `strict-origin-when-cross-origin`                   |
 | `QUOIN_SECURITY_PERMISSIONS_POLICY` | `Permissions-Policy` header value            | `geolocation=(), camera=(), microphone=()`          |
 | `QUOIN_MAX_REQUEST_BODY_BYTES` | Max request body size in bytes (`<=0` = disabled) | `1048576` (1 MiB)                                   |
+| `QUOIN_HTTP_TIMEOUT_SECONDS` | Outbound request timeout in seconds (all phases)   | `10.0`                                              |
+| `QUOIN_HTTP_RETRY_ATTEMPTS`  | Total attempts per outbound call (`1` = no retry)  | `3`                                                 |
+
+Finer backoff and circuit-breaker tuning are module constants in
+[`app/http/client.py`](../../app/http/client.py) rather than settings; the
+connection pool uses httpx defaults. See the
+[Outbound HTTP Client guide](outbound-http.md).
 
 ## Core Settings Module
 

@@ -120,5 +120,10 @@ class Settings(BaseSettings):
     OAUTH_AUDIENCE: str | None = None
     OAUTH_ROLES_CLAIM: str = "roles"
 
+    # Outbound HTTP client (finer backoff/breaker/pool tuning lives as
+    # constants in app/http/client.py)
+    HTTP_TIMEOUT_SECONDS: float = 10.0
+    HTTP_RETRY_ATTEMPTS: int = 3
+
 
 settings = Settings()

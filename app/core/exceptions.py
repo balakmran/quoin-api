@@ -145,6 +145,18 @@ class UnauthorizedError(QuoinError):
         )
 
 
+class BadGatewayError(QuoinError):
+    """Bad Gateway — an upstream dependency returned an invalid response."""
+
+    def __init__(
+        self,
+        message: str = "Bad Gateway",
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Initialize BadGatewayError."""
+        super().__init__(message, status_code=502, headers=headers)
+
+
 class ServiceUnavailableError(QuoinError):
     """Service Unavailable — a required dependency is unreachable."""
 

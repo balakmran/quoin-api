@@ -462,6 +462,37 @@ app = FastAPI(lifespan=lifespan)
 
 ---
 
+### Outbound HTTP Client (Resilience)
+
+**Decision:** A single lifespan-managed `httpx.AsyncClient` on
+`app.state.http_client`, wrapped by **stamina** (retries) and
+**purgatory** (circuit breaker).
+
+**Alternatives Considered:** Hyx (all-in-one toolkit),
+tenacity + pybreaker, hand-rolled primitives.
+
+**Rationale:**
+
+- **Mirrors the DB pattern** — created on startup, closed on shutdown
+  after the in-flight drain, injected via a `get_http_client` dependency.
+- **Maintained, async-first deps** — both stamina and purgatory are
+  actively released and asyncio-native. Hyx was rejected: its last
+  release was `0.0.2` (Feb 2023), too stale for the foundation that every
+  later integration depends on. Hand-rolling correct backoff + breaker
+  state was deemed more risk than two small libraries.
+- **Breaker outermost, retry inner** — an open circuit fails fast
+  (`503`) without burning retries, and the breaker records one
+  success/failure per *logical* call rather than per attempt.
+- **Transport-only error translation** — timeouts → `504`, transport
+  errors → `502`, open circuit → `503`. Response *status codes* are left
+  for the caller to interpret (a `404` is a domain outcome, not an
+  infrastructure failure), so writes are never silently replayed.
+
+**Out of scope:** in-app rate limiting (handled at the edge per the
+roadmap) and any concrete upstream integration.
+
+---
+
 ### Structured Logging
 
 **Decision:** Use Structlog for all application logging
