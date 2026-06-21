@@ -4,6 +4,16 @@
 
 ### Added
 
+- **Supply chain**: Dependabot keeps dependencies patched with weekly,
+  grouped pull requests. `.github/dependabot.yml` watches two
+  ecosystems — `uv` (Python `dependencies` in `pyproject.toml` +
+  `uv.lock`) and `github-actions` (the actions pinned in
+  `.github/workflows/`) — collapsing minor and patch bumps into a
+  single PR per ecosystem while keeping majors separate. The new
+  Dependency Scanning guide documents the cadence, how to enable
+  GitHub-native secret scanning and push protection (repository
+  settings, not files), and how enterprises layer Snyk / Black Duck /
+  GHAS on top.
 - **Migrations**: a zero-downtime migration playbook. The Database
   Migrations guide documents the expand/contract (parallel-change)
   pattern with recipes for renaming a column, dropping a column,

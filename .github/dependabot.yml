@@ -1,0 +1,45 @@
+# Dependabot configuration.
+#
+# Keeps dependencies patched with weekly, grouped pull requests. See
+# docs/guides/dependency-scanning.md for the scanning posture and how
+# enterprises layer Snyk / Black Duck / GHAS on top.
+#
+# Note: GitHub-native secret scanning, push protection, and Dependabot
+# alerts are repository *settings* (Settings -> Code security), not
+# files. Enable them there; this file only controls version-update PRs.
+version: 2
+updates:
+  # Python dependencies (pyproject.toml + uv.lock). The `uv` ecosystem
+  # has been natively supported since March 2025. Only runtime
+  # `dependencies` (which carry version constraints) are bumped
+  # reliably; packages declared solely under `[dependency-groups]`
+  # may not be updated — an upstream limitation.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    groups:
+      python-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions pinned in .github/workflows/*.yml.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"

@@ -181,5 +181,6 @@ CORSMiddleware             ← innermost
 ## See Also
 
 - [Configuration reference](configuration.md) — all `QUOIN_SECURITY_*` variables
+- [Dependency Scanning](dependency-scanning.md) — Dependabot + secret scanning
 - [Deployment guide](deployment.md) — production environment setup
 - [`app/core/middlewares.py`](../../app/core/middlewares.py) — implementation
