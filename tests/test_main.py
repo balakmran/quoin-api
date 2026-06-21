@@ -29,9 +29,11 @@ def test_lifespan():
         response = client.get("/health")
         assert response.status_code == status.HTTP_200_OK
 
-    # Shutdown ran the clean-drain path and disposed the engine.
+    # Shutdown ran the clean-drain path and disposed the engine, and the
+    # shared HTTP client was created on startup and closed on shutdown.
     assert app.state.lifecycle.is_shutting_down is True
     assert app.state.engine.dispose.called
+    assert app.state.http_client.is_closed
 
 
 def test_lifespan_shutdown_drain_timeout(monkeypatch: pytest.MonkeyPatch):
@@ -49,6 +51,26 @@ def test_lifespan_shutdown_drain_timeout(monkeypatch: pytest.MonkeyPatch):
     # was disposed anyway.
     assert app.state.lifecycle.is_shutting_down is True
     assert app.state.lifecycle.in_flight == 1
+    assert app.state.engine.dispose.called
+
+
+def test_lifespan_disposes_engine_when_http_close_errors(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Engine is disposed even if closing the HTTP client raises."""
+    app = create_app()
+
+    with pytest.raises(RuntimeError, match="close boom"):
+        with TestClient(app, base_url="http://test") as client:
+            client.get("/health")
+            # Force aclose() to raise on shutdown; the independently
+            # guarded finally must still dispose the engine.
+            monkeypatch.setattr(
+                app.state.http_client,
+                "aclose",
+                AsyncMock(side_effect=RuntimeError("close boom")),
+            )
+
     assert app.state.engine.dispose.called
 
 

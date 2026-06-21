@@ -1,6 +1,7 @@
 import os
 
 import httpx
+import structlog
 from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -18,6 +19,8 @@ from opentelemetry.sdk.trace.export import (
 
 from app.core import metadata
 from app.core.config import settings
+
+logger = structlog.get_logger(__name__)
 
 
 class SafeConsoleSpanExporter(ConsoleSpanExporter):
@@ -64,10 +67,18 @@ def instrument_http_client(client: httpx.AsyncClient) -> None:
     Spans are emitted for each request made through ``client``. The
     specific client instance is instrumented (rather than patching httpx
     globally) so the test client and other ad-hoc clients are unaffected.
+    No-op when ``QUOIN_OTEL_ENABLED`` is false.
+
+    Tracing is best-effort: if instrumentation fails (e.g. an
+    instrumentor/httpx version skew) the error is logged and swallowed so
+    a purely observational concern never aborts application startup.
 
     Args:
         client: The shared async HTTP client to instrument.
     """
     if not settings.OTEL_ENABLED:
         return
-    HTTPXClientInstrumentor.instrument_client(client)
+    try:
+        HTTPXClientInstrumentor.instrument_client(client)
+    except Exception as exc:
+        logger.warning("http_client_instrumentation_failed", error=repr(exc))

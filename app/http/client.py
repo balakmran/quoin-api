@@ -15,12 +15,13 @@ from app.core.exceptions import (
     InternalServerError,
     ServiceUnavailableError,
 )
+from app.core.telemetry import instrument_http_client
 
 logger = structlog.get_logger(__name__)
 
-# Upstream status codes worth retrying when ``retry_on_status`` is set.
-# 429 (Too Many Requests) and 5xx are transient; 4xx (other than 429) are
-# caller errors and are never retried.
+# Upstream status codes worth retrying when ``retry_on_status`` is set:
+# 429 (Too Many Requests) plus the transient 5xx (500/502/503/504). Other
+# 4xx are caller errors and 501 is not transient, so none are retried.
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
 # Backoff and circuit-breaker tuning. These are module constants rather
@@ -81,9 +82,17 @@ class ResilientHTTPClient:
         self._breakers = breakers
 
     @property
-    def client(self) -> httpx.AsyncClient:
-        """The underlying ``httpx.AsyncClient`` (for advanced use)."""
-        return self._client
+    def is_closed(self) -> bool:
+        """Whether the underlying client has been closed."""
+        return self._client.is_closed
+
+    def instrument(self) -> None:
+        """Enable OpenTelemetry tracing on the underlying client.
+
+        Keeps the raw client private — callers cannot reach it to bypass
+        the resilience wrapper. No-op when ``QUOIN_OTEL_ENABLED`` is false.
+        """
+        instrument_http_client(self._client)
 
     def _breaker_key(self, url: httpx.URL | str) -> str:
         """Derive the circuit-breaker key (the target host) for a URL.
@@ -134,13 +143,20 @@ class ResilientHTTPClient:
             ServiceUnavailableError: The circuit for this host is open.
             GatewayTimeoutError: The upstream timed out after retries.
             BadGatewayError: A transport/connection error after retries.
+            InternalServerError: The URL has no host (see ``_breaker_key``).
+
+        Note:
+            Non-transport httpx errors (e.g. ``InvalidURL``,
+            ``TooManyRedirects``) are not translated here and propagate to
+            the caller / global handler.
         """
         retry_on: tuple[type[Exception], ...] = (httpx.TransportError,)
         if retry_on_status:
             retry_on += (_TransientStatusError,)
 
+        host = self._breaker_key(url)
         try:
-            breaker = await self._breakers.get_breaker(self._breaker_key(url))
+            breaker = await self._breakers.get_breaker(host)
             async with breaker:
                 async for attempt in stamina.retry_context(
                     on=retry_on,
@@ -163,10 +179,18 @@ class ResilientHTTPClient:
         except _TransientStatusError as exc:
             # Retries exhausted on a transient status — hand the last
             # response back rather than raising; the breaker has already
-            # recorded the failure on the way out.
+            # recorded the failure on the way out. Log it so a hard-down
+            # upstream is visible, mirroring the transport-error paths.
+            logger.warning(
+                "http_status_retries_exhausted",
+                host=host,
+                method=method,
+                status_code=exc.response.status_code,
+                attempts=settings.HTTP_RETRY_ATTEMPTS,
+            )
             return exc.response
         except OpenedState as exc:
-            logger.warning("http_circuit_open", host=self._breaker_key(url))
+            logger.warning("http_circuit_open", host=host)
             raise ServiceUnavailableError(
                 "Upstream service is unavailable"
             ) from exc

@@ -13,7 +13,7 @@ from app.core.lifecycle import Lifecycle
 from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
-from app.core.telemetry import instrument_http_client, setup_opentelemetry
+from app.core.telemetry import setup_opentelemetry
 from app.db.session import create_db_engine, create_session_factory
 from app.http.client import create_http_client
 
@@ -42,7 +42,7 @@ def create_app() -> FastAPI:
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)
         http_client = create_http_client()
-        instrument_http_client(http_client.client)
+        http_client.instrument()
         app.state.http_client = http_client
         yield
         lifecycle: Lifecycle = app.state.lifecycle

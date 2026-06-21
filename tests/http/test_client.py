@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable, Generator
 from types import SimpleNamespace
 
@@ -27,7 +28,7 @@ def _fast_retries() -> Generator[None]:
     Keeps the configured number of attempts (``HTTP_RETRY_ATTEMPTS``)
     but removes the exponential-backoff sleeps between them.
     """
-    stamina.set_testing(True, attempts=3)
+    stamina.set_testing(True, attempts=settings.HTTP_RETRY_ATTEMPTS)
     yield
     stamina.set_testing(False)
 
@@ -205,6 +206,76 @@ async def test_breaker_is_per_host() -> None:
     await client.aclose()
 
 
+async def test_retry_on_status_recovers_within_budget() -> None:
+    """A retryable status that recovers mid-budget returns the success."""
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls < settings.HTTP_RETRY_ATTEMPTS:
+            return httpx.Response(503)
+        return httpx.Response(200)
+
+    client = _client(handler)
+    response = await client.get("http://upstream.test/x", retry_on_status=True)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert calls == settings.HTTP_RETRY_ATTEMPTS
+    await client.aclose()
+
+
+async def test_retry_on_status_failures_open_circuit() -> None:
+    """Exhausted retryable statuses count toward the breaker and open it."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503)
+
+    client = _client(handler)
+
+    opened = False
+    for _ in range(20):
+        try:
+            await client.get("http://upstream.test/x", retry_on_status=True)
+        except ServiceUnavailableError:
+            opened = True
+            break
+    assert opened, "retryable-status failures should trip the breaker"
+    await client.aclose()
+
+
+async def test_circuit_recovers_after_ttl(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A half-open trial closes the circuit once the upstream recovers."""
+    monkeypatch.setattr("app.http.client._BREAKER_TTL", 0.1)
+    failing = True
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if failing:
+            raise httpx.ConnectError("down", request=request)
+        return httpx.Response(200)
+
+    client = _client(handler)
+
+    for _ in range(20):
+        try:
+            await client.get("http://flap.test/x")
+        except BadGatewayError:
+            continue
+        except ServiceUnavailableError:
+            break
+
+    # Upstream recovers; wait out the open window, then the next call
+    # should be allowed through (half-open) and close the circuit.
+    failing = False
+    await asyncio.sleep(0.15)
+    response = await client.get("http://flap.test/x")
+
+    assert response.status_code == status.HTTP_200_OK
+    await client.aclose()
+
+
 async def test_hostless_url_raises() -> None:
     """A relative/host-less URL is rejected instead of sharing a breaker."""
 
@@ -257,4 +328,4 @@ async def test_aclose_closes_underlying_client() -> None:
 
     client = _client(handler)
     await client.aclose()
-    assert client.client.is_closed
+    assert client.is_closed

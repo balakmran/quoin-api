@@ -2,6 +2,7 @@ import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import httpx
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
 from app.core.config import settings
@@ -146,3 +147,26 @@ class TestInstrumentHttpClient:
             mock_instrumentor.instrument_client.assert_called_once_with(
                 mock_client
             )
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    async def test_enabled_accepts_real_client(self):
+        """A real httpx.AsyncClient is accepted by the instrumentor."""
+        client = httpx.AsyncClient()
+        try:
+            # Must not raise against the real instrumentor API.
+            instrument_http_client(client)
+        finally:
+            await client.aclose()
+
+    @mock.patch.object(settings, "OTEL_ENABLED", True)
+    def test_instrumentation_failure_is_swallowed(self):
+        """Instrumentation errors are logged, not raised (best-effort)."""
+        mock_client = MagicMock()
+        with patch(
+            "app.core.telemetry.HTTPXClientInstrumentor"
+        ) as mock_instrumentor:
+            mock_instrumentor.instrument_client.side_effect = RuntimeError(
+                "version skew"
+            )
+            # Should not propagate — app startup must not abort.
+            instrument_http_client(mock_client)
