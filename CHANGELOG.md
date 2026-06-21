@@ -4,6 +4,15 @@
 
 ### Added
 
+- **Migrations**: a zero-downtime migration playbook. The Database
+  Migrations guide documents the expand/contract (parallel-change)
+  pattern with recipes for renaming a column, dropping a column,
+  changing a type, adding a NOT NULL column, and building an index
+  concurrently. `just migrate-gen` now runs a non-blocking guard
+  (`scripts/migration_guard.py`) that parses the generated script's AST
+  and flags destructive or locking operations — drops, type changes,
+  NOT NULL on populated tables, non-concurrent indexes, and destructive
+  raw SQL — for review.
 - **Integrations**: a shared, resilient outbound HTTP client
   (`app.http`). A single `httpx.AsyncClient` is lifecycle-managed in the
   lifespan and injected via `HTTPClientDep`. Every call is guarded by a

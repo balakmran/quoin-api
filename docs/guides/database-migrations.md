@@ -63,6 +63,12 @@ migration file in `alembic/versions/`:
 alembic/versions/abc123def456_add_phone_field_to_users_table.py
 ```
 
+Immediately afterwards, `migrate-gen` runs the **migration guard**
+(`scripts/migration_guard.py`), which scans the new script and flags any
+operation that is unsafe to apply to a live, populated database. See
+[The migration guard](#the-migration-guard) below for what it catches and
+how to respond.
+
 ### 3. Review the Generated SQL
 
 **Always review the generated migration** before applying it:
@@ -215,6 +221,155 @@ def upgrade() -> None:
         INSERT INTO user_profiles (id, user_id, ...)
         SELECT gen_random_uuid(), id, ... FROM users
     """)
+```
+
+---
+
+## Zero-Downtime Migrations
+
+In production the new application version and the old one overlap: during a
+rolling deploy, both run against the **same database** for a window of
+seconds to minutes. A migration is zero-downtime only if the schema is
+compatible with *both* versions throughout that window. The single rule
+that follows from this:
+
+!!! danger "The overlap rule"
+    A migration must never break the application version that is **still
+    running**. Anything that drops, renames, narrows, or hard-constrains a
+    column the old code still touches will cause errors mid-deploy.
+
+The discipline that satisfies the rule is **expand/contract** (also called
+parallel-change).
+
+### The expand/contract pattern
+
+Split every breaking schema change across **multiple deploys** so the
+database is always compatible with the code on either side of a rollout:
+
+```mermaid
+graph LR
+    A[Expand: add the new shape, additively] --> B[Migrate: backfill + dual-write]
+    B --> C[Switch: read from the new shape]
+    C --> D[Contract: drop the old shape]
+```
+
+1. **Expand** — Add the new column/table/index. Make it **additive and
+   nullable**; never remove or tighten anything yet. Safe to apply while
+   old code runs because old code ignores it.
+2. **Migrate** — Backfill existing rows and have the new code **dual-write**
+   (write both old and new shapes). Deploy this code.
+3. **Switch** — Move reads to the new shape. Deploy. The old shape is now
+   unused but still present.
+4. **Contract** — In a *later* release, once no running code touches the
+   old shape, drop it (and add any NOT NULL / constraints the new shape
+   needs).
+
+Each step is its own PR and its own deploy. The contract step is the only
+destructive one, and by the time it runs nothing depends on what it drops.
+
+### Recipes for common changes
+
+#### Rename a column (`old_name` → `new_name`)
+
+A rename is a drop + add to Postgres — never autogenerate it directly.
+
+1. **Expand**: add `new_name` as nullable. `op.add_column(...)`.
+2. **Migrate**: backfill `UPDATE t SET new_name = old_name`; deploy code
+   that writes both.
+3. **Switch**: deploy code that reads `new_name`.
+4. **Contract**: `op.drop_column("t", "old_name")`.
+
+#### Drop a column
+
+1. **Expand/Switch**: deploy code that no longer reads or writes the
+   column. (No schema change yet.)
+2. **Contract**: `op.drop_column(...)` in the next release.
+
+#### Change a column type
+
+1. **Expand**: add a new column of the target type, nullable.
+2. **Migrate**: backfill with a safe cast; dual-write.
+3. **Switch**: read the new column.
+4. **Contract**: drop the old column.
+
+   In-place `ALTER COLUMN ... TYPE` may rewrite the whole table under an
+   `ACCESS EXCLUSIVE` lock and can silently truncate on narrowing — avoid
+   it on large or hot tables.
+
+#### Add a NOT NULL column
+
+`ADD COLUMN ... NOT NULL` without a default **fails** on a populated table.
+
+1. **Expand**: add it nullable, or with a `server_default`.
+
+   ```python
+   op.add_column(
+       "users",
+       sa.Column("status", sa.String(), server_default="active"),
+   )
+   ```
+
+2. **Migrate**: backfill any remaining `NULL`s.
+3. **Contract**: `op.alter_column("users", "status", nullable=False)` once
+   every row has a value.
+
+#### Add an index
+
+Plain `CREATE INDEX` takes a write lock for the duration of the build. On
+Postgres, build it concurrently instead:
+
+```python
+def upgrade() -> None:
+    op.create_index(
+        "ix_users_created_at", "users", ["created_at"],
+        postgresql_concurrently=True,
+    )
+```
+
+!!! warning "CONCURRENTLY needs a non-transactional migration"
+    `CREATE INDEX CONCURRENTLY` cannot run inside a transaction. Set
+    `# revision = ...` aside and disable the per-migration transaction for
+    that script (`op.get_context().autocommit_block()` or run it as a
+    standalone migration), or the build will error.
+
+### The migration guard
+
+`just migrate-gen` runs `scripts/migration_guard.py` against the script it
+just generated and prints **advisory** flags for unsafe operations. It is
+non-blocking — it never stops the workflow; it surfaces what to review.
+
+It parses the migration's AST — so multi-line calls are matched as whole
+statements, and operations nested inside an `op.batch_alter_table(...)`
+block are caught too — and flags:
+
+| Operation | Why it's flagged |
+| :-------- | :--------------- |
+| `drop_column` / `drop_table` | Irreversible data loss; contract-phase only |
+| `drop_constraint` | May break invariants the running app relies on |
+| `alter_column(..., type_=...)` | Table rewrite under lock; data loss on narrowing |
+| `alter_column(..., nullable=False)` | Table scan/lock; fails on existing `NULL`s |
+| `add_column(..., nullable=False)` without a real `server_default` | Fails on a populated table |
+| `create_index` / `drop_index` without `postgresql_concurrently=True` | Takes a blocking lock |
+| `op.execute(...)` with a `DELETE FROM`, `TRUNCATE`, or `DROP <object>` statement | Destructive raw SQL |
+
+Operation rows match calls on `op` and on the variable bound by a
+`batch_alter_table` block (conventionally `batch_op`).
+
+It deliberately does **not** flag the safe escape hatches: a column added
+with a real `server_default` (an explicit `server_default=None` is treated
+as *no* default and is still flagged), an index built
+`postgresql_concurrently=True`, or Alembic's `existing_nullable=False`
+context on a type change. Commented-out operations — and `DROP` / `DELETE` /
+`TRUNCATE` appearing only inside string data, such as `'Drop-off point'` —
+are ignored.
+
+A flag is a prompt, not a verdict. If you intend the change and have a
+maintenance window (or the table is small and empty), proceed. Otherwise
+split it into an expand/contract sequence using the recipes above. You can
+re-run the guard manually on any script:
+
+```bash
+uv run python scripts/migration_guard.py alembic/versions/<file>.py
 ```
 
 ---

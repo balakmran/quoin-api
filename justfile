@@ -101,9 +101,10 @@ _db-check:
             || (echo "" && echo "Database not running; starting it..." && echo "" && docker compose up -d --wait db); \
     fi
 
-# Generate a new migration
+# Generate a new migration (scans the result for unsafe operations)
 migrate-gen message:
     uv run alembic revision --autogenerate -m "{{message}}"
+    @uv run python scripts/migration_guard.py
 
 # Apply pending database migrations
 migrate-up:
