@@ -43,8 +43,16 @@ def setup_logging() -> None:
             structlog.processors.JSONRenderer(),
         ]
     else:
+        # ConsoleRenderer formats exc_info itself (prettier tracebacks).
+        # Drop format_exc_info here, or it pre-renders exc_info to a
+        # string and ConsoleRenderer emits a UserWarning.
+        console_processors = [
+            p
+            for p in shared_processors
+            if p is not structlog.processors.format_exc_info
+        ]
         processors = [
-            *shared_processors,
+            *console_processors,
             structlog.dev.ConsoleRenderer(
                 pad_event_to=0
             ),  # No padding for compact logs
