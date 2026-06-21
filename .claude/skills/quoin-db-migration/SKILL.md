@@ -21,6 +21,8 @@ just migrate-gen "describe the change in present tense"
 
 Good messages: `"add email_verified to user"`, `"index user.created_at"`, `"drop legacy session_token from user"`. Bad: `"changes"`, `"fix"`, `"update"`. The message becomes the docstring of the migration file.
 
+`migrate-gen` then runs the **migration guard** (`scripts/migration_guard.py`) over the new script and prints advisory flags for unsafe operations (drops, type changes, NOT NULL on populated tables, non-concurrent indexes, destructive raw SQL). It never blocks — treat its output as the start of your review, then apply the expand/contract recipes in [docs/guides/database-migrations.md](../../../docs/guides/database-migrations.md#zero-downtime-migrations) where a flag is genuine.
+
 ### 3. Review the generated script — this is the important step
 
 Open the new file in `alembic/versions/` and read it line by line. Autogenerate is good but not infallible. Check:
