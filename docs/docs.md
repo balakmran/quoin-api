@@ -50,7 +50,7 @@ interactive API docs.
 |---|---|
 | `just setup` | Install deps and wire commit hooks — run once |
 | `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
-| `just new <module>` | Scaffold a complete DDD module (models, schemas, repo, service, routes) |
+| `just new <module>` | Scaffold and register a complete DDD module |
 | `just check` | Run format → lint → typecheck → test in one gate |
 | `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
 | `just token` | Mint a signed JWT against the local mock OAuth server |

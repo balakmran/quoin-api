@@ -72,18 +72,7 @@ sync-main:
 
 # Scaffold a new feature module (e.g. just new product)
 new module:
-    @mkdir -p app/modules/{{module}}
-    @touch app/modules/{{module}}/__init__.py
-    @touch app/modules/{{module}}/models.py
-    @touch app/modules/{{module}}/schemas.py
-    @touch app/modules/{{module}}/repository.py
-    @touch app/modules/{{module}}/service.py
-    @touch app/modules/{{module}}/routes.py
-    @touch app/modules/{{module}}/exceptions.py
-    @mkdir -p tests/modules/{{module}}
-    @touch tests/modules/{{module}}/__init__.py
-    @touch tests/modules/{{module}}/test_routes.py
-    @echo "Module '{{module}}' scaffolded in app/modules/{{module}}/ and tests/modules/{{module}}/"
+    @uv run python scripts/scaffold_module.py {{module}}
 
 # =============================================================================
 # Database

@@ -53,10 +53,10 @@ All project skills live in `.claude/skills/`.
 **Triggers on:** "add a product module", "scaffold an orders feature",
 "create a new resource for X"
 
-Walks through the full DDD module scaffold:
-`just new <module>` → models → schemas → repository → service → routes →
-exceptions → register router → generate and review migration → write tests
-→ `just check`.
+Walks through the full DDD module scaffold: `just new <module>` →
+models → schemas → repository → service → routes → exceptions → review
+auto-registered router → generate and review migration → write tests →
+`just check`.
 
 ### `quoin-add-endpoint`
 
