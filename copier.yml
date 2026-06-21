@@ -18,12 +18,12 @@ env_prefix:
 
 description:
   type: str
-  default: "A high-performance, scalable RESTful API foundation for modern Python backends."
+  default: "The Foundation for your Python backend API."
   help: "Short description for OpenAPI and pyproject.toml"
 
 long_description:
   type: str
-  default: "{{ project_name }} is a high-performance, scalable RESTful API foundation for modern Python backends. Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty)."
+  default: "{{ project_name }} is a production-ready Python backend foundation built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty)."
   help: "Long descriptive string for OpenAPI documentation"
 
 author_name:

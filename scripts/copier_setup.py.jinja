@@ -67,7 +67,7 @@ def process_file(file_path: Path) -> None:
     elif name == "pyproject.toml":
         # Project description field.
         content = re.sub(
-            r'description\s*=\s*"The architectural cornerstone.*?"',
+            r'description\s*=\s*"The Foundation.*?"',
             f'description = "{DESCRIPTION}"',
             content,
             flags=re.DOTALL,
