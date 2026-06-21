@@ -279,6 +279,55 @@ async def test_exception_handlers() -> None:
 
 
 @pytest.mark.asyncio
+async def test_unhandled_exception_returns_problem_json() -> None:
+    """An arbitrary uncaught error yields a 500 problem+json response."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/boom")
+    async def raise_unexpected() -> None:
+        raise KeyError("secret internal detail")
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.get("/boom")
+
+    body = response.json()
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.headers["content-type"] == _PROBLEM_CONTENT_TYPE
+    assert body["type"] == "urn:quoin:error:internal_server_error"
+    assert body["title"] == "Internal Server Error"
+    assert body["status"] == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert body["detail"] == "Internal Server Error"
+    assert body["instance"] == "/boom"
+    assert "errors" not in body
+    # Internal exception detail must never leak to the client.
+    assert "secret internal detail" not in response.text
+
+
+@pytest.mark.asyncio
+async def test_unhandled_exception_logs() -> None:
+    """unhandled_exception_handler emits a structured error log."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/boom")
+    async def raise_unexpected() -> None:
+        raise KeyError("secret internal detail")
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        with capture_logs() as cap_logs:
+            await ac.get("/boom")
+
+    events = [log for log in cap_logs if log["event"] == "unhandled_exception"]
+    assert len(events) == 1
+    assert events[0]["exc_type"] == "KeyError"
+    assert events[0]["path"] == "/boom"
+    assert events[0]["log_level"] == "error"
+
+
+@pytest.mark.asyncio
 async def test_fastapi_request_validation_handling() -> None:
     """FastAPI validation errors produce RFC 9457 with errors array."""
     app = FastAPI()

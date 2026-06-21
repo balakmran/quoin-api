@@ -64,6 +64,30 @@ async def quoin_exception_handler(request: Request, exc: Any) -> Response:
     return _problem_response(problem, quoin_exc.status_code, quoin_exc.headers)
 
 
+async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
+    """Handle any exception not caught by a more specific handler.
+
+    Guarantees that even bare ``KeyError``s or non-transport ``httpx``
+    errors surface as RFC 9457 ``application/problem+json`` responses
+    rather than Starlette's default ``text/plain`` 500. The internal
+    exception message and traceback are logged but never leaked to the
+    client.
+    """
+    logger.exception(
+        "unhandled_exception",
+        exc_type=type(exc).__name__,
+        path=request.url.path,
+    )
+    problem = ProblemDetail(
+        type="urn:quoin:error:internal_server_error",
+        title=_problem_title(500),
+        status=500,
+        detail="Internal Server Error",
+        instance=request.url.path,
+    )
+    return _problem_response(problem, 500)
+
+
 async def validation_exception_handler(request: Request, exc: Any) -> Response:
     """Handle Pydantic and FastAPI request validation errors."""
     errors: list[dict[str, Any]] = exc.errors()
@@ -88,3 +112,4 @@ def add_exception_handlers(app: FastAPI) -> None:
         RequestValidationError, validation_exception_handler
     )
     app.add_exception_handler(ValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
