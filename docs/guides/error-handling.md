@@ -292,6 +292,52 @@ async def validation_exception_handler(
     )
 ```
 
+### Catch-all handler (uncaught exceptions)
+
+A catch-all `unhandled_exception_handler` is registered against the base
+`Exception` type. It guarantees that **any** error not caught by a more
+specific handler — a bare `KeyError`, or a non-transport `httpx` error
+such as `httpx.InvalidURL` / `httpx.TooManyRedirects` that escapes the
+outbound HTTP client — still returns an RFC 9457
+`application/problem+json` 500 instead of Starlette's default
+`text/plain` `Internal Server Error`:
+
+```json
+{
+  "type": "urn:quoin:error:internal_server_error",
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "Internal Server Error",
+  "instance": "/api/v1/users/"
+}
+```
+
+The handler logs the full exception (type, traceback, request path) via
+structlog, but **never leaks the internal exception message or stack to
+the client** — the `detail` is always the generic `"Internal Server
+Error"`. Prefer raising an explicit `QuoinError` subclass over relying
+on this fallback; it exists as a safety net, not a substitute for
+deliberate error handling.
+
+```python
+async def unhandled_exception_handler(
+    request: Request, exc: Any
+) -> Response:
+    logger.exception(
+        "unhandled_exception",
+        exc_type=type(exc).__name__,
+        path=request.url.path,
+    )
+    problem = ProblemDetail(
+        type="urn:quoin:error:internal_server_error",
+        title=_problem_title(500),
+        status=500,
+        detail="Internal Server Error",
+        instance=request.url.path,
+    )
+    return _problem_response(problem, 500)
+```
+
 These handlers are registered in
 [`main.py`](https://github.com/balakmran/quoin-api/blob/main/app/main.py):
 
