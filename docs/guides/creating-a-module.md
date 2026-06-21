@@ -9,8 +9,9 @@ following the same patterns used by the existing `user` module.
 
 !!! tip "Scaffold first"
     Run `just new product` before following the steps below. This creates
-    the module directory and all 7 empty files so you can fill them in
-    without manually creating anything.
+    the module directory, a minimal router export, tests directory, and
+    `app/api.py` registration so you can fill in the feature layers
+    without manually creating the boilerplate.
 
 ---
 
@@ -356,7 +357,7 @@ async def delete_product(
     await service.delete_product(product_id)
 ```
 
-### 8. Export the Router
+### 8. Review the Router Export
 
 ```python
 # app/modules/product/__init__.py
@@ -365,9 +366,12 @@ from app.modules.product.routes import router
 __all__ = ["router"]
 ```
 
-### 9. Register with the API
+`just new product` creates this export automatically. Keep it in place so
+`app/api.py` can import the module-level router.
 
-Add the module router to `app/api.py`:
+### 9. Confirm API Registration
+
+`just new product` also registers the module router in `app/api.py`:
 
 ```python
 # app/api.py
@@ -376,8 +380,11 @@ from app.modules.user import router as user_router
 
 v1_router = APIRouter()
 v1_router.include_router(user_router)
-v1_router.include_router(product_router)  # Add this line
+v1_router.include_router(product_router)
 ```
+
+Review this file after scaffolding, but do not add a second manual import
+or `include_router()` call.
 
 ### 10. Import the Model for Migrations
 
@@ -442,7 +449,7 @@ async def test_get_product_not_found(client: AsyncClient) -> None:
 - [ ] `service.py` — Business logic only, raises domain exceptions
 - [ ] `routes.py` — FastAPI router, calls service via dependency
 - [ ] `__init__.py` — Exports `router`
-- [ ] `app/api.py` — Router registered under `v1_router`
+- [ ] `app/api.py` — Auto-registration reviewed under `v1_router`
 - [ ] `app/db/base.py` — Model imported so Alembic can detect schema changes
 - [ ] Tests written in `tests/modules/<name>/`
 - [ ] `just check` passes

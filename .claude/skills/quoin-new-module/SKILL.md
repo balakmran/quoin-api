@@ -23,7 +23,10 @@ Work top-to-bottom. Each step has a reason — don't skip layers, and don't leav
 just new <module>
 ```
 
-This creates `app/modules/<module>/{__init__,models,schemas,repository,service,routes,exceptions}.py` and `tests/modules/<module>/test_routes.py`. The files start empty — you fill them in.
+This creates
+`app/modules/<module>/{__init__,models,schemas,repository,service,routes,exceptions}.py`
+and `tests/modules/<module>/test_routes.py`. It also writes a minimal
+router, exports it from `__init__.py`, and registers it in `app/api.py`.
 
 ### 2. Define the model (`models.py`)
 
@@ -59,9 +62,11 @@ from app.modules.<module>.routes import router
 __all__ = ["router"]
 ```
 
-### 9. Register in `app/api.py`
+### 9. Review the `app/api.py` registration
 
-Add the import and `v1_router.include_router(<module>_router)` next to the existing modules. Without this step the routes don't actually mount — easy to forget.
+`just new <module>` adds the import and
+`v1_router.include_router(<module>_router)` next to the existing modules.
+Review the generated wiring, but don't add a duplicate manual registration.
 
 ### 10. Generate and apply the migration
 
