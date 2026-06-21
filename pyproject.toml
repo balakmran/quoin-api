@@ -20,11 +20,14 @@ dependencies = [
     "opentelemetry-api>=1.42.1",
     "opentelemetry-exporter-otlp>=1.42.1",
     "opentelemetry-instrumentation-fastapi>=0.63b1",
+    "opentelemetry-instrumentation-httpx>=0.63b1",
     "opentelemetry-sdk>=1.42.1",
     "psycopg[binary]==3.3.4",
+    "purgatory>=3.0.1",
     "pydantic-settings>=2.14.1",
     "PyJWT[crypto]>=2.13.0",
     "sqlmodel==0.0.38",
+    "stamina>=26.1.0",
     "structlog>=25.5.0",
 ]
 

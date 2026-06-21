@@ -15,6 +15,7 @@ from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
 from app.core.telemetry import setup_opentelemetry
 from app.db.session import create_db_engine, create_session_factory
+from app.http.client import create_http_client
 
 logger = structlog.get_logger(__name__)
 
@@ -27,11 +28,12 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         """Manage the engine, session factory, and graceful shutdown.
 
-        On startup the DB engine and session factory are created. On
-        shutdown the readiness probe is flipped to 503, in-flight
-        requests are drained (bounded by
-        ``QUOIN_SHUTDOWN_DRAIN_TIMEOUT``), and only then is the engine
-        disposed so no in-flight request loses its connection.
+        On startup the DB engine, session factory, and shared outbound
+        HTTP client are created. On shutdown the readiness probe is
+        flipped to 503, in-flight requests are drained (bounded by
+        ``QUOIN_SHUTDOWN_DRAIN_TIMEOUT``), and only then are the HTTP
+        client and engine disposed so no in-flight request loses its
+        connection.
 
         Args:
             app: The FastAPI application instance.
@@ -39,6 +41,9 @@ def create_app() -> FastAPI:
         engine = create_db_engine()
         app.state.engine = engine
         app.state.session_factory = create_session_factory(engine)
+        http_client = create_http_client()
+        http_client.instrument()
+        app.state.http_client = http_client
         yield
         lifecycle: Lifecycle = app.state.lifecycle
         lifecycle.begin_shutdown()
@@ -64,7 +69,12 @@ def create_app() -> FastAPI:
             )
             raise
         finally:
-            await app.state.engine.dispose()
+            # Guard each cleanup independently so a failure closing the
+            # HTTP client never skips engine disposal (and vice versa).
+            try:
+                await app.state.http_client.aclose()
+            finally:
+                await app.state.engine.dispose()
 
     app = FastAPI(lifespan=lifespan, **OPENAPI_PARAMETERS)
     app.state.lifecycle = Lifecycle()

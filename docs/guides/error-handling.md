@@ -15,6 +15,7 @@ exception handlers, and best practices for error management.
 | `ConflictError`               | 409    | Resource conflict (e.g., duplicate email) |
 | `QuoinRequestValidationError` | 422    | Pydantic validation errors (internal)     |
 | `InternalServerError`         | 500    | Unexpected server errors                  |
+| `BadGatewayError`             | 502    | Upstream returned an invalid response      |
 | `ServiceUnavailableError`     | 503    | Required dependency unreachable           |
 | `GatewayTimeoutError`         | 504    | Request exceeded the configured timeout   |
 

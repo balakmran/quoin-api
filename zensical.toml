@@ -22,6 +22,7 @@ nav = [
             { "Database Migrations" = "guides/database-migrations.md" },
             { "Authentication" = "guides/authentication.md" },
             { "Error Handling" = "guides/error-handling.md" },
+            { "Outbound HTTP Client" = "guides/outbound-http.md" },
             { "Testing" = "guides/testing.md" },
             { "Quality Checks" = "guides/quality-checks.md" },
             { "AI-Assisted Development" = "guides/ai-setup.md" },
