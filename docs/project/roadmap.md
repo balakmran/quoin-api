@@ -52,7 +52,7 @@ security fixes land first.
 | ✅ | **Outbound HTTP client** — Shared `httpx.AsyncClient` lifecycle-managed in lifespan; retries with exponential backoff; circuit breaker; OTel-instrumented. Foundational — every later integration sits on this. |
 | ✅ | **Zero-downtime migration playbook** — Expand/contract patterns documented; `migrate-gen` guard flags destructive operations for review |
 | ✅ | **Auto-register routers** — `just new <module>` registers the router in `api.py` automatically |
-| 📋 | **Dependabot + secret scanning enabled** — `.github/dependabot.yml` + GitHub-native secret scanning (free for public OSS). `docs/security/scanning.md` notes how enterprises can layer Snyk/Black Duck/GHAS on top. |
+| ✅ | **Dependabot + secret scanning enabled** — `.github/dependabot.yml` + GitHub-native secret scanning (free for public OSS). `docs/guides/dependency-scanning.md` notes how enterprises can layer Snyk/Black Duck/GHAS on top. |
 
 ---
 

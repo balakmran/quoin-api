@@ -29,6 +29,7 @@ nav = [
         ]},
         { "Operations" = [
             { "Security" = "guides/security.md" },
+            { "Dependency Scanning" = "guides/dependency-scanning.md" },
             { "Observability" = "guides/observability.md" },
             { "Deployment" = "guides/deployment.md" },
             { "Release Workflow" = "guides/release-workflow.md" },
