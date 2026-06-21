@@ -11,11 +11,11 @@ title: Docs
 [![prek](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/j178/prek/master/docs/assets/badge-v0.json)](https://github.com/j178/prek)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**QuoinAPI** (pronounced "koyn") is a high-performance, scalable foundation
-for modern Python backends. Built with **FastAPI**, **SQLModel**, and the
-**Astral stack** (uv, ruff, ty), it provides a battle-tested "Golden Path"
-for developers who prioritize architectural integrity, type safety, and
-observability.
+**QuoinAPI** (pronounced "koyn") is a production-ready Python
+backend foundation. Built with **FastAPI**, **SQLModel**, and the
+**Astral stack** (uv, ruff, ty), it gives you a battle-tested
+starting point with type safety, observability, and clean
+architecture out of the box.
 
 New here? Start with the [Getting Started Guide](guides/getting-started.md).
 

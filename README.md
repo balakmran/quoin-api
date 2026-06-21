@@ -6,15 +6,14 @@
 [![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**The architectural cornerstone for high-performance, scalable Python services.**
+**The Foundation for your Python backend API.**
 
 ![QuoinAPI](docs/assets/images/quoin-api-banner.png)
 
-QuoinAPI (pronounced "koyn") is a high-performance, scalable foundation
-designed to serve as the structural cornerstone for modern Python backends.
-Built with FastAPI, SQLModel, and the Astral stack (uv, ruff, ty), it provides
-a battle-tested "Golden Path" for developers who prioritize architectural
-integrity, type safety, and observability.
+QuoinAPI (pronounced "koyn") is a production-ready Python backend
+foundation built with FastAPI, SQLModel, and the Astral stack
+(uv, ruff, ty). It gives you a battle-tested starting point with
+type safety, observability, and clean architecture out of the box.
 
 ## Key Highlights
 
@@ -24,7 +23,7 @@ integrity, type safety, and observability.
 - **Lightning-fast tooling** powered by `uv` for dependency management
 - **Optimized** for production workloads with connection pooling
 
-### Structural Integrity
+### Type Safety
 
 - **100% type-annotated** code verified by `ty` and strict linting via `ruff`
 - **Domain-driven design** with module-level exceptions and rich error context
@@ -36,7 +35,7 @@ integrity, type safety, and observability.
 - **Structured logging** with Structlog for machine-readable logs
 - **Health checks** and readiness endpoints out of the box
 
-### Architectural Efficiency
+### Developer Experience
 
 - **Ready-to-use template** that eliminates boilerplate
 - **Environment-based configuration** with `.env` file selection

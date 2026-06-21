@@ -2,8 +2,13 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-21
+
 ### Added
 
+- **Scaffold**: `just new <module>` now auto-registers the new
+  module's router in `app/api.py`, eliminating the manual wiring
+  step.
 - **Supply chain**: Dependabot keeps dependencies patched with weekly,
   grouped pull requests. `.github/dependabot.yml` watches two
   ecosystems — `uv` (Python `dependencies` in `pyproject.toml` +
@@ -19,28 +24,30 @@
   pattern with recipes for renaming a column, dropping a column,
   changing a type, adding a NOT NULL column, and building an index
   concurrently. `just migrate-gen` now runs a non-blocking guard
-  (`scripts/migration_guard.py`) that parses the generated script's AST
-  and flags destructive or locking operations — drops, type changes,
-  NOT NULL on populated tables, non-concurrent indexes, and destructive
-  raw SQL — for review.
+  (`scripts/migration_guard.py`) that parses the generated script's
+  AST and flags destructive or locking operations — drops, type
+  changes, NOT NULL on populated tables, non-concurrent indexes, and
+  destructive raw SQL — for review.
 - **Integrations**: a shared, resilient outbound HTTP client
-  (`app.http`). A single `httpx.AsyncClient` is lifecycle-managed in the
-  lifespan and injected via `HTTPClientDep`. Every call is guarded by a
-  per-host circuit breaker (purgatory) wrapping a retry loop with
-  exponential backoff (stamina), and is OpenTelemetry-instrumented when
-  `QUOIN_OTEL_ENABLED`. Transport failures map to `BadGatewayError`
-  (502), `GatewayTimeoutError` (504), and `ServiceUnavailableError`
-  (503, circuit open); response status codes are left for callers to
-  interpret. Tunable via `QUOIN_HTTP_TIMEOUT_SECONDS` and
-  `QUOIN_HTTP_RETRY_ATTEMPTS`. See the Outbound HTTP Client guide.
+  (`app.http`). A single `httpx.AsyncClient` is lifecycle-managed in
+  the lifespan and injected via `HTTPClientDep`. Every call is guarded
+  by a per-host circuit breaker (purgatory) wrapping a retry loop with
+  exponential backoff (stamina), and is OpenTelemetry-instrumented
+  when `QUOIN_OTEL_ENABLED`. Transport failures map to
+  `BadGatewayError` (502), `GatewayTimeoutError` (504), and
+  `ServiceUnavailableError` (503, circuit open); response status codes
+  are left for callers to interpret. Tunable via
+  `QUOIN_HTTP_TIMEOUT_SECONDS` and `QUOIN_HTTP_RETRY_ATTEMPTS`. See
+  the Outbound HTTP Client guide.
 - **Reliability**: graceful shutdown drains in-flight requests before
   the database engine is disposed. On shutdown the readiness probe
   flips to 503 (so orchestrators stop routing new traffic),
   `InFlightRequestMiddleware` tracks active requests, and the lifespan
   handler waits for them to drain — bounded by
-  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default 30s; `<=0` skips the wait) —
-  before disposing the engine. See the Graceful Shutdown section in the
-  deployment guide for the uvicorn relationship and Kubernetes wiring.
+  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default 30s; `<=0` skips the wait)
+  — before disposing the engine. See the Graceful Shutdown section in
+  the deployment guide for the uvicorn relationship and Kubernetes
+  wiring.
 - **Security**: `SecurityHeadersMiddleware` emits HSTS, CSP,
   X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and
   Permissions-Policy on every response. All values configurable via
@@ -49,61 +56,79 @@
 - **Security**: `RequestSizeLimitMiddleware` rejects oversize bodies
   before they reach route handlers by checking the advertised
   `Content-Length`. Returns 413 RFC 9457 `payload_too_large`.
-  Configurable via `QUOIN_MAX_REQUEST_BODY_BYTES` (default 1 MiB; `<=0`
-  disables). Conforming clients always send `Content-Length`; the
-  uvicorn/h11 layer caps raw protocol buffers for the chunked edge
-  case.
+  Configurable via `QUOIN_MAX_REQUEST_BODY_BYTES` (default 1 MiB;
+  `<=0` disables). Conforming clients always send `Content-Length`;
+  the uvicorn/h11 layer caps raw protocol buffers for the chunked
+  edge case.
 
 ### Changed
 
-- **Security**: CORS configuration now requires explicit allowlists for
-  methods and headers (`QUOIN_BACKEND_CORS_ALLOW_METHODS`,
+- **Branding**: project tagline updated to "The Foundation for your
+  Python backend API" across README, pyproject.toml, OpenAPI metadata,
+  docs, and Copier template defaults.
+- **Dependencies**: FastAPI 0.136.3 → 0.138.0, structlog 25.5.0 →
+  26.1.0, greenlet 3.5.1 → 3.5.2, pydantic-settings 2.14.1 →
+  2.14.2, pytest 9.0.3 → 9.1.1, pytest-asyncio 1.3.0 → 1.4.0.
+  Tooling: ruff 0.15.14 → 0.15.18, ty 0.0.39 → 0.0.51,
+  prek 0.4.1 → 0.4.5, zensical 0.0.43 → 0.0.46,
+  mkdocstrings-python 2.0.3 → 2.0.5. New runtime deps: `httpx`,
+  `purgatory`, `stamina`, `opentelemetry-instrumentation-httpx`.
+- **Security**: CORS configuration now requires explicit allowlists
+  for methods and headers (`QUOIN_BACKEND_CORS_ALLOW_METHODS`,
   `QUOIN_BACKEND_CORS_ALLOW_HEADERS`,
   `QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS`). Wildcard methods/headers
   combined with `allow_credentials=True` outside `development` are
   rejected at startup — that combination is silently ignored by
   browsers and was a credentialed-CORS footgun.
 - **Tooling**: `uv` resolution is now bounded by a 7-day dependency
-  cooldown (`exclude-newer = "7 days"`) for more reproducible installs,
-  and `required-version` pins the minimum `uv` version so contributors
-  and CI stay in sync. Ruff now lints naming conventions (`N` /
-  pep8-naming) and formats code samples embedded in docstrings
+  cooldown (`exclude-newer = "7 days"`) for more reproducible
+  installs, and `required-version` pins the minimum `uv` version so
+  contributors and CI stay in sync. Ruff now lints naming conventions
+  (`N` / pep8-naming) and formats code samples embedded in docstrings
   (`docstring-code-format`). `pyproject.toml`'s dependency lists and
   tool sections are sorted alphabetically for easier scanning and
   fewer merge conflicts.
 - **Developer Experience**: Claude Code workflow improvements distilled
-  from recurring manual chores — three new skills (`quoin-coverage` for the
-  drive-to-100% coverage loop, `quoin-deps-upgrade` for the dependency and
-  GitHub Actions upgrade ritual, `quoin-docs-audit` for docs↔code drift
-  sweeps), a `migration-reviewer` subagent that audits autogenerated Alembic
-  scripts, two advisory `Stop` hooks (`config-drift` when `app/core/config.py`
-  changes without matching `.env.example` / `docs/guides/configuration.md`
-  updates, and `migration-reminder` when a `models.py` changes without a new
+  from recurring manual chores — three new skills (`quoin-coverage`
+  for the drive-to-100% coverage loop, `quoin-deps-upgrade` for the
+  dependency and GitHub Actions upgrade ritual, `quoin-docs-audit` for
+  docs-to-code drift sweeps), a `migration-reviewer` subagent that
+  audits autogenerated Alembic scripts, two advisory `Stop` hooks
+  (`config-drift` when `app/core/config.py` changes without matching
+  `.env.example` / `docs/guides/configuration.md` updates, and
+  `migration-reminder` when a `models.py` changes without a new
   migration), a read-only `postgres` MCP server for live schema
-  introspection, a `just sync-main` recipe for post-merge branch cleanup, and
-  `just test`/`just check` now auto-start Postgres instead of failing.
-  `quoin-pre-pr` now gates on `just check` passing at 100% coverage.
-  `.env.example` now documents the `QUOIN_ALLOWED_HOSTS` setting.
-- **Template**: `copier copy` now produces a clean, de-branded starter.
-  QuoinAPI-specific docs are excluded at copy time (the marketing
-  `docs.md`, the architecture decision log, the roadmap, and the custom
-  home-page JavaScript), and the post-generation script rewrites the
-  remaining chrome — a fresh `README.md` and minimal `docs/index.md`, a
-  trimmed documentation nav with the personal social links removed, and
-  the error-type URN namespace rebranded from `urn:quoin:error:*` to
-  `urn:<project-slug>:error:*`. The guides, architecture overview, and
-  full API reference (including the `user` module) are retained.
+  introspection, a `just sync-main` recipe for post-merge branch
+  cleanup, and `just test`/`just check` now auto-start Postgres
+  instead of failing. `quoin-pre-pr` now gates on `just check`
+  passing at 100% coverage. `.env.example` now documents the
+  `QUOIN_ALLOWED_HOSTS` setting.
+- **Template**: `copier copy` now produces a clean, de-branded
+  starter. QuoinAPI-specific docs are excluded at copy time (the
+  marketing `docs.md`, the architecture decision log, the roadmap,
+  and the custom home-page JavaScript), and the post-generation
+  script rewrites the remaining chrome — a fresh `README.md` and
+  minimal `docs/index.md`, a trimmed documentation nav with the
+  personal social links removed, and the error-type URN namespace
+  rebranded from `urn:quoin:error:*` to `urn:<project-slug>:error:*`.
+  The guides, architecture overview, and full API reference (including
+  the `user` module) are retained.
 
 ### Fixed
 
+- **Errors**: unhandled exceptions (bare `KeyError`, non-transport
+  `httpx` errors, etc.) now return RFC 9457 `application/problem+json`
+  instead of Starlette's default `text/plain` 500. A catch-all
+  `Exception` handler logs the traceback and maps to
+  `InternalServerError`.
 - **Template**: scoped the Copier post-generation substitutions by
   filename so they can no longer corrupt unrelated files. The author
   email rewrite was previously applied to every file and overwrote
-  `email = "..."` values in test fixtures, breaking a freshly generated
-  project's test suite; the `APP_DESCRIPTION` rewrite matched only a
-  parenthesised form the source never used, so the default API
-  description leaked into generated projects. Both now target their
-  intended file.
+  `email = "..."` values in test fixtures, breaking a freshly
+  generated project's test suite; the `APP_DESCRIPTION` rewrite
+  matched only a parenthesised form the source never used, so the
+  default API description leaked into generated projects. Both now
+  target their intended file.
 
 ## [0.7.0] - 2026-05-25
 
@@ -364,7 +389,8 @@
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/balakmran/quoin-api/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/balakmran/quoin-api/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/balakmran/quoin-api/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/balakmran/quoin-api/compare/v0.4.0...v0.5.0
