@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Users**: `GET /users` now orders results by `created_at, id` so
+  pagination is stable across pages instead of relying on Postgres's
+  unspecified default ordering.
+- **Users**: a uniqueness race on concurrent creates/updates with the
+  same email now returns 409 `DuplicateEmailError` instead of an
+  unhandled 500 — the repository catches the commit-time
+  `IntegrityError` and translates it, on top of the existing
+  check-then-insert fast path.
+- **Users**: email is now compared and stored case-insensitively.
+  Addresses are lowercased on write and looked up via a case-
+  insensitive functional unique index, so `Foo@example.com` and
+  `foo@example.com` are treated as the same user.
+- **Users**: `full_name`/`email` on create are now capped at 255 chars
+  (matching the DB column and the existing update schema), so an
+  over-length value is rejected with 422 instead of a raw DB error.
+- **Users**: `created_at`/`updated_at` now have a `server_default`, so
+  non-ORM writes (raw SQL, another service, a backfill script) can no
+  longer violate `NOT NULL` on those columns.
+- **Errors**: a bare `pydantic.ValidationError` raised while
+  constructing an internal model no longer returns a misleading 422 —
+  it now falls through to the catch-all handler and returns a generic
+  500, since it signals a server bug rather than a client mistake.
+- **Middleware**: error responses manufactured by an inner middleware
+  (504 from `TimeoutMiddleware`, 413 from `RequestSizeLimitMiddleware`)
+  now carry CORS and security headers plus `X-Request-ID`, instead of
+  arriving at the client bare. `TrustedHostMiddleware` was reordered to
+  sit outside `CORSMiddleware` so Host validation applies to every
+  request, including a CORS preflight — previously a forged `Host`
+  header on a preflight request could bypass Host validation entirely.
+- **Security**: `openapi.json` is now disabled in production, matching
+  the existing `/docs`/`/redoc` behaviour.
+
 ## [0.8.0] - 2026-06-21
 
 ### Added
