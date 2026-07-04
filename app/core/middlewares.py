@@ -282,21 +282,34 @@ def configure_middlewares(app: FastAPI) -> None:
     """Configure all application middlewares.
 
     Middleware is registered in innermost-first order (add_middleware is
-    LIFO). TimeoutMiddleware is added last so it becomes the outermost
-    layer and wraps the entire request lifecycle; the size limit sits
-    just inside it so oversize bodies are rejected before any
-    downstream work. The in-flight counter is added first of all so it
-    sits innermost — closest to the router — and brackets only requests
-    that pass the outer layers (CORS, TrustedHost, etc.) and reach a
+    LIFO). SecurityHeaders and RequestID are added last so they become
+    the outermost layers: every response — including 504s from
+    TimeoutMiddleware, 413s from the size limit, and 400s from
+    TrustedHost — bubbles back up through them and gets security
+    headers and an X-Request-ID echo before reaching the client.
+
+    TrustedHost sits outside CORS so Host validation applies to every
+    request, including a CORS preflight — Starlette's CORSMiddleware
+    answers preflight (OPTIONS) requests itself without calling the
+    wrapped app, so if CORS were outer, a forged Host header on a
+    preflight would never reach TrustedHost at all. CORS in turn wraps
+    Timeout and SizeLimit so their 504/413 responses still get CORS
+    headers; a bad-Host 400 from TrustedHost does not get CORS headers
+    (it isn't part of a legitimate CORS negotiation), but it does get
+    the outer SecurityHeaders/RequestID treatment. Within that, Timeout
+    wraps SizeLimit so oversize bodies are still rejected before the
+    timeout clock ticks into downstream work. The in-flight counter is
+    added first of all so it sits innermost — closest to the router —
+    and brackets only requests that pass every outer layer and reach a
     handler.
     """
     app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
+    app.add_middleware(RequestSizeLimitMiddleware)
+    app.add_middleware(TimeoutMiddleware)
     configure_cors(app)
     configure_trusted_hosts(app)
-    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(RequestSizeLimitMiddleware)
-    app.add_middleware(TimeoutMiddleware)  # outermost — added last
+    app.add_middleware(SecurityHeadersMiddleware)  # outermost — added last
 
 
 __all__ = [

@@ -41,7 +41,9 @@ class User(SQLModel, table=True):
     __tablename__ = "users"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(unique=True, index=True, max_length=255)
+    # Uniqueness is enforced case-insensitively via a functional index
+    # in __table_args__ (see the model file), not a column-level unique=True.
+    email: str = Field(index=True, max_length=255)
     full_name: str | None = Field(default=None, max_length=255)
     is_active: bool = Field(default=True)
     # NEW: Add a phone number field

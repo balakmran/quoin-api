@@ -1,8 +1,10 @@
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.user.exceptions import DuplicateEmailError
 from app.modules.user.models import User
 from app.modules.user.schemas import UserCreate, UserUpdate
 
@@ -27,10 +29,19 @@ class UserRepository:
         Returns:
             The newly created User with id, created_at, and updated_at
             set.
+
+        Raises:
+            DuplicateEmailError: If a concurrent insert already
+                committed this email between the service's pre-check
+                and this write.
         """
         db_user = User.model_validate(user_create)
         self.session.add(db_user)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise DuplicateEmailError(email=user_create.email) from exc
         await self.session.refresh(db_user)
         return db_user
 
@@ -49,12 +60,12 @@ class UserRepository:
         """Fetch a single User by email address.
 
         Args:
-            email: Email address to search for (case-sensitive).
+            email: Email address to search for (case-insensitive).
 
         Returns:
             The matching User, or None if not found.
         """
-        statement = select(User).where(User.email == email)  # type: ignore
+        statement = select(User).where(User.email == email.lower())  # type: ignore
         result = await self.session.exec(statement)  # type: ignore
         return result.scalars().first()
 
@@ -68,7 +79,12 @@ class UserRepository:
         Returns:
             Ordered list of User records; may be empty.
         """
-        statement = select(User).offset(skip).limit(limit)
+        statement = (
+            select(User)
+            .order_by(User.created_at, User.id)  # type: ignore
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self.session.exec(statement)  # type: ignore
         return list(result.scalars().all())
 
@@ -84,12 +100,22 @@ class UserRepository:
 
         Returns:
             The updated User with all fields refreshed from the database.
+
+        Raises:
+            DuplicateEmailError: If a concurrent write already
+                committed the new email between the service's
+                pre-check and this write.
         """
         user_data = user_update.model_dump(exclude_unset=True)
         for key, value in user_data.items():
             setattr(user, key, value)
+        new_email = user.email
         self.session.add(user)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise DuplicateEmailError(email=new_email) from exc
         await self.session.refresh(user)
         return user
 

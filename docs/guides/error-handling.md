@@ -243,6 +243,30 @@ class UserService:
     Never raise `HTTPException` from services. Services should be
     HTTP-agnostic.
 
+The `get_by_email` pre-check above is a friendly fast path, not the
+uniqueness guarantee — two concurrent requests can both pass it before
+either commits. The repository closes that race by catching the
+resulting `IntegrityError` at commit time and translating it to the
+same domain exception:
+
+```python
+class UserRepository:
+    async def create(self, user_create: UserCreate) -> User:
+        db_user = User.model_validate(user_create)
+        self.session.add(db_user)
+        try:
+            await self.session.commit()
+        except IntegrityError as exc:
+            await self.session.rollback()
+            raise DuplicateEmailError(email=user_create.email) from exc
+        await self.session.refresh(db_user)
+        return db_user
+```
+
+`UserRepository.update` follows the same pattern. This is why the
+route always returns 409, never a bare 500, even under concurrent
+writes to the same email.
+
 ---
 
 ## Global Exception Handlers
@@ -291,6 +315,13 @@ async def validation_exception_handler(
         media_type="application/problem+json",
     )
 ```
+
+This handler is registered only for `RequestValidationError` (request
+body/query/path parsing) and `QuoinRequestValidationError` — **not**
+for a bare `pydantic.ValidationError`. A bare `ValidationError` means
+an *internal* model failed to validate (a server bug, not a client
+mistake), so it deliberately falls through to the catch-all handler
+below and comes back as a 500, not a misleading 422.
 
 ### Catch-all handler (uncaught exceptions)
 

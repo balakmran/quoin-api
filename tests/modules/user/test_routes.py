@@ -1,10 +1,14 @@
 import uuid
 
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.modules.user.exceptions import DuplicateEmailError
 from app.modules.user.models import User
+from app.modules.user.repository import UserRepository
+from app.modules.user.schemas import UserCreate, UserUpdate
 
 
 async def test_create_user(admin_client: AsyncClient) -> None:
@@ -159,3 +163,98 @@ async def test_update_user_duplicate_email(admin_client: AsyncClient) -> None:
     )
     assert response.status_code == status.HTTP_409_CONFLICT
     assert "already registered" in response.json()["detail"]
+
+
+async def test_list_users_stable_order(
+    read_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """B1 regression: list_users orders by created_at, id (no overlap/gap)."""
+    users = [
+        User(email=f"order-{i}@example.com", full_name=f"Order {i}")
+        for i in range(3)
+    ]
+    for user in users:
+        db_session.add(user)
+        await db_session.commit()
+
+    page1 = await read_client.get("/api/v1/users/?skip=0&limit=2")
+    page2 = await read_client.get("/api/v1/users/?skip=2&limit=2")
+
+    ids_page1 = [row["id"] for row in page1.json()]
+    ids_page2 = [row["id"] for row in page2.json()]
+    assert not set(ids_page1) & set(ids_page2)
+
+    full = await read_client.get("/api/v1/users/?skip=0&limit=100")
+    emails = [row["email"] for row in full.json()]
+    # created_at is monotonic with insertion order, so the three seeded
+    # users must appear in that order in the full listing.
+    seeded = [e for e in emails if e.startswith("order-")]
+    assert seeded == [
+        "order-0@example.com",
+        "order-1@example.com",
+        "order-2@example.com",
+    ]
+
+
+async def test_repository_create_race_returns_duplicate_email_error(
+    db_session: AsyncSession,
+) -> None:
+    """B2 regression: a commit-time uniqueness violation raises 409, not 500.
+
+    Simulates two concurrent creates racing past the service's
+    get_by_email pre-check by calling the repository directly twice.
+    """
+    repository = UserRepository(db_session)
+    user_create = UserCreate(email="race@example.com")
+    await repository.create(user_create)
+
+    with pytest.raises(DuplicateEmailError):
+        await repository.create(user_create)
+
+
+async def test_repository_update_race_returns_duplicate_email_error(
+    db_session: AsyncSession,
+) -> None:
+    """B2 regression: an update-time uniqueness violation raises 409."""
+    repository = UserRepository(db_session)
+    await repository.create(UserCreate(email="update-race-taken@example.com"))
+    victim = await repository.create(
+        UserCreate(email="update-race-victim@example.com")
+    )
+
+    with pytest.raises(DuplicateEmailError):
+        await repository.update(
+            victim, UserUpdate(email="update-race-taken@example.com")
+        )
+
+
+async def test_create_user_full_name_too_long_returns_422(
+    admin_client: AsyncClient,
+) -> None:
+    """B6 regression: an over-length full_name is rejected before Postgres."""
+    response = await admin_client.post(
+        "/api/v1/users/",
+        json={
+            "email": "toolong@example.com",
+            "full_name": "x" * 300,
+        },
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_create_user_email_normalized_and_case_insensitive_duplicate(
+    admin_client: AsyncClient,
+) -> None:
+    """B7 regression: emails are lowercased and compared case-insensitively."""
+    create_res = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "Mixed.Case@Example.com"},
+    )
+    assert create_res.status_code == status.HTTP_201_CREATED
+    assert create_res.json()["email"] == "mixed.case@example.com"
+
+    dup_res = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "mixed.case@EXAMPLE.com"},
+    )
+    assert dup_res.status_code == status.HTTP_409_CONFLICT

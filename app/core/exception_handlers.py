@@ -6,7 +6,6 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from pydantic import ValidationError
 
 from app.core.exceptions import QuoinError, QuoinRequestValidationError
 from app.core.schemas import ProblemDetail
@@ -111,5 +110,4 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         RequestValidationError, validation_exception_handler
     )
-    app.add_exception_handler(ValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
