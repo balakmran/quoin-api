@@ -53,6 +53,7 @@ class OpenAPIParameters(TypedDict):
     description: str
     docs_url: str | None
     redoc_url: str | None
+    openapi_url: str | None
     openapi_tags: list[dict[str, Any]]
     servers: list[dict[str, Any]] | None
     swagger_ui_parameters: dict[str, Any]
@@ -65,6 +66,9 @@ OPENAPI_PARAMETERS: OpenAPIParameters = {
     "description": inspect.cleandoc(metadata.APP_LONG_DESCRIPTION),
     "docs_url": "/docs" if settings.ENV != Environment.production else None,
     "redoc_url": "/redoc" if settings.ENV != Environment.production else None,
+    "openapi_url": (
+        "/openapi.json" if settings.ENV != Environment.production else None
+    ),
     "openapi_tags": APITag.metadata(),  # type: ignore
     "servers": None,
     "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},

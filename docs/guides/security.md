@@ -168,13 +168,31 @@ Middleware is registered in LIFO order via `add_middleware`, so the
 execution order from outermost to innermost is:
 
 ```
-TimeoutMiddleware          ← outermost: wraps full lifecycle
-RequestSizeLimitMiddleware ← reject oversize before downstream reads
+SecurityHeadersMiddleware  ← outermost: every response gets these headers
 RequestIDMiddleware
-SecurityHeadersMiddleware
-TrustedHostMiddleware
-CORSMiddleware             ← innermost
+TrustedHostMiddleware      ← validates Host before CORS can short-circuit
+CORSMiddleware
+TimeoutMiddleware          ← reject oversize before the timeout clock ticks
+RequestSizeLimitMiddleware
+InFlightRequestMiddleware  ← innermost, closest to the router
 ```
+
+SecurityHeaders and RequestID sit outermost so that error responses
+manufactured by inner layers — 504s from `TimeoutMiddleware`, 413s from
+`RequestSizeLimitMiddleware`, 400s from `TrustedHostMiddleware` — still
+bubble back through them and carry security headers and an
+`X-Request-ID` echo instead of arriving at the client bare.
+
+`TrustedHostMiddleware` sits outside `CORSMiddleware` deliberately:
+Starlette's `CORSMiddleware` answers a CORS preflight (`OPTIONS`)
+request itself, without ever calling the wrapped app. If CORS were
+outer, a forged `Host` header on a preflight request would never reach
+`TrustedHostMiddleware` at all. With `TrustedHostMiddleware` outer,
+Host validation applies to every request, preflight included; a
+rejected (400) request never reaches CORS and so doesn't carry CORS
+headers, but it does get the outer SecurityHeaders/RequestID treatment.
+`CORSMiddleware` still wraps `TimeoutMiddleware`/`RequestSizeLimitMiddleware`,
+so their 504/413 responses do carry CORS headers.
 
 ---
 

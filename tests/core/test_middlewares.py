@@ -7,7 +7,7 @@ import structlog
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from starlette.types import Message, Receive, Scope, Send
 
 from app.core.config import Environment, settings
@@ -518,3 +518,137 @@ async def test_request_size_limit_disabled_when_zero(
             response = await ac.post("/echo", json=body)
 
     assert response.status_code == status.HTTP_200_OK
+
+
+def _assert_security_and_request_id_headers(response: Response) -> None:
+    """Assert security headers and a well-formed X-Request-ID survived.
+
+    Regression check for B5: responses manufactured by an inner
+    middleware (Timeout, SizeLimit, TrustedHost) must still bubble up
+    through the outer SecurityHeaders/RequestID layers.
+    """
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "Referrer-Policy" in response.headers
+    assert "Permissions-Policy" in response.headers
+    assert "Content-Security-Policy" in response.headers
+    assert "Strict-Transport-Security" in response.headers
+    header = settings.REQUEST_ID_HEADER
+    assert header in response.headers
+    uuid.UUID(response.headers[header])  # raises if not a valid UUID
+
+
+def _assert_error_response_fully_wrapped(response: Response) -> None:
+    """Assert CORS, security, and request-ID headers survived to the client.
+
+    Regression check for B5: responses manufactured by Timeout or
+    SizeLimit must still bubble up through the outer
+    CORS/SecurityHeaders/RequestID layers.
+    """
+    assert response.headers["Access-Control-Allow-Origin"] == (
+        "http://localhost:3000"
+    )
+    _assert_security_and_request_id_headers(response)
+
+
+@pytest.mark.asyncio
+async def test_timeout_504_carries_cors_and_security_headers() -> None:
+    """A 504 from TimeoutMiddleware still gets CORS/security/request-ID."""
+    app = create_app()
+
+    @app.get("/test-timeout-wrapped")
+    async def _slow() -> dict[str, str]:
+        await anyio.sleep(0.5)
+        return {}
+
+    with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 0.05):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get(
+                "/test-timeout-wrapped",
+                headers={"Origin": "http://localhost:3000"},
+            )
+
+    assert response.status_code == status.HTTP_504_GATEWAY_TIMEOUT
+    _assert_error_response_fully_wrapped(response)
+
+
+@pytest.mark.asyncio
+async def test_size_limit_413_carries_cors_and_security_headers() -> None:
+    """A 413 from RequestSizeLimitMiddleware still gets CORS/security/RID."""
+    app = create_app()
+
+    @app.post("/test-size-wrapped")
+    async def _echo(payload: dict[str, str]) -> dict[str, str]:
+        return payload
+
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
+        body = b'{"a":"' + b"x" * 64 + b'"}'
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.post(
+                "/test-size-wrapped",
+                content=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Origin": "http://localhost:3000",
+                },
+            )
+
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE
+    _assert_error_response_fully_wrapped(response)
+
+
+@pytest.mark.asyncio
+async def test_trusted_host_400_carries_security_headers() -> None:
+    """A 400 from TrustedHostMiddleware still gets security headers/RID.
+
+    It does not carry CORS headers — TrustedHost sits outside CORS
+    deliberately (see test_trusted_host_rejects_bad_host_on_preflight),
+    so a rejected request never reaches CORSMiddleware.
+    """
+    app = create_app()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get(
+            "/health",
+            headers={
+                "Host": "evil.example.com",
+                "Origin": "http://localhost:3000",
+            },
+        )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Access-Control-Allow-Origin" not in response.headers
+    _assert_security_and_request_id_headers(response)
+
+
+@pytest.mark.asyncio
+async def test_trusted_host_rejects_bad_host_on_preflight() -> None:
+    """B5 regression: a CORS preflight with a forged Host is still rejected.
+
+    TrustedHostMiddleware must sit outside CORSMiddleware — Starlette's
+    CORSMiddleware answers preflight (OPTIONS) requests itself without
+    calling the wrapped app, so if CORS were outer, a forged Host header
+    on a preflight would never reach TrustedHostMiddleware at all.
+    """
+    app = create_app()
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.options(
+            "/api/v1/users/",
+            headers={
+                "Host": "evil.example.com",
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Access-Control-Allow-Origin" not in response.headers

@@ -1,17 +1,23 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserBase(BaseModel):
     """Base user schema."""
 
-    email: EmailStr
-    full_name: str | None = None
+    email: EmailStr = Field(max_length=255)
+    full_name: str | None = Field(default=None, max_length=255)
     is_active: bool = True
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, value: str) -> str:
+        """Lowercase email so uniqueness checks are case-insensitive."""
+        return value.lower()
 
 
 class UserCreate(UserBase):
@@ -28,6 +34,12 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, value: str | None) -> str | None:
+        """Lowercase email so uniqueness checks are case-insensitive."""
+        return value.lower() if value is not None else value
 
 
 class UserRead(BaseModel):
