@@ -1,7 +1,9 @@
 # Stage 1: Builder
 FROM python:3.14-slim-bookworm AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# Pin the uv build tool to a released version for reproducible builds
+# (Dependabot's docker ecosystem keeps this current).
+COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /bin/uv
 
 WORKDIR /app
 

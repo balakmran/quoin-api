@@ -16,6 +16,7 @@ from app.core.middlewares import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
+    _safe_request_id,
     configure_cors,
     configure_middlewares,
     configure_trusted_hosts,
@@ -227,6 +228,58 @@ async def test_request_id_middleware_propagates_existing_id(
         )
 
     assert response.headers[settings.REQUEST_ID_HEADER] == incoming
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        "bad id with spaces",
+        "inject;DROP TABLE",
+        "a" * 65,  # over the 64-char cap
+    ],
+)
+async def test_request_id_middleware_rejects_unsafe_id(
+    request_id_app: FastAPI,
+    hostile: str,
+) -> None:
+    """Unsafe inbound X-Request-ID is discarded for a fresh UUID (S6)."""
+    async with AsyncClient(
+        transport=ASGITransport(app=request_id_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get(
+            "/test", headers={settings.REQUEST_ID_HEADER: hostile}
+        )
+
+    echoed = response.headers[settings.REQUEST_ID_HEADER]
+    assert echoed != hostile
+    uuid.UUID(echoed)  # a valid UUID replaced the hostile value
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        None,
+        "",
+        "has space",
+        "inject;DROP",
+        "café",  # non-ASCII
+        "trailing-newline\n",  # \Z anchor rejects; $ would have accepted
+        "a\nb",  # embedded newline
+        "a" * 65,  # over the 64-char cap
+    ],
+)
+def test_safe_request_id_rejects_unsafe_values(raw: str | None) -> None:
+    """Unsafe raw values are replaced with a fresh UUID (S6)."""
+    result = _safe_request_id(raw)
+    assert result != raw
+    uuid.UUID(result)  # raises if not a valid UUID
+
+
+@pytest.mark.parametrize("raw", ["my-trace-id-42", "a", "a" * 64, "A.b_c-9"])
+def test_safe_request_id_passes_valid_values(raw: str) -> None:
+    """Well-formed request IDs are returned unchanged (S6)."""
+    assert _safe_request_id(raw) == raw
 
 
 @pytest.mark.asyncio

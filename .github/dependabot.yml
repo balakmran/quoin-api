@@ -29,6 +29,22 @@ updates:
           - "minor"
           - "patch"
 
+  # Base images / build tooling pinned in the Dockerfile (e.g. the
+  # `ghcr.io/astral-sh/uv` build stage and the Python base image).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
   # GitHub Actions pinned in .github/workflows/*.yml.
   - package-ecosystem: "github-actions"
     directory: "/"

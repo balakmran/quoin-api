@@ -162,6 +162,59 @@ QUOIN_MAX_REQUEST_BODY_BYTES=10485760
 
 ---
 
+## Request ID validation
+
+`RequestIDMiddleware` propagates an inbound `X-Request-ID` into the log
+context and echoes it in the response. To stop a client from injecting
+newlines or control characters into logs (log injection) or reflecting
+attacker-controlled content in the response header, the inbound value is
+accepted only if it matches `^[A-Za-z0-9._-]{1,64}$`. Anything longer or
+containing other characters is discarded and a fresh UUID is generated
+instead.
+
+---
+
+## OAuth trust anchors & fail-fast
+
+Token validation (see the [Authentication guide](authentication.md))
+requires **all three** trust anchors — `QUOIN_OAUTH_JWKS_URI`,
+`QUOIN_OAUTH_ISSUER`, and `QUOIN_OAUTH_AUDIENCE`. Issuer is enforced
+explicitly: PyJWT silently skips `iss` verification when the expected
+issuer is `None`, so an unset issuer would let any token signed by a
+JWKS key through regardless of `iss`.
+
+In `production` these are validated at **app startup**
+(`validate_production_oauth()` is called from `create_app()`), and the
+JWKS URI must be `https://` — an `http://` endpoint would let an
+on-path attacker substitute signing keys. A misconfigured production
+deployment therefore crash-loops rather than serving 401s while
+appearing healthy. The check lives in `create_app()` rather than on
+config import so data-plane tooling that only imports settings —
+Alembic migrations, scripts — stays decoupled from OAuth. Development
+and test skip the check.
+
+### JWKS refresh backoff
+
+A token carrying an unknown `kid` normally triggers a JWKS refetch to
+pick up rotated keys. Left unbounded, an attacker spraying garbage-`kid`
+tokens could force an outbound HTTP call on every request. `JWKSCache`
+caps unknown-`kid` refetches to at most one per
+`QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS` (default `30`), and the backoff
+timer is set before the fetch so a *failed* fetch backs off too. Tokens
+inside the window are rejected from cache with no outbound call.
+
+---
+
+## Database credential redaction
+
+`QUOIN_POSTGRES_PASSWORD` is a `SecretStr`, and the assembled
+`DATABASE_URL` is a plain `@property` (not a `@computed_field`), so
+neither the password nor the credential-bearing URL is emitted by
+`settings.model_dump()`, the OpenAPI schema, or a future config-dump
+endpoint.
+
+---
+
 ## Middleware ordering
 
 Middleware is registered in LIFO order via `add_middleware`, so the

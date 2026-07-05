@@ -1,3 +1,4 @@
+import re
 import uuid
 from collections.abc import Awaitable, Callable
 
@@ -16,6 +17,20 @@ from app.core.exception_handlers import _problem_response
 from app.core.schemas import ProblemDetail
 
 logger = structlog.get_logger(__name__)
+
+# Accept an inbound request ID only if it is a short, printable token.
+# Rejecting everything else stops a client from injecting newlines or
+# control characters into logs and the reflected response header.
+# Anchor with \Z, not $: $ also matches just before a trailing newline,
+# which would let a value ending in "\n" slip past the injection guard.
+_REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}\Z")
+
+
+def _safe_request_id(raw: str | None) -> str:
+    """Return the inbound request ID if safe, else a fresh UUID."""
+    if raw is not None and _REQUEST_ID_RE.match(raw):
+        return raw
+    return str(uuid.uuid4())
 
 
 class TimeoutMiddleware(BaseHTTPMiddleware):
@@ -68,7 +83,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         """Assign a request ID, bind it to structlog, echo it in response."""
         header = settings.REQUEST_ID_HEADER
-        request_id = request.headers.get(header, str(uuid.uuid4()))
+        request_id = _safe_request_id(request.headers.get(header))
         structlog.contextvars.bind_contextvars(request_id=request_id)
         try:
             response = await call_next(request)

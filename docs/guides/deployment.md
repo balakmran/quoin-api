@@ -176,6 +176,26 @@ Use these endpoints for:
 - **Load balancer probes** - Kubernetes liveness/readiness
 - **Monitoring systems** - Uptime tracking
 
+!!! warning "Keep probes off the public internet"
+    `/ready` runs an unauthenticated `SELECT 1` against the database on
+    every hit. That is harmless from an in-cluster orchestrator, but if
+    the endpoint is internet-routable it becomes a free DB-load
+    amplification lever. Restrict `/health` and `/ready` to the internal
+    network (ingress allowlist, separate probe port, or a
+    `NetworkPolicy`) rather than exposing them publicly.
+
+---
+
+## Edge rate limiting
+
+QuoinAPI does **not** ship an in-process rate limiter — the template
+*assumes rate limiting is enforced at the edge* (API gateway, ingress,
+CDN, or WAF) in front of the service. Budget for this in your
+deployment: without an upstream limiter, the API has no protection
+against request floods. This is a deliberate design choice — edge
+limiting is more robust and horizontally consistent than a per-process
+counter.
+
 ---
 
 ## Graceful Shutdown
