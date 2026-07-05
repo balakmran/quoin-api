@@ -316,6 +316,64 @@ async def test_jwks_cache_get_signing_key_cache_hit(
     assert key is rsa_public_key
 
 
+def _empty_jwks_client(get_mock: AsyncMock) -> AsyncMock:
+    """Build an AsyncClient context manager whose get uses ``get_mock``."""
+    return AsyncMock(
+        __aenter__=AsyncMock(return_value=AsyncMock(get=get_mock)),
+        __aexit__=AsyncMock(return_value=False),
+    )
+
+
+async def test_jwks_cache_unknown_kid_backoff() -> None:
+    """Repeated unknown kids inside the window trigger one fetch (S2)."""
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = {"keys": []}
+    mock_response.raise_for_status.return_value = None
+    get_mock = AsyncMock(return_value=mock_response)
+
+    # A large min_refresh keeps both sprays inside the backoff window.
+    cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=1000)
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=_empty_jwks_client(get_mock),
+    ):
+        with pytest.raises(UnauthorizedError, match="signing key not found"):
+            await cache.get_signing_key("spray-1")
+        with pytest.raises(UnauthorizedError, match="signing key not found"):
+            await cache.get_signing_key("spray-2")
+
+    # The second unknown kid is served from cache — no outbound call.
+    assert get_mock.await_count == 1
+
+
+async def test_jwks_cache_failed_fetch_backs_off() -> None:
+    """A failing JWKS endpoint is retried at most once per window (S2)."""
+    get_mock = AsyncMock(side_effect=httpx.ConnectError("boom"))
+
+    cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=1000)
+
+    with patch(
+        "app.core.security.AsyncClient",
+        return_value=_empty_jwks_client(get_mock),
+    ):
+        with pytest.raises(UnauthorizedError, match="signing keys"):
+            await cache.get_signing_key("any-kid")
+        # Even though the cache is still empty/stale, the backoff timer
+        # (set before the failed fetch) suppresses the second call.
+        with pytest.raises(UnauthorizedError, match="signing key not found"):
+            await cache.get_signing_key("any-kid")
+
+    assert get_mock.await_count == 1
+
+
+def test_jwks_cache_init_records_min_refresh() -> None:
+    """min_refresh_seconds is stored on the cache (S2)."""
+    cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=15.0)
+    assert cache._min_refresh == 15.0  # noqa: PLR2004
+    assert cache._last_attempt == float("-inf")
+
+
 def test_get_jwks_cache_no_uri_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -491,6 +549,18 @@ async def test_validate_token_no_audience(
     """validate_token raises UnauthorizedError if audience is not set."""
     mock_settings.OAUTH_AUDIENCE = ""
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_AUDIENCE"):
+        await validate_token("header.payload.signature")
+
+
+async def test_validate_token_no_issuer(
+    mock_settings: MagicMock,
+) -> None:
+    """validate_token raises UnauthorizedError if issuer is not set (S1).
+
+    Guards the PyJWT hole where ``issuer=None`` skips ``iss`` checks.
+    """
+    mock_settings.OAUTH_ISSUER = ""
+    with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_ISSUER"):
         await validate_token("header.payload.signature")
 
 

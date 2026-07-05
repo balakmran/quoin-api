@@ -93,7 +93,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_POSTGRES_HOST`        | PostgreSQL host                                     | `localhost`                                          |
 | `QUOIN_POSTGRES_PORT`        | PostgreSQL port                                     | `5432`                                               |
 | `QUOIN_POSTGRES_USER`        | PostgreSQL username                                 | `postgres`                                           |
-| `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password                                 | `postgres`                                           |
+| `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password (`SecretStr` — redacted in dumps/logs) | `postgres`                                    |
 | `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
 | `QUOIN_REQUEST_TIMEOUT_SECONDS` | Per-request wall-clock timeout (0 = disabled)    | `30.0`                                              |
 | `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` | Max seconds to drain in-flight requests on shutdown (`<=0` = no wait) | `30.0`                          |
@@ -125,7 +125,7 @@ All settings are defined in [`app/core/config.py`](../../app/core/config.py). Th
 
 ```python
 from enum import StrEnum
-from pydantic import PostgresDsn, computed_field
+from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings
 
 class Environment(StrEnum):
@@ -139,6 +139,7 @@ class Settings(BaseSettings):
         env_prefix="quoin_",
         case_sensitive=False,
         env_file=env_file,  # Automatically selected
+        extra="ignore",     # Unknown QUOIN_* vars are dropped
     )
 
     ENV: Environment = Environment.development
@@ -148,14 +149,26 @@ class Settings(BaseSettings):
     # Database - constructed from individual POSTGRES_* vars
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     # ... other POSTGRES_* fields
 
-    @computed_field
+    # A plain @property (not a @computed_field): the credential-bearing
+    # URL is never emitted by model_dump()/OpenAPI, and the password is
+    # a SecretStr so it is redacted in any dump or log.
     @property
     def DATABASE_URL(self) -> PostgresDsn:
-        \"\"\"Assemble the database URL.\"\"\"
+        """Assemble the database URL."""
         # Constructed from POSTGRES_* fields
 ```
+
+!!! note "Config hygiene"
+    - `extra="ignore"` means a mistyped `QUOIN_*` variable is dropped
+      silently rather than accepted as an unknown extra — the real
+      setting keeps its default. Double-check spelling against this
+      table.
+    - `DATABASE_URL` and `POSTGRES_PASSWORD` never appear in
+      `model_dump()`, the OpenAPI schema, or logs, so the credential
+      cannot leak through a config dump.
 
 ## Database Configuration
 

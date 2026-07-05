@@ -117,7 +117,27 @@ QUOIN_OAUTH_AUDIENCE=api://{your-app-client-id}
 
 # Claim key — defaults work for Azure AD; adjust for other providers
 QUOIN_OAUTH_ROLES_CLAIM=roles
+
+# Backoff: min seconds between JWKS refetches for an unknown kid
+QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
 ```
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `QUOIN_OAUTH_JWKS_URI` | JWKS endpoint (public signing keys) | `None` |
+| `QUOIN_OAUTH_ISSUER` | Expected `iss` claim | `None` |
+| `QUOIN_OAUTH_AUDIENCE` | Expected `aud` claim | `None` |
+| `QUOIN_OAUTH_ROLES_CLAIM` | Claim key holding app roles | `roles` |
+| `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS` | Min seconds between JWKS refetches triggered by an unknown `kid` | `30.0` |
+
+!!! warning "All three trust anchors are required"
+    `validate_token` rejects every request unless
+    `QUOIN_OAUTH_JWKS_URI`, `QUOIN_OAUTH_ISSUER`, **and**
+    `QUOIN_OAUTH_AUDIENCE` are set. Issuer is enforced explicitly
+    because PyJWT silently skips `iss` verification when the expected
+    issuer is `None`. In `production` these are validated at **startup**
+    — a deployment missing any of them (or using a non-`https://` JWKS
+    URI) crash-loops rather than serving 401s while looking healthy.
 
 !!! note
     If your provider uses scopes instead of roles (e.g. Okta, Auth0

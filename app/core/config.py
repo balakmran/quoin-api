@@ -1,7 +1,7 @@
 import os
 from enum import StrEnum
 
-from pydantic import PostgresDsn, computed_field
+from pydantic import PostgresDsn, SecretStr
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
         env_file=env_file,
         env_ignore_empty=True,
-        extra="allow",
+        extra="ignore",
     )
 
     # Application
@@ -54,17 +54,22 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     POSTGRES_DB: str = "app_db"
 
-    @computed_field
     @property
     def DATABASE_URL(self) -> PostgresDsn:  # noqa: N802
-        """Assemble the database URL."""
+        """Assemble the database URL.
+
+        A plain ``@property`` (not a ``@computed_field``) so the
+        credential-bearing URL is never emitted by ``model_dump()``,
+        the OpenAPI schema, or any future config-dump endpoint. The
+        password itself is a ``SecretStr`` and is redacted in dumps.
+        """
         return MultiHostUrl.build(  # type: ignore
             scheme=self.POSTGRES_DRIVER,
             username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
+            password=self.POSTGRES_PASSWORD.get_secret_value(),
             host=self.POSTGRES_HOST,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
@@ -119,6 +124,10 @@ class Settings(BaseSettings):
     OAUTH_ISSUER: str | None = None
     OAUTH_AUDIENCE: str | None = None
     OAUTH_ROLES_CLAIM: str = "roles"
+    # Minimum seconds between JWKS refetches triggered by an unknown
+    # kid — bounds outbound calls when tokens with garbage kids are
+    # sprayed (negative cache / backoff).
+    OAUTH_JWKS_MIN_REFRESH_SECONDS: float = 30.0
 
     # Outbound HTTP client (finer backoff/breaker/pool tuning lives as
     # constants in app/http/client.py)
@@ -127,3 +136,46 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def validate_production_oauth(s: Settings = settings) -> None:
+    """Fail fast on a misconfigured production deployment.
+
+    In ``production`` the OAuth trust anchors must all be present and
+    the JWKS endpoint must be ``https://`` — otherwise an on-path
+    attacker could substitute signing keys. Called from
+    ``create_app()`` (not on import) so the API server crash-loops on a
+    misconfigured boot while data-plane tooling that only imports
+    settings — Alembic migrations, scripts — is unaffected. Development
+    and test are no-ops.
+
+    Args:
+        s: The settings instance to validate (defaults to the module
+            singleton; injectable for tests).
+
+    Raises:
+        RuntimeError: If production is missing any OAuth trust anchor or
+            the JWKS URI is not ``https://``.
+    """
+    if s.ENV != Environment.production:
+        return
+
+    missing = [
+        name
+        for name, value in (
+            ("QUOIN_OAUTH_JWKS_URI", s.OAUTH_JWKS_URI),
+            ("QUOIN_OAUTH_ISSUER", s.OAUTH_ISSUER),
+            ("QUOIN_OAUTH_AUDIENCE", s.OAUTH_AUDIENCE),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "Production requires OAuth to be fully configured; "
+            f"missing: {', '.join(missing)}."
+        )
+    if not s.OAUTH_JWKS_URI.startswith("https://"):  # type: ignore
+        raise RuntimeError(
+            "QUOIN_OAUTH_JWKS_URI must use https:// in production "
+            "to prevent signing-key substitution."
+        )

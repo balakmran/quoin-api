@@ -38,25 +38,48 @@ class JWKSCache:
     an unknown kid (handles provider-side key rotation transparently).
     """
 
-    def __init__(self, uri: str, ttl_seconds: int = 3600) -> None:
+    def __init__(
+        self,
+        uri: str,
+        ttl_seconds: int = 3600,
+        min_refresh_seconds: float = 30.0,
+    ) -> None:
         """Initialize JWKSCache.
 
         Args:
             uri: The JWKS endpoint URL.
             ttl_seconds: Cache TTL in seconds (default 1 hour).
+            min_refresh_seconds: Minimum seconds between refetches
+                triggered by an unknown kid. Bounds outbound calls
+                when tokens carrying garbage kids are sprayed.
         """
         self._uri = uri
         self._ttl = ttl_seconds
+        self._min_refresh = min_refresh_seconds
         self._keys: dict[str, Any] = {}
         self._fetched_at: float = float("-inf")
+        self._last_attempt: float = float("-inf")
         self._lock = asyncio.Lock()
 
     def _is_stale(self) -> bool:
         """Return True if the cache has expired."""
         return (time.monotonic() - self._fetched_at) > self._ttl
 
+    def _may_refetch(self) -> bool:
+        """Return True if enough time has passed to attempt a refetch.
+
+        Backs off after the last fetch *attempt* (success or failure)
+        so a spray of unknown-kid tokens — or a persistently failing
+        JWKS endpoint — triggers at most one outbound call per
+        ``min_refresh`` window.
+        """
+        return (time.monotonic() - self._last_attempt) > self._min_refresh
+
     async def _refresh(self) -> None:
         """Fetch fresh keys from the JWKS URI."""
+        # Record the attempt up-front so a *failed* fetch also backs
+        # off, not just a successful one.
+        self._last_attempt = time.monotonic()
         try:
             async with AsyncClient() as client:
                 response = await client.get(self._uri, timeout=10.0)
@@ -95,7 +118,8 @@ class JWKSCache:
             UnauthorizedError: If the kid is not found after a fresh fetch.
         """
         async with self._lock:
-            if self._is_stale() or kid not in self._keys:
+            unknown_kid = kid not in self._keys
+            if (self._is_stale() or unknown_kid) and self._may_refetch():
                 await self._refresh()
             if kid not in self._keys:
                 raise UnauthorizedError("Token signing key not found")
@@ -114,7 +138,10 @@ def _get_jwks_cache() -> JWKSCache:
             raise UnauthorizedError(
                 "OAuth not configured — QUOIN_OAUTH_JWKS_URI is not set"
             )
-        _jwks_cache = JWKSCache(settings.OAUTH_JWKS_URI)
+        _jwks_cache = JWKSCache(
+            settings.OAUTH_JWKS_URI,
+            min_refresh_seconds=settings.OAUTH_JWKS_MIN_REFRESH_SECONDS,
+        )
     return _jwks_cache
 
 
@@ -191,6 +218,13 @@ async def validate_token(token: str) -> dict[str, Any]:
     if not settings.OAUTH_AUDIENCE:
         raise UnauthorizedError(
             "OAuth not configured — QUOIN_OAUTH_AUDIENCE is not set"
+        )
+    # PyJWT silently skips issuer verification when ``issuer`` is None,
+    # so an unset issuer would let any token signed by a JWKS key pass
+    # regardless of ``iss``. Require it explicitly.
+    if not settings.OAUTH_ISSUER:
+        raise UnauthorizedError(
+            "OAuth not configured — QUOIN_OAUTH_ISSUER is not set"
         )
 
     try:

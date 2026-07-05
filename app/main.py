@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router, system_router_root
-from app.core.config import settings
+from app.core.config import settings, validate_production_oauth
 from app.core.exception_handlers import add_exception_handlers
 from app.core.lifecycle import Lifecycle
 from app.core.logging import setup_logging
@@ -23,6 +23,11 @@ logger = structlog.get_logger(__name__)
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     setup_logging()
+
+    # Crash-loop a misconfigured production boot rather than serving
+    # 401s while looking healthy. Runs here (not on config import) so
+    # Alembic migrations and scripts stay decoupled from OAuth config.
+    validate_production_oauth()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
