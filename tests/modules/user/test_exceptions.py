@@ -2,7 +2,11 @@ import uuid
 
 from fastapi import status
 
-from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
+from app.modules.user.exceptions import (
+    DuplicateEmailError,
+    UserInUseError,
+    UserNotFoundError,
+)
 
 
 def test_user_not_found_error() -> None:
@@ -18,4 +22,14 @@ def test_duplicate_email_error() -> None:
     email = "test@example.com"
     err = DuplicateEmailError(email=email)
     assert err.message == f"Email '{email}' is already registered"
+    assert err.status_code == status.HTTP_409_CONFLICT
+
+
+def test_user_in_use_error() -> None:
+    """Test UserInUseError initialization."""
+    user_id = str(uuid.uuid4())
+    err = UserInUseError(user_id=user_id)
+    assert err.message == (
+        f"User '{user_id}' cannot be deleted: it is referenced by other records"
+    )
     assert err.status_code == status.HTTP_409_CONFLICT

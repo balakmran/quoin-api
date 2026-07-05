@@ -325,6 +325,8 @@ Delete a user.
 **Errors:**
 
 - `404 Not Found` — User not found
+- `409 Conflict` — User is referenced by other records and cannot be
+  deleted
 
 **Example:**
 

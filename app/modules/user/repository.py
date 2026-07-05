@@ -4,9 +4,37 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.user.exceptions import DuplicateEmailError
+from app.modules.user.exceptions import DuplicateEmailError, UserInUseError
 from app.modules.user.models import User
 from app.modules.user.schemas import UserCreate, UserUpdate
+
+_EMAIL_UNIQUE_CONSTRAINT = "ix_users_email_lower"
+
+
+def _is_email_uniqueness_violation(exc: IntegrityError) -> bool:
+    """Check whether an IntegrityError was raised by the email index.
+
+    The DBAPI driver (asyncpg) raises its own error type, which
+    SQLAlchemy's dialect wraps in turn before setting it as ``.orig``.
+    The attribute carrying the constraint name lives on whichever
+    exception in that ``__cause__`` chain actually came from the
+    driver, so this walks the chain instead of only checking ``.orig``
+    itself.
+
+    Args:
+        exc: The IntegrityError caught around a flush.
+
+    Returns:
+        True if the underlying DB error names the unique index on
+        lower(email); False for any other constraint violation.
+    """
+    error: BaseException | None = exc.orig
+    while error is not None:
+        constraint_name = getattr(error, "constraint_name", None)
+        if constraint_name is not None:
+            return constraint_name == _EMAIL_UNIQUE_CONSTRAINT
+        error = error.__cause__
+    return False
 
 
 class UserRepository:
@@ -34,13 +62,15 @@ class UserRepository:
             DuplicateEmailError: If a concurrent insert already
                 committed this email between the service's pre-check
                 and this write.
+            IntegrityError: If the flush fails for any other reason.
         """
         db_user = User.model_validate(user_create)
         self.session.add(db_user)
         try:
-            await self.session.commit()
+            await self.session.flush()
         except IntegrityError as exc:
-            await self.session.rollback()
+            if not _is_email_uniqueness_violation(exc):
+                raise
             raise DuplicateEmailError(email=user_create.email) from exc
         await self.session.refresh(db_user)
         return db_user
@@ -105,6 +135,7 @@ class UserRepository:
             DuplicateEmailError: If a concurrent write already
                 committed the new email between the service's
                 pre-check and this write.
+            IntegrityError: If the flush fails for any other reason.
         """
         user_data = user_update.model_dump(exclude_unset=True)
         for key, value in user_data.items():
@@ -112,9 +143,10 @@ class UserRepository:
         new_email = user.email
         self.session.add(user)
         try:
-            await self.session.commit()
+            await self.session.flush()
         except IntegrityError as exc:
-            await self.session.rollback()
+            if not _is_email_uniqueness_violation(exc):
+                raise
             raise DuplicateEmailError(email=new_email) from exc
         await self.session.refresh(user)
         return user
@@ -125,6 +157,14 @@ class UserRepository:
         Args:
             user: The User instance to delete; must be attached to the
                 session.
+
+        Raises:
+            UserInUseError: If a foreign key still references this
+                user (e.g. an `ON DELETE RESTRICT` relationship),
+                preventing the delete from completing.
         """
         await self.session.delete(user)
-        await self.session.commit()
+        try:
+            await self.session.flush()
+        except IntegrityError as exc:
+            raise UserInUseError(user_id=str(user.id)) from exc

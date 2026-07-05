@@ -198,6 +198,15 @@ class DuplicateEmailError(ConflictError):
 
     def __init__(self, email: str) -> None:
         super().__init__(message=f"Email '{email}' is already registered")
+
+class UserInUseError(ConflictError):
+    """Raised when a user cannot be deleted due to referencing records."""
+
+    def __init__(self, user_id: str) -> None:
+        super().__init__(
+            message=f"User '{user_id}' cannot be deleted: "
+            "it is referenced by other records"
+        )
 ```
 
 The `type` URN in error responses is derived automatically from the
@@ -245,9 +254,10 @@ class UserService:
 
 The `get_by_email` pre-check above is a friendly fast path, not the
 uniqueness guarantee — two concurrent requests can both pass it before
-either commits. The repository closes that race by catching the
-resulting `IntegrityError` at commit time and translating it to the
-same domain exception:
+either flushes. The repository closes that race by catching the
+resulting `IntegrityError` at flush time (the actual commit happens
+later, in `get_session`'s unit-of-work boundary) and inspecting the
+failed constraint before translating it:
 
 ```python
 class UserRepository:
@@ -255,17 +265,28 @@ class UserRepository:
         db_user = User.model_validate(user_create)
         self.session.add(db_user)
         try:
-            await self.session.commit()
+            await self.session.flush()
         except IntegrityError as exc:
-            await self.session.rollback()
+            if not _is_email_uniqueness_violation(exc):
+                raise
             raise DuplicateEmailError(email=user_create.email) from exc
         await self.session.refresh(db_user)
         return db_user
 ```
 
-`UserRepository.update` follows the same pattern. This is why the
-route always returns 409, never a bare 500, even under concurrent
-writes to the same email.
+`_is_email_uniqueness_violation` checks `exc.orig.constraint_name`
+against the unique index on `lower(email)`, so an `IntegrityError`
+from an unrelated constraint propagates unchanged instead of being
+mislabeled as a duplicate email. `UserRepository.update` follows the
+same pattern. This is why the route always returns 409, never a bare
+500, even under concurrent writes to the same email.
+
+`UserRepository.delete` applies the same flush-then-inspect shape for
+foreign-key conflicts: if another table still references the user
+(e.g. via `ON DELETE RESTRICT`), the flush raises `IntegrityError`,
+which the repository translates to `UserInUseError` (409) instead of
+letting a raw `IntegrityError` reach the unhandled-exception handler
+as a 500.
 
 ---
 

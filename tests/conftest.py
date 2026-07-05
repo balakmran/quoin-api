@@ -51,11 +51,13 @@ async def db_session(initialize_db: None) -> AsyncGenerator[AsyncSession]:
     connection = await fastapi_app.state.engine.connect()
     trans = await connection.begin()
 
-    # join_transaction_mode="create_savepoint" makes the session run on
-    # a SAVEPOINT nested inside `trans`, so an application-level
-    # session.commit()/rollback() (e.g. the IntegrityError handling in
-    # UserRepository.create/update) only affects that savepoint and
-    # never the outer per-test transaction rolled back below.
+    # join_transaction_mode="create_savepoint" makes every
+    # session.commit() release a SAVEPOINT rather than a real
+    # transaction commit. Tests that seed data via db_session.commit()
+    # stay isolated inside the outer transaction rolled back in
+    # teardown. HTTP tests override get_session entirely, so the UoW
+    # commit in get_session is bypassed; flush() visibility within the
+    # session is sufficient for test assertions.
     session_maker = async_sessionmaker(
         bind=connection,
         class_=AsyncSession,
