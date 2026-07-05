@@ -50,10 +50,12 @@ def create_session_factory(
 async def get_session(
     request: Request,
 ) -> AsyncGenerator[AsyncSession]:
-    """Yield a database session for the duration of the request.
+    """Yield a unit-of-work session scoped to one HTTP request.
 
-    Reads the session factory from app.state, which is initialised
-    during application startup.
+    Commits on clean exit; rolls back if the handler raises. This
+    makes the entire request handler atomic — repositories only need
+    to flush to detect constraint violations early; the actual
+    transaction commit is deferred to here.
 
     Args:
         request: The current FastAPI request (used to access app.state).
@@ -68,4 +70,9 @@ async def get_session(
     if not session_factory:
         raise InternalServerError("Database session factory is not initialized")
     async with session_factory() as session:
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

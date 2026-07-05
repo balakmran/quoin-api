@@ -119,7 +119,11 @@ async def update_user(
         404: {
             "model": ProblemDetail,
             "description": "User not found",
-        }
+        },
+        409: {
+            "model": ProblemDetail,
+            "description": "User is referenced by other records",
+        },
     },
 )
 async def delete_user(

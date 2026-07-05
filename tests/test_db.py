@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from sqlmodel import select
@@ -47,3 +47,45 @@ async def test_db_lifecycle_and_error_handling():
     fastapi_app.state.engine = engine
     fastapi_app.state.session_factory = create_session_factory(engine)
     assert fastapi_app.state.engine is not None
+
+
+def _mock_request_with_session(mock_session: AsyncMock) -> Mock:
+    """Build a fake Request whose session_factory yields mock_session."""
+    mock_session.__aenter__.return_value = mock_session
+    mock_session.__aexit__.return_value = False
+    mock_request = Mock()
+    mock_request.app.state.session_factory = Mock(return_value=mock_session)
+    return mock_request
+
+
+@pytest.mark.asyncio
+async def test_get_session_commits_on_success():
+    """get_session commits the session when the caller exits cleanly."""
+    mock_session = AsyncMock()
+    mock_request = _mock_request_with_session(mock_session)
+
+    async for session in get_session(mock_request):
+        assert session is mock_session
+
+    mock_session.commit.assert_awaited_once()
+    mock_session.rollback.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_session_rolls_back_and_reraises_on_error():
+    """get_session rolls back and re-raises when the caller errors."""
+    mock_session = AsyncMock()
+    mock_request = _mock_request_with_session(mock_session)
+
+    class HandlerError(Exception):
+        """Stand-in for an exception raised by a request handler."""
+
+    generator = get_session(mock_request)
+    session = await generator.__anext__()
+    assert session is mock_session
+
+    with pytest.raises(HandlerError):
+        await generator.athrow(HandlerError("handler failed"))
+
+    mock_session.rollback.assert_awaited_once()
+    mock_session.commit.assert_not_awaited()

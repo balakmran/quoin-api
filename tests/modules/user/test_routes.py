@@ -1,11 +1,13 @@
 import uuid
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.user.exceptions import DuplicateEmailError
+from app.modules.user.exceptions import DuplicateEmailError, UserInUseError
 from app.modules.user.models import User
 from app.modules.user.repository import UserRepository
 from app.modules.user.schemas import UserCreate, UserUpdate
@@ -226,6 +228,55 @@ async def test_repository_update_race_returns_duplicate_email_error(
         await repository.update(
             victim, UserUpdate(email="update-race-taken@example.com")
         )
+
+
+async def test_repository_create_other_integrity_error_propagates() -> None:
+    """An IntegrityError from an unrelated constraint isn't mislabeled.
+
+    Only a violation of the email-uniqueness index should be translated
+    to DuplicateEmailError; anything else must propagate unchanged.
+    """
+    mock_orig = Mock(spec=["constraint_name", "__cause__"])
+    mock_orig.constraint_name = "some_other_constraint"
+    mock_orig.__cause__ = None
+    mock_session = AsyncMock(spec=AsyncSession)
+    mock_session.flush.side_effect = IntegrityError("INSERT", {}, mock_orig)
+    repository = UserRepository(mock_session)
+
+    with pytest.raises(IntegrityError):
+        await repository.create(UserCreate(email="other@example.com"))
+
+
+async def test_repository_update_other_integrity_error_propagates() -> None:
+    """A non-email IntegrityError on update propagates unchanged.
+
+    Also exercises the constraint-name lookup when no exception in the
+    ``__cause__`` chain exposes ``constraint_name`` at all, so the
+    violation is correctly treated as "not an email uniqueness" error.
+    """
+    mock_orig = Mock(spec=["__cause__"])
+    mock_orig.__cause__ = None
+    mock_session = AsyncMock(spec=AsyncSession)
+    mock_session.flush.side_effect = IntegrityError("UPDATE", {}, mock_orig)
+    repository = UserRepository(mock_session)
+    user = User(email="orig@example.com")
+
+    with pytest.raises(IntegrityError):
+        await repository.update(user, UserUpdate(full_name="New Name"))
+
+
+async def test_repository_delete_fk_conflict_raises_user_in_use_error() -> None:
+    """A referencing row surfaces as UserInUseError, not IntegrityError."""
+    mock_orig = Mock(spec=["constraint_name", "__cause__"])
+    mock_orig.constraint_name = "fk_some_table_user_id"
+    mock_orig.__cause__ = None
+    mock_session = AsyncMock(spec=AsyncSession)
+    mock_session.flush.side_effect = IntegrityError("DELETE", {}, mock_orig)
+    repository = UserRepository(mock_session)
+    user = User(email="fk@example.com")
+
+    with pytest.raises(UserInUseError):
+        await repository.delete(user)
 
 
 async def test_create_user_full_name_too_long_returns_422(

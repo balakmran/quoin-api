@@ -15,3 +15,16 @@ class DuplicateEmailError(ConflictError):
     def __init__(self, email: str) -> None:
         """Initialize DuplicateEmailError."""
         super().__init__(message=f"Email '{email}' is already registered")
+
+
+class UserInUseError(ConflictError):
+    """Raised when a user cannot be deleted due to referencing records."""
+
+    def __init__(self, user_id: str) -> None:
+        """Initialize UserInUseError."""
+        super().__init__(
+            message=(
+                f"User '{user_id}' cannot be deleted: "
+                "it is referenced by other records"
+            )
+        )
