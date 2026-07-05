@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Users**: deleting a user still referenced by another record now
+  returns 409 `UserInUseError` instead of a bare 500 — the repository
+  translates the foreign-key `IntegrityError` at the unit-of-work
+  boundary.
+
+### Changed
+
+- **Persistence**: transactions now follow a unit-of-work boundary.
+  `get_session` commits once when a request handler returns and rolls
+  back if it raises, so a request touching multiple repositories is
+  atomic. Repositories `flush()` instead of `commit()`, surfacing
+  constraint violations early while deferring the commit to the
+  request boundary. Constraint violations are now discriminated by
+  name: only the `lower(email)` unique index maps to 409
+  `DuplicateEmailError`; any other `IntegrityError` propagates to the
+  catch-all handler as a 500 instead of being mislabeled a duplicate
+  email.
+
 ### Fixed
 
 - **Users**: `GET /users` now orders results by `created_at, id` so
@@ -35,6 +55,36 @@
   header on a preflight request could bypass Host validation entirely.
 - **Security**: `openapi.json` is now disabled in production, matching
   the existing `/docs`/`/redoc` behaviour.
+
+### Security
+
+- **Fail-fast posture**: in `production`, the app now crash-loops at
+  startup when the OAuth JWKS URI, issuer, or audience is missing, or
+  when the JWKS URI is not `https://`, instead of booting and serving
+  401s while looking healthy.
+- **Auth**: `QUOIN_OAUTH_ISSUER` is now required during token
+  validation, closing the PyJWT `issuer=None` skip — tokens are always
+  checked against `iss`, so a token from any key in the configured
+  JWKS can no longer pass regardless of issuer.
+- **Auth**: an unknown-`kid` token can no longer be used to hammer the
+  JWKS endpoint — refetches are bounded to one per
+  `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`, with the backoff armed before
+  the fetch so failed fetches also back off.
+- **Config**: `POSTGRES_PASSWORD` is now a `SecretStr` and
+  `DATABASE_URL` a plain property, so the DB credential no longer leaks
+  via `model_dump()` or the OpenAPI schema. Unknown `QUOIN_*` env vars
+  are now ignored (`extra="ignore"`) rather than silently accepted, so
+  a typo can't masquerade as valid config while the real setting keeps
+  its default.
+- **Observability**: inbound `X-Request-ID` is validated (safe charset,
+  64-char cap) and replaced with a fresh UUID otherwise, preventing log
+  injection and header reflection.
+- **Supply chain**: the `Dockerfile` pins `uv` to a released version,
+  all GitHub Actions are SHA-pinned, and a `docker` Dependabot
+  ecosystem keeps those pins fresh.
+- **Docs**: the deployment guide now states that health/readiness
+  probes must not be internet-routable and that the template assumes
+  edge rate limiting.
 
 ## [0.8.0] - 2026-06-21
 
