@@ -81,32 +81,45 @@ Shared fixtures are defined in
 
 ### `initialize_db` — Database Setup
 
-Runs automatically before the test session begins. Creates all tables once, yields,
-then drops all tables and disposes the engine at the end of the session, drastically improving test speeds:
+Runs automatically before the test session begins. It builds the schema
+by **running the Alembic migration chain** (`alembic upgrade head`),
+yields, then reverses the chain (`alembic downgrade base`) and disposes
+the engine at the end of the session. Building from migrations — rather
+than `SQLModel.metadata.create_all` — means model/migration drift fails
+the suite instead of shipping silently, and running the down-migrations
+at teardown exercises them too.
+
+The connection URL is assembled from settings parts (overriding only the
+database name to the maintenance `postgres` database) rather than
+string-replacing the name inside an assembled URL:
 
 ```python
 @pytest.fixture(scope="session", autouse=True)
 async def initialize_db() -> AsyncGenerator[None, None]:
-    # Connect to the default 'postgres' database safely to avoid dropping
-    # tables from the main development 'app_db' database.
-    base_url = str(settings.DATABASE_URL)
-    test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
-
-    engine = create_db_engine(url=test_url)
+    engine = create_db_engine(url=_test_database_url())
     fastapi_app.state.engine = engine
     fastapi_app.state.session_factory = create_session_factory(engine)
 
-    async with fastapi_app.state.engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    # Reset any leftover state, then build the schema from migrations.
+    async with engine.connect() as conn:
+        await conn.run_sync(_reset_schema)
+        await conn.commit()
+    async with engine.connect() as conn:
+        await conn.run_sync(_upgrade_to_head)  # alembic upgrade head
 
     yield
 
-    async with fastapi_app.state.engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    async with engine.connect() as conn:
+        await conn.run_sync(_downgrade_to_base)  # alembic downgrade base
 
-    await fastapi_app.state.engine.dispose()
+    await engine.dispose()
     fastapi_app.state.engine = None
 ```
+
+Running Alembic against a live connection requires `alembic/env.py`'s
+`run_migrations_online()` to reuse a connection injected via
+`config.attributes["connection"]`; the test helpers set that attribute
+before calling `command.upgrade` / `command.downgrade`.
 
 ### `db_session` — Isolated Database Session
 
@@ -150,7 +163,10 @@ async def client(
         base_url="http://test",
     ) as c:
         yield c
-    fastapi_app.dependency_overrides.clear()
+    # Pop only the override this fixture added — clearing everything
+    # would wipe overrides owned by nested fixtures (e.g. the caller
+    # override in read_client / admin_client) during independent teardown.
+    fastapi_app.dependency_overrides.pop(get_session, None)
 ```
 
 !!! tip

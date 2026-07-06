@@ -129,11 +129,20 @@ async def run_async_migrations() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+    When a caller injects a live connection via
+    ``config.attributes["connection"]`` — as the test session fixture
+    does to build its schema from the migration chain — reuse it and
+    run migrations synchronously against it. Reusing the caller's
+    connection avoids nesting ``asyncio.run`` inside an already-running
+    event loop. Otherwise, build a fresh async engine from the
+    configured URL.
 
     """
-    asyncio.run(run_async_migrations())
+    connectable = config.attributes.get("connection")
+    if connectable is None:
+        asyncio.run(run_async_migrations())
+    else:
+        do_run_migrations(connectable)
 
 
 if context.is_offline_mode():

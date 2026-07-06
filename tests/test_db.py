@@ -40,9 +40,12 @@ async def test_db_lifecycle_and_error_handling():
         async for _ in get_session(mock_request):
             pass
 
-    # 3. Re-initialize the DB (restore state for other tests/teardown)
-    base_url = str(settings.DATABASE_URL)
-    test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
+    # 3. Re-initialize the DB (restore state for other tests/teardown).
+    # Build the URL from parts (override only the db name) rather than
+    # string-replacing inside an assembled URL.
+    test_url = str(
+        settings.model_copy(update={"POSTGRES_DB": "postgres"}).DATABASE_URL
+    )
     engine = create_db_engine(url=test_url)
     fastapi_app.state.engine = engine
     fastapi_app.state.session_factory = create_session_factory(engine)
