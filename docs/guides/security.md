@@ -203,6 +203,17 @@ caps unknown-`kid` refetches to at most one per
 timer is set before the fetch so a *failed* fetch backs off too. Tokens
 inside the window are rejected from cache with no outbound call.
 
+The refresh itself goes through the shared
+[resilient HTTP client](outbound-http.md) — retries with backoff, a
+per-host circuit breaker, and the shared `QUOIN_HTTP_TIMEOUT_SECONDS` —
+rather than a bare per-refresh client. A hard-down authorization server
+therefore trips the breaker and fails fast instead of serialising every
+auth attempt behind a doomed fetch. A transport-level JWKS failure (a
+down IdP, a timeout, or an open circuit) surfaces as a `502`/`503`/`504`
+rather than a mislabeled `401`, since the outage is our upstream
+failing and not the caller's token; a genuine JWKS HTTP error response
+(such as a `404`) still maps to `401`.
+
 ---
 
 ## Database credential redaction
