@@ -1,40 +1,93 @@
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from alembic import command
 from app.core.config import settings
 from app.core.security import ServicePrincipal, get_current_caller
 from app.db.session import create_db_engine, create_session_factory, get_session
 from app.main import app as fastapi_app
 
+_ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+def _test_database_url() -> str:
+    """Build the test connection URL from settings parts.
+
+    Overrides only the database name (to the maintenance ``postgres``
+    database, so the suite never touches a real ``app_db``) and
+    reassembles the URL from its components. Building from parts avoids
+    the brittleness of string-replacing the db name inside an assembled
+    URL, where a name colliding with the user or host would corrupt it.
+    """
+    return str(
+        settings.model_copy(update={"POSTGRES_DB": "postgres"}).DATABASE_URL
+    )
+
+
+def _alembic_config(connection: Connection) -> Config:
+    """Build an Alembic Config bound to an existing DB connection."""
+    config = Config(str(_ALEMBIC_INI))
+    config.attributes["connection"] = connection
+    return config
+
+
+def _reset_schema(connection: Connection) -> None:
+    """Drop every app table plus Alembic's version table.
+
+    Guarantees a clean slate before the migration chain runs, so a
+    crashed prior session — or a database still holding ``create_all``
+    tables from before the migration-backed switch — can't wedge
+    ``alembic upgrade``.
+    """
+    SQLModel.metadata.drop_all(connection, checkfirst=True)
+    connection.exec_driver_sql("DROP TABLE IF EXISTS alembic_version")
+
+
+def _upgrade_to_head(connection: Connection) -> None:
+    """Apply the full migration chain against ``connection``."""
+    command.upgrade(_alembic_config(connection), "head")
+
+
+def _downgrade_to_base(connection: Connection) -> None:
+    """Reverse the full migration chain against ``connection``."""
+    command.downgrade(_alembic_config(connection), "base")
+
 
 @pytest.fixture(scope="session", autouse=True)
 async def initialize_db() -> AsyncGenerator[None]:
-    """Initialize the database engine for the test session."""
-    # Connect to the default 'postgres' database safely to avoid dropping
-    # tables from the main development 'app_db' database.
-    base_url = str(settings.DATABASE_URL)
-    test_url = base_url.replace(f"/{settings.POSTGRES_DB}", "/postgres")
+    """Initialize the test database engine and schema for the session.
 
-    engine = create_db_engine(url=test_url)
+    Builds the schema by running the Alembic migration chain rather
+    than ``SQLModel.metadata.create_all``, so model/migration drift
+    fails the suite instead of shipping silently. Teardown reverses the
+    chain to ``base``, exercising the down-migrations and leaving the
+    database clean.
+    """
+    engine = create_db_engine(url=_test_database_url())
     fastapi_app.state.engine = engine
     fastapi_app.state.session_factory = create_session_factory(engine)
 
-    # Create tables
-    async with fastapi_app.state.engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    # Reset any leftover state, then build the schema from migrations.
+    async with engine.connect() as conn:
+        await conn.run_sync(_reset_schema)
+        await conn.commit()
+    async with engine.connect() as conn:
+        await conn.run_sync(_upgrade_to_head)
 
     yield
 
-    # Drop tables (optional, but good for cleanup)
-    async with fastapi_app.state.engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    async with engine.connect() as conn:
+        await conn.run_sync(_downgrade_to_base)
 
-    await fastapi_app.state.engine.dispose()
+    await engine.dispose()
     fastapi_app.state.engine = None
 
 
@@ -88,8 +141,9 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     ) as c:
         yield c
 
-    # Clear overrides after test
-    fastapi_app.dependency_overrides.clear()
+    # Remove only the override this fixture added, so nested fixtures'
+    # overrides (e.g. get_current_caller) survive independent teardown.
+    fastapi_app.dependency_overrides.pop(get_session, None)
 
 
 @pytest.fixture
@@ -120,7 +174,7 @@ async def read_client(
     """HTTP client authenticated as a service with users.read role."""
     fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_read
     yield client
-    fastapi_app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.pop(get_current_caller, None)
 
 
 @pytest.fixture
@@ -131,4 +185,4 @@ async def admin_client(
     """HTTP client authenticated as a service with users.read + users.write."""
     fastapi_app.dependency_overrides[get_current_caller] = lambda: caller_admin
     yield client
-    fastapi_app.dependency_overrides.clear()
+    fastapi_app.dependency_overrides.pop(get_current_caller, None)
