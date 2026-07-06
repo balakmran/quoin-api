@@ -13,7 +13,11 @@ from httpx import Response
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 
 from app.core import security as security_module
-from app.core.exceptions import ForbiddenError, UnauthorizedError
+from app.core.exceptions import (
+    BadGatewayError,
+    ForbiddenError,
+    UnauthorizedError,
+)
 from app.core.security import (
     JWKSCache,
     ServicePrincipal,
@@ -22,6 +26,20 @@ from app.core.security import (
     require_roles,
     validate_token,
 )
+from app.http.client import ResilientHTTPClient
+
+
+def _fake_http_client(
+    *, response: Any = None, side_effect: Exception | None = None
+) -> Any:
+    """Build a fake resilient HTTP client whose ``get`` returns/raises."""
+    client = MagicMock(spec=ResilientHTTPClient)
+    client.get = (
+        AsyncMock(side_effect=side_effect)
+        if side_effect is not None
+        else AsyncMock(return_value=response)
+    )
+    return client
 
 
 @pytest.fixture(scope="session")
@@ -119,19 +137,7 @@ async def test_jwks_cache_refresh_parses_rsa_keys(
     mock_response.raise_for_status.return_value = None
 
     cache = JWKSCache("http://example.com/jwks")
-
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        await cache._refresh()
+    await cache._refresh(_fake_http_client(response=mock_response))
 
     assert "key-1" in cache._keys
     assert cache._fetched_at > 0
@@ -151,19 +157,7 @@ async def test_jwks_cache_refresh_parses_ec_keys() -> None:
     mock_response.raise_for_status.return_value = None
 
     cache = JWKSCache("http://example.com/jwks")
-
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        await cache._refresh()
+    await cache._refresh(_fake_http_client(response=mock_response))
 
     assert "ec-key-1" in cache._keys
 
@@ -177,19 +171,7 @@ async def test_jwks_cache_refresh_skips_non_sig_keys() -> None:
     mock_response.raise_for_status.return_value = None
 
     cache = JWKSCache("http://example.com/jwks")
-
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        await cache._refresh()
+    await cache._refresh(_fake_http_client(response=mock_response))
 
     assert cache._keys == {}
 
@@ -203,44 +185,39 @@ async def test_jwks_cache_refresh_skips_unknown_kty_keys() -> None:
     mock_response.raise_for_status.return_value = None
 
     cache = JWKSCache("http://example.com/jwks")
-
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        await cache._refresh()
+    await cache._refresh(_fake_http_client(response=mock_response))
 
     assert cache._keys == {}
 
 
+async def test_jwks_cache_refresh_propagates_transport_failure() -> None:
+    """A transport failure surfaces as a 5xx domain error, not a 401.
+
+    The shared client already translates connection failures into
+    Bad/Gateway/ServiceUnavailable — a down IdP is our upstream failing,
+    so it must not be relabelled as an auth (401) problem.
+    """
+    cache = JWKSCache("http://example.com/jwks")
+    client = _fake_http_client(
+        side_effect=BadGatewayError("Upstream request failed")
+    )
+
+    with pytest.raises(BadGatewayError):
+        await cache._refresh(client)
+
+
 async def test_jwks_cache_refresh_raises_on_http_error() -> None:
-    """_refresh raises UnauthorizedError when the JWKS endpoint is down."""
+    """A JWKS HTTP error *response* (e.g. 404) maps to UnauthorizedError."""
+    mock_response = MagicMock(spec=Response)
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "404 Not Found", request=MagicMock(), response=MagicMock()
+    )
     cache = JWKSCache("http://example.com/jwks")
 
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(
-                        side_effect=httpx.ConnectError("connection refused")
-                    )
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
+    with pytest.raises(
+        UnauthorizedError, match="Unable to fetch OAuth signing keys"
     ):
-        with pytest.raises(
-            UnauthorizedError, match="Unable to fetch OAuth signing keys"
-        ):
-            await cache._refresh()
+        await cache._refresh(_fake_http_client(response=mock_response))
 
 
 async def test_jwks_cache_get_signing_key_found(
@@ -259,19 +236,9 @@ async def test_jwks_cache_get_signing_key_found(
     mock_response.raise_for_status.return_value = None
 
     cache = JWKSCache("http://example.com/jwks")
-
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        key = await cache.get_signing_key("key-abc")
+    key = await cache.get_signing_key(
+        "key-abc", _fake_http_client(response=mock_response)
+    )
 
     assert key is not None
 
@@ -284,19 +251,10 @@ async def test_jwks_cache_get_signing_key_not_found() -> None:
 
     cache = JWKSCache("http://example.com/jwks")
 
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=AsyncMock(
-            __aenter__=AsyncMock(
-                return_value=AsyncMock(
-                    get=AsyncMock(return_value=mock_response)
-                )
-            ),
-            __aexit__=AsyncMock(return_value=False),
-        ),
-    ):
-        with pytest.raises(UnauthorizedError, match="signing key not found"):
-            await cache.get_signing_key("missing-kid")
+    with pytest.raises(UnauthorizedError, match="signing key not found"):
+        await cache.get_signing_key(
+            "missing-kid", _fake_http_client(response=mock_response)
+        )
 
 
 async def test_jwks_cache_get_signing_key_cache_hit(
@@ -308,20 +266,19 @@ async def test_jwks_cache_get_signing_key_cache_hit(
     cache._keys = {"cached-kid": rsa_public_key}
     cache._fetched_at = time.monotonic()
 
-    # No HTTP call should be made — if AsyncClient is invoked this test fails
-    with patch("app.core.security.AsyncClient") as mock_client:
-        key = await cache.get_signing_key("cached-kid")
-        mock_client.assert_not_called()
+    # No outbound call should be made — the client's get must stay unused.
+    client = _fake_http_client(response=MagicMock())
+    key = await cache.get_signing_key("cached-kid", client)
+    client.get.assert_not_awaited()
 
     assert key is rsa_public_key
 
 
-def _empty_jwks_client(get_mock: AsyncMock) -> AsyncMock:
-    """Build an AsyncClient context manager whose get uses ``get_mock``."""
-    return AsyncMock(
-        __aenter__=AsyncMock(return_value=AsyncMock(get=get_mock)),
-        __aexit__=AsyncMock(return_value=False),
-    )
+def _client_with_get(get_mock: AsyncMock) -> Any:
+    """Build a fake resilient HTTP client whose get uses ``get_mock``."""
+    client = MagicMock(spec=ResilientHTTPClient)
+    client.get = get_mock
+    return client
 
 
 async def test_jwks_cache_unknown_kid_backoff() -> None:
@@ -333,15 +290,12 @@ async def test_jwks_cache_unknown_kid_backoff() -> None:
 
     # A large min_refresh keeps both sprays inside the backoff window.
     cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=1000)
+    client = _client_with_get(get_mock)
 
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=_empty_jwks_client(get_mock),
-    ):
-        with pytest.raises(UnauthorizedError, match="signing key not found"):
-            await cache.get_signing_key("spray-1")
-        with pytest.raises(UnauthorizedError, match="signing key not found"):
-            await cache.get_signing_key("spray-2")
+    with pytest.raises(UnauthorizedError, match="signing key not found"):
+        await cache.get_signing_key("spray-1", client)
+    with pytest.raises(UnauthorizedError, match="signing key not found"):
+        await cache.get_signing_key("spray-2", client)
 
     # The second unknown kid is served from cache — no outbound call.
     assert get_mock.await_count == 1
@@ -349,20 +303,19 @@ async def test_jwks_cache_unknown_kid_backoff() -> None:
 
 async def test_jwks_cache_failed_fetch_backs_off() -> None:
     """A failing JWKS endpoint is retried at most once per window (S2)."""
-    get_mock = AsyncMock(side_effect=httpx.ConnectError("boom"))
+    get_mock = AsyncMock(side_effect=BadGatewayError("boom"))
 
     cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=1000)
+    client = _client_with_get(get_mock)
 
-    with patch(
-        "app.core.security.AsyncClient",
-        return_value=_empty_jwks_client(get_mock),
-    ):
-        with pytest.raises(UnauthorizedError, match="signing keys"):
-            await cache.get_signing_key("any-kid")
-        # Even though the cache is still empty/stale, the backoff timer
-        # (set before the failed fetch) suppresses the second call.
-        with pytest.raises(UnauthorizedError, match="signing key not found"):
-            await cache.get_signing_key("any-kid")
+    # First attempt propagates the upstream failure (5xx, not a 401)...
+    with pytest.raises(BadGatewayError):
+        await cache.get_signing_key("any-kid", client)
+    # ...and even though the cache is still empty/stale, the backoff timer
+    # (set before the failed fetch) suppresses the second call, so the
+    # kid is simply reported missing.
+    with pytest.raises(UnauthorizedError, match="signing key not found"):
+        await cache.get_signing_key("any-kid", client)
 
     assert get_mock.await_count == 1
 
@@ -481,7 +434,7 @@ async def test_validate_token_success(
     monkeypatch.setattr(security_module, "_jwks_cache", cache)
 
     token = _make_token(rsa_private_key, _make_claims())
-    claims = await validate_token(token)
+    claims = await validate_token(token, _fake_http_client())
     assert claims["sub"] == "svc-001"
 
 
@@ -498,7 +451,7 @@ async def test_validate_token_expired(
 
     token = _make_token(rsa_private_key, _make_claims(exp_offset=-1))
     with pytest.raises(UnauthorizedError, match="expired"):
-        await validate_token(token)
+        await validate_token(token, _fake_http_client())
 
 
 async def test_validate_token_wrong_audience(
@@ -514,7 +467,7 @@ async def test_validate_token_wrong_audience(
 
     token = _make_token(rsa_private_key, _make_claims(aud="wrong-audience"))
     with pytest.raises(UnauthorizedError, match="audience"):
-        await validate_token(token)
+        await validate_token(token, _fake_http_client())
 
 
 async def test_validate_token_wrong_issuer(
@@ -530,7 +483,7 @@ async def test_validate_token_wrong_issuer(
 
     token = _make_token(rsa_private_key, _make_claims(iss="http://evil-issuer"))
     with pytest.raises(UnauthorizedError, match="issuer"):
-        await validate_token(token)
+        await validate_token(token, _fake_http_client())
 
 
 async def test_validate_token_no_uri(
@@ -540,7 +493,7 @@ async def test_validate_token_no_uri(
     """validate_token raises UnauthorizedError if no JWKS URI is set."""
     mock_settings.OAUTH_JWKS_URI = ""
     with pytest.raises(UnauthorizedError, match="not configured"):
-        await validate_token("header.payload.signature")
+        await validate_token("header.payload.signature", _fake_http_client())
 
 
 async def test_validate_token_no_audience(
@@ -549,7 +502,7 @@ async def test_validate_token_no_audience(
     """validate_token raises UnauthorizedError if audience is not set."""
     mock_settings.OAUTH_AUDIENCE = ""
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_AUDIENCE"):
-        await validate_token("header.payload.signature")
+        await validate_token("header.payload.signature", _fake_http_client())
 
 
 async def test_validate_token_no_issuer(
@@ -561,7 +514,7 @@ async def test_validate_token_no_issuer(
     """
     mock_settings.OAUTH_ISSUER = ""
     with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_ISSUER"):
-        await validate_token("header.payload.signature")
+        await validate_token("header.payload.signature", _fake_http_client())
 
 
 async def test_validate_token_malformed(
@@ -569,7 +522,7 @@ async def test_validate_token_malformed(
 ) -> None:
     """Malformed token string raises UnauthorizedError."""
     with pytest.raises(UnauthorizedError, match="Invalid token format"):
-        await validate_token("not.a.jwt")
+        await validate_token("not.a.jwt", _fake_http_client())
 
 
 async def test_validate_token_generic_pyjwt_error(
@@ -590,7 +543,7 @@ async def test_validate_token_generic_pyjwt_error(
         side_effect=jwt.PyJWTError("unexpected error"),
     ):
         with pytest.raises(UnauthorizedError, match="Token validation failed"):
-            await validate_token(token)
+            await validate_token(token, _fake_http_client())
 
 
 async def test_get_current_caller_resolves_identity(
@@ -626,10 +579,13 @@ async def test_get_token_claims_delegates_to_validate_token(
 
     credentials = MagicMock()
     credentials.credentials = "raw.jwt.token"
+    http_client = _fake_http_client()
 
-    result = await security_module.get_token_claims(credentials=credentials)
+    result = await security_module.get_token_claims(
+        credentials=credentials, http_client=http_client
+    )
 
-    mock_validate.assert_awaited_once_with("raw.jwt.token")
+    mock_validate.assert_awaited_once_with("raw.jwt.token", http_client)
     assert result == expected
 
 
