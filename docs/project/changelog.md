@@ -11,6 +11,15 @@
 
 ### Changed
 
+- **Testing**: the test schema is now built by running the Alembic
+  migration chain (`upgrade head`, reversed with `downgrade base` at
+  session teardown) instead of `SQLModel.metadata.create_all`, so
+  model/migration drift fails the suite instead of shipping silently
+  and the down-migrations are exercised too. The test DB URL is built
+  from settings parts rather than string-replaced, per-test dependency
+  overrides are removed individually instead of cleared wholesale, and
+  a genuine two-connection concurrency test now covers the email
+  uniqueness race.
 - **Database**: connection-pool sizing is now tunable via
   `QUOIN_DB_POOL_SIZE`, `QUOIN_DB_MAX_OVERFLOW`, `QUOIN_DB_POOL_TIMEOUT`,
   `QUOIN_DB_POOL_RECYCLE`, and `QUOIN_DB_POOL_PRE_PING` instead of the
