@@ -112,6 +112,42 @@ async def test_timeout_middleware_integration_real_app() -> None:
     assert body["instance"] == "/test-timeout-slow"
 
 
+@pytest.mark.asyncio
+async def test_timeout_after_response_started_does_not_double_send() -> None:
+    """A timeout after headers are sent re-raises instead of a 504.
+
+    Once ``http.response.start`` is on the wire a 504 cannot replace it,
+    so the middleware must let the abort propagate rather than emit a
+    second (illegal) response start.
+    """
+
+    async def streaming_app(scope: Scope, receive: Receive, send: Send) -> None:
+        await send(
+            {"type": "http.response.start", "status": 200, "headers": []}
+        )
+        await anyio.sleep(0.5)
+        await send({"type": "http.response.body", "body": b"late"})
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    sent: list[Message] = []
+
+    async def capture(message: Message) -> None:
+        sent.append(message)
+
+    middleware = TimeoutMiddleware(streaming_app)
+    with patch.object(settings, "REQUEST_TIMEOUT_SECONDS", 0.05):
+        with pytest.raises(TimeoutError):
+            await middleware(
+                {"type": "http", "path": "/stream"}, receive, capture
+            )
+
+    starts = [m for m in sent if m["type"] == "http.response.start"]
+    assert len(starts) == 1
+    assert starts[0]["status"] == status.HTTP_200_OK
+
+
 def test_configure_cors_enabled() -> None:
     """Test CORS middleware configuration when origins are enabled."""
     app = FastAPI()

@@ -1,19 +1,15 @@
 import re
 import uuid
-from collections.abc import Awaitable, Callable
 
 import anyio
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import Environment, settings
-from app.core.exception_handlers import _problem_response
 from app.core.schemas import ProblemDetail
 
 logger = structlog.get_logger(__name__)
@@ -33,106 +29,146 @@ def _safe_request_id(raw: str | None) -> str:
     return str(uuid.uuid4())
 
 
-class TimeoutMiddleware(BaseHTTPMiddleware):
-    """Enforce a per-request wall-clock timeout using anyio cancel scopes."""
+class TimeoutMiddleware:
+    """Enforce a per-request wall-clock timeout using anyio cancel scopes.
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        """Cancel the request and return 504 if it exceeds the timeout.
+    Pure ASGI so it adds no ``BaseHTTPMiddleware`` task/streaming
+    overhead. A 504 is only manufacturable while the response has not
+    yet started; once ``http.response.start`` has gone out the headers
+    are already on the wire, so a timeout past that point can only abort
+    the connection (the clock stops at headers — the same limitation the
+    old ``BaseHTTPMiddleware`` had, now explicit rather than silent).
+    """
 
-        Args:
-            request: The incoming request.
-            call_next: The next middleware or route handler.
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
 
-        Returns:
-            The response from the downstream handler, or a 504 Problem
-            Details response if the deadline is exceeded.
-        """
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Cancel the request and return 504 if it exceeds the timeout."""
         timeout = settings.REQUEST_TIMEOUT_SECONDS
-        if timeout <= 0:
-            return await call_next(request)
+        if scope["type"] != "http" or timeout <= 0:
+            await self.app(scope, receive, send)
+            return
+
+        response_started = False
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
         try:
             with anyio.fail_after(timeout):
-                return await call_next(request)
+                await self.app(scope, receive, send_wrapper)
         except TimeoutError:
             logger.warning(
                 "request_timeout",
-                path=request.url.path,
+                path=scope.get("path", ""),
                 timeout=timeout,
             )
+            if response_started:
+                # Headers already sent — the fail_after scope has torn
+                # down the handler; nothing left to do but let the abort
+                # propagate.
+                raise
             problem = ProblemDetail(
                 type="urn:quoin:error:gateway_timeout_error",
                 title="Gateway Timeout",
                 status=504,
                 detail=f"Request exceeded {timeout}s timeout",
-                instance=request.url.path,
+                instance=scope.get("path", ""),
             )
-            return _problem_response(problem, 504)
+            await _send_problem(send, problem, 504)
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Generate or propagate X-Request-ID and bind it to the log context."""
+class RequestIDMiddleware:
+    """Generate or propagate X-Request-ID and bind it to the log context.
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
+    Pure ASGI. The contextvar is unbound only after the downstream app
+    has fully completed, so log lines emitted while a response body is
+    still streaming keep their ``request_id`` binding.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
         """Assign a request ID, bind it to structlog, echo it in response."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         header = settings.REQUEST_ID_HEADER
-        request_id = _safe_request_id(request.headers.get(header))
+        inbound = _header_value(scope, header.lower().encode("latin-1"))
+        request_id = _safe_request_id(inbound)
         structlog.contextvars.bind_contextvars(request_id=request_id)
+
+        async def send_with_id(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                MutableHeaders(raw=message["headers"])[header] = request_id
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, receive, send_with_id)
         finally:
             structlog.contextvars.unbind_contextvars("request_id")
-        response.headers[header] = request_id
-        return response
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+class SecurityHeadersMiddleware:
     """Add baseline security response headers on every response.
 
     Emits HSTS, CSP, X-Frame-Options, X-Content-Type-Options,
     Referrer-Policy, and Permissions-Policy. All values are configurable
     via ``QUOIN_SECURITY_*`` settings; the middleware itself is gated by
-    ``QUOIN_SECURITY_HEADERS_ENABLED``.
+    ``QUOIN_SECURITY_HEADERS_ENABLED``. Pure ASGI.
     """
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        """Apply configured security headers to the downstream response."""
-        response = await call_next(request)
-        if not settings.SECURITY_HEADERS_ENABLED:
-            return response
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
 
-        headers = response.headers
-        headers.setdefault("X-Content-Type-Options", "nosniff")
-        headers.setdefault("X-Frame-Options", "DENY")
-        if settings.SECURITY_REFERRER_POLICY:
-            headers.setdefault(
-                "Referrer-Policy", settings.SECURITY_REFERRER_POLICY
-            )
-        if settings.SECURITY_PERMISSIONS_POLICY:
-            headers.setdefault(
-                "Permissions-Policy", settings.SECURITY_PERMISSIONS_POLICY
-            )
-        if settings.SECURITY_CSP:
-            headers.setdefault("Content-Security-Policy", settings.SECURITY_CSP)
-        if settings.SECURITY_HSTS_MAX_AGE > 0:
-            value = f"max-age={settings.SECURITY_HSTS_MAX_AGE}"
-            if settings.SECURITY_HSTS_INCLUDE_SUBDOMAINS:
-                value += "; includeSubDomains"
-            if settings.SECURITY_HSTS_PRELOAD:
-                value += "; preload"
-            headers.setdefault("Strict-Transport-Security", value)
-        return response
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Apply configured security headers to the downstream response."""
+        if scope["type"] != "http" or not settings.SECURITY_HEADERS_ENABLED:
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                _apply_security_headers(MutableHeaders(raw=message["headers"]))
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+def _apply_security_headers(headers: MutableHeaders) -> None:
+    """Set the configured security headers, never clobbering existing ones."""
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    headers.setdefault("X-Frame-Options", "DENY")
+    if settings.SECURITY_REFERRER_POLICY:
+        headers.setdefault("Referrer-Policy", settings.SECURITY_REFERRER_POLICY)
+    if settings.SECURITY_PERMISSIONS_POLICY:
+        headers.setdefault(
+            "Permissions-Policy", settings.SECURITY_PERMISSIONS_POLICY
+        )
+    if settings.SECURITY_CSP:
+        headers.setdefault("Content-Security-Policy", settings.SECURITY_CSP)
+    if settings.SECURITY_HSTS_MAX_AGE > 0:
+        value = f"max-age={settings.SECURITY_HSTS_MAX_AGE}"
+        if settings.SECURITY_HSTS_INCLUDE_SUBDOMAINS:
+            value += "; includeSubDomains"
+        if settings.SECURITY_HSTS_PRELOAD:
+            value += "; preload"
+        headers.setdefault("Strict-Transport-Security", value)
 
 
 class RequestSizeLimitMiddleware:
@@ -220,6 +256,36 @@ def _header_value(scope: Scope, name: bytes) -> str | None:
     return None
 
 
+async def _send_problem(
+    send: Send,
+    problem: ProblemDetail,
+    status: int,
+    *,
+    close: bool = False,
+) -> None:
+    """Send an RFC 9457 Problem Details response over raw ASGI.
+
+    Args:
+        send: The ASGI send callable.
+        problem: The Problem Details body to serialise.
+        status: The HTTP status code.
+        close: When True, add ``Connection: close`` — used where the
+            request stream may still hold an unread body (a rejected
+            oversize upload) that we do not want to drain.
+    """
+    body = problem.model_dump_json(exclude_none=True).encode("utf-8")
+    headers = [
+        (b"content-type", b"application/problem+json"),
+        (b"content-length", str(len(body)).encode("ascii")),
+    ]
+    if close:
+        headers.append((b"connection", b"close"))
+    await send(
+        {"type": "http.response.start", "status": status, "headers": headers}
+    )
+    await send({"type": "http.response.body", "body": body})
+
+
 async def _send_413(send: Send, path: str, limit: int) -> None:
     """Send a 413 RFC 9457 Problem Details response and close the stream."""
     logger.warning("request_too_large", path=path, limit=limit)
@@ -230,19 +296,7 @@ async def _send_413(send: Send, path: str, limit: int) -> None:
         detail=f"Request body exceeds {limit} bytes",
         instance=path,
     )
-    body = problem.model_dump_json(exclude_none=True).encode("utf-8")
-    await send(
-        {
-            "type": "http.response.start",
-            "status": 413,
-            "headers": [
-                (b"content-type", b"application/problem+json"),
-                (b"content-length", str(len(body)).encode("ascii")),
-                (b"connection", b"close"),
-            ],
-        }
-    )
-    await send({"type": "http.response.body", "body": body})
+    await _send_problem(send, problem, 413, close=True)
 
 
 def _has_wildcard(values: list[str]) -> bool:
