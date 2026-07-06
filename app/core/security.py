@@ -14,12 +14,12 @@ from typing import Any
 import jwt
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from httpx import AsyncClient
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, UnauthorizedError
+from app.http.client import ResilientHTTPClient, get_http_client
 
 # ---------------------------------------------------------------------------
 # JWKS Cache
@@ -75,16 +75,26 @@ class JWKSCache:
         """
         return (time.monotonic() - self._last_attempt) > self._min_refresh
 
-    async def _refresh(self) -> None:
-        """Fetch fresh keys from the JWKS URI."""
+    async def _refresh(self, client: ResilientHTTPClient) -> None:
+        """Fetch fresh keys from the JWKS URI via the shared HTTP client.
+
+        Transport-level failures (connection refused, timeout, open
+        circuit) propagate as the client's 5xx domain exceptions —
+        a down IdP is our upstream failing, not a bad caller token.
+        Only a genuine HTTP error *response* (e.g. 404 JWKS) or an
+        unparseable body maps back to ``UnauthorizedError``.
+
+        Args:
+            client: The shared resilient HTTP client (retries, per-host
+                circuit breaker, shared timeout, OTel instrumentation).
+        """
         # Record the attempt up-front so a *failed* fetch also backs
         # off, not just a successful one.
         self._last_attempt = time.monotonic()
+        response = await client.get(self._uri, retry_on_status=True)
         try:
-            async with AsyncClient() as client:
-                response = await client.get(self._uri, timeout=10.0)
-                response.raise_for_status()
-                jwks = response.json()
+            response.raise_for_status()
+            jwks = response.json()
         except Exception as exc:
             raise UnauthorizedError(
                 "Unable to fetch OAuth signing keys"
@@ -103,13 +113,16 @@ class JWKSCache:
         self._keys = keys
         self._fetched_at = time.monotonic()
 
-    async def get_signing_key(self, kid: str) -> Any:
+    async def get_signing_key(
+        self, kid: str, client: ResilientHTTPClient
+    ) -> Any:
         """Return the public key for the given kid.
 
         Fetches from JWKS URI if the cache is stale or the kid is unknown.
 
         Args:
             kid: The key ID from the JWT header.
+            client: The shared resilient HTTP client used for any refresh.
 
         Returns:
             The RSA public key object.
@@ -120,7 +133,7 @@ class JWKSCache:
         async with self._lock:
             unknown_kid = kid not in self._keys
             if (self._is_stale() or unknown_kid) and self._may_refetch():
-                await self._refresh()
+                await self._refresh(client)
             if kid not in self._keys:
                 raise UnauthorizedError("Token signing key not found")
             return self._keys[kid]
@@ -197,13 +210,16 @@ class ServicePrincipal(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-async def validate_token(token: str) -> dict[str, Any]:
+async def validate_token(
+    token: str, client: ResilientHTTPClient
+) -> dict[str, Any]:
     """Validate a Bearer JWT against the configured OAuth server.
 
     Checks signature (via JWKS), expiry, audience, and issuer.
 
     Args:
         token: Raw JWT string (without "Bearer " prefix).
+        client: The shared resilient HTTP client used to fetch JWKS.
 
     Returns:
         Decoded claims dict.
@@ -234,7 +250,7 @@ async def validate_token(token: str) -> dict[str, Any]:
 
     kid = header.get("kid", "")
     cache = _get_jwks_cache()
-    public_key = await cache.get_signing_key(kid)
+    public_key = await cache.get_signing_key(kid, client)
 
     decode_options: dict[str, Any] = {
         "verify_exp": True,
@@ -269,11 +285,13 @@ async def validate_token(token: str) -> dict[str, Any]:
 
 async def get_token_claims(
     credentials: HTTPAuthorizationCredentials | None = Depends(_http_bearer),
+    http_client: ResilientHTTPClient = Depends(get_http_client),
 ) -> dict[str, Any]:
     """Extract and validate the Bearer token from the request.
 
     Args:
         credentials: HTTP Bearer credentials from the Authorization header.
+        http_client: The shared resilient HTTP client (for JWKS fetches).
 
     Returns:
         Decoded JWT claims dict.
@@ -283,7 +301,7 @@ async def get_token_claims(
     """
     if credentials is None:
         raise UnauthorizedError("Authorization header is required")
-    return await validate_token(credentials.credentials)
+    return await validate_token(credentials.credentials, http_client)
 
 
 async def get_current_caller(
