@@ -52,7 +52,8 @@ The `Dockerfile` uses a **multi-stage build**:
 ```dockerfile
 # Stage 1: Builder — install dependencies only
 FROM python:3.14-slim-bookworm AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+# uv pinned by version tag AND manifest digest for reproducible builds
+COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e... /uv /bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
@@ -71,7 +72,17 @@ RUN addgroup --system --gid 1001 quoin && \
     adduser --system --uid 1001 --ingroup quoin quoin
 RUN chown -R quoin:quoin /app
 USER quoin
+# Liveness probe hitting /health via the stdlib (no curl in slim)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).status == 200 else 1)"]
 CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+The `HEALTHCHECK` lets Docker/Compose report container health (and
+orchestrators gate traffic on it). Inspect it with:
+
+```bash
+docker inspect --format '{{.State.Health.Status}}' quoin-api
 ```
 
 ### Running in Production
@@ -102,6 +113,41 @@ docker run -d \
   -e QUOIN_POSTGRES_HOST=db \
   quoin-api:latest
 ```
+
+---
+
+## Behind a load balancer or reverse proxy
+
+When the service runs behind a load balancer, ingress, or reverse proxy
+(the usual production topology), the TCP peer is the proxy, not the
+client. To recover the real client IP, scheme, and host, the app must
+trust the `X-Forwarded-*` / `Forwarded` headers the proxy sets — but
+**only from the proxy**, because any client can forge those headers.
+
+Proxy-header trust is therefore **off by default**. Enable it
+explicitly for the deployment, scoping trust to the proxy's address:
+
+```bash
+# Trust forwarded headers only from the proxy's IP(s). Never use "*"
+# unless the app is unreachable except through the proxy.
+docker run -d \
+  --name quoin-api \
+  -p 8000:8000 \
+  -e FORWARDED_ALLOW_IPS=10.0.0.0/8 \
+  quoin-api:latest \
+  fastapi run app/main.py --host 0.0.0.0 --port 8000 --proxy-headers
+```
+
+- `--proxy-headers` tells the underlying uvicorn server to honour the
+  forwarded headers.
+- `FORWARDED_ALLOW_IPS` (a uvicorn environment variable) restricts
+  which source addresses are trusted; set it to the proxy's IP or CIDR,
+  never a blanket `*` on an internet-reachable socket — that lets any
+  caller spoof their apparent client IP (and thus your access logs and
+  any IP-based logic).
+
+If you terminate TLS at the edge, also ensure the proxy forwards
+`X-Forwarded-Proto: https` so the app builds correct absolute URLs.
 
 ---
 
@@ -172,7 +218,8 @@ new traffic to the draining instance.
 
 Use these endpoints for:
 
-- **Docker health checks** - `HEALTHCHECK` directive
+- **Docker health checks** - the image ships a `HEALTHCHECK` directive
+  that polls `/health` (see the Dockerfile above)
 - **Load balancer probes** - Kubernetes liveness/readiness
 - **Monitoring systems** - Uptime tracking
 

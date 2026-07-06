@@ -9,9 +9,14 @@ following the same patterns used by the existing `user` module.
 
 !!! tip "Scaffold first"
     Run `just new product` before following the steps below. This creates
-    the module directory, a minimal router export, tests directory, and
-    `app/api.py` registration so you can fill in the feature layers
-    without manually creating the boilerplate.
+    the module directory and `app/api.py` registration, with every file
+    as a minimally-working stub that passes `just check` immediately: a
+    router with the pluralized prefix, `ProductRepository` /
+    `ProductService` classes, a `ProductBase(SQLModel)` schema, a
+    `ProductNotFoundError` example, and a skeleton test asserting the
+    router prefix. Only `models.py` is left empty (a real table needs a
+    migration — see step below). Fill in each layer by replacing the
+    placeholder shapes.
 
 ---
 

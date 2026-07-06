@@ -88,6 +88,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | :--------------------------- | :-------------------------------------------------- | :--------------------------------------------------- |
 | `QUOIN_ENV`                  | Environment (`development`, `test`, `production`)   | `development`                                        |
 | `QUOIN_LOG_LEVEL`            | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) | `INFO`                                               |
+| `QUOIN_ACCESS_LOG_ENABLED`   | One INFO line per request (method, path, status, duration); probes excluded | `true`                       |
 | `QUOIN_OTEL_ENABLED`         | Enable OpenTelemetry tracing                        | `true`                                               |
 | `QUOIN_POSTGRES_DRIVER`      | Database driver                                     | `postgresql+asyncpg`                                 |
 | `QUOIN_POSTGRES_HOST`        | PostgreSQL host                                     | `localhost`                                          |

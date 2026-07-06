@@ -1,4 +1,5 @@
 import re
+import time
 import uuid
 
 import anyio
@@ -209,6 +210,59 @@ class RequestSizeLimitMiddleware:
         await self.app(scope, receive, send)
 
 
+class AccessLogMiddleware:
+    """Emit one structured INFO line per HTTP request.
+
+    Pure ASGI. Logs method, path, status, and wall-clock duration once
+    the response has started, so production debugging does not rely
+    solely on traces. The ``/health`` and ``/ready`` probe paths are
+    excluded to keep orchestrator polling out of the log stream, and
+    the whole layer is gated by ``QUOIN_ACCESS_LOG_ENABLED``.
+
+    Placed inside ``RequestIDMiddleware`` (see ``configure_middlewares``)
+    so the bound ``request_id`` rides along on every line.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the downstream ASGI app."""
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Log the request outcome once the response completes."""
+        if (
+            scope["type"] != "http"
+            or not settings.ACCESS_LOG_ENABLED
+            or scope.get("path", "") in _PROBE_PATHS
+        ):
+            await self.app(scope, receive, send)
+            return
+
+        status = 500
+        started = time.perf_counter()
+
+        async def send_with_status(message: Message) -> None:
+            nonlocal status
+            if message["type"] == "http.response.start":
+                status = message["status"]
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_status)
+        finally:
+            # ``finally`` so a request that raises before responding
+            # still records a line (status stays 500) before the
+            # exception propagates to the handler chain.
+            logger.info(
+                "http_request",
+                method=scope.get("method", ""),
+                path=scope.get("path", ""),
+                status=status,
+                duration_ms=round((time.perf_counter() - started) * 1000, 2),
+            )
+
+
 class InFlightRequestMiddleware:
     """Track in-flight HTTP requests for graceful-shutdown draining.
 
@@ -371,17 +425,24 @@ def configure_middlewares(app: FastAPI) -> None:
     added first of all so it sits innermost — closest to the router —
     and brackets only requests that pass every outer layer and reach a
     handler.
+
+    AccessLog is added just before RequestID, so it sits inside
+    RequestID (the ``request_id`` contextvar is bound before it runs)
+    but outside Timeout/SizeLimit/CORS — one INFO line per request that
+    correctly reports 504/413 statuses and their duration too.
     """
     app.add_middleware(InFlightRequestMiddleware)  # innermost — added first
     app.add_middleware(RequestSizeLimitMiddleware)
     app.add_middleware(TimeoutMiddleware)
     configure_cors(app)
     configure_trusted_hosts(app)
+    app.add_middleware(AccessLogMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)  # outermost — added last
 
 
 __all__ = [
+    "AccessLogMiddleware",
     "InFlightRequestMiddleware",
     "RequestIDMiddleware",
     "RequestSizeLimitMiddleware",

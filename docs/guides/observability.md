@@ -69,10 +69,14 @@ Machine-readable JSON:
   "event": "user_created",
   "email": "test@example.com",
   "user_id": "abc123def456",
-  "timestamp": "2026-02-15T15:30:00.123456",
+  "timestamp": "2026-02-15T15:30:00.123456+00:00",
   "level": "info"
 }
 ```
+
+In `production` the `timestamp` is emitted in **UTC** so logs
+aggregated from many hosts share one timezone. Development and test
+logs use host-local time to stay readable against the wall clock.
 
 ### Usage in Code
 
@@ -173,6 +177,40 @@ QUOIN_REQUEST_ID_HEADER=X-Correlation-ID
 
 This affects both the inbound lookup and the outbound response header,
 so callers and the application always agree on the name.
+
+### Access Log
+
+`AccessLogMiddleware` emits exactly one structured `http_request` INFO
+line as each request completes — so happy-path traffic is visible in
+the log stream, not only in traces. The line carries `method`, `path`,
+`status`, and `duration_ms`, plus the `request_id` (and trace context)
+bound for that request:
+
+```json
+{
+  "event": "http_request",
+  "method": "GET",
+  "path": "/api/v1/users/",
+  "status": 200,
+  "duration_ms": 12.34,
+  "request_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "level": "info"
+}
+```
+
+The middleware sits inside `RequestIDMiddleware` but outside the
+timeout and body-size limits, so 504 and 413 responses are logged with
+their real status too. If a handler raises before responding, a line
+is still recorded (with `status` 500) before the error propagates.
+
+The `/health` and `/ready` probe paths are excluded to keep
+orchestrator polling out of the stream. Disable the access log
+entirely with:
+
+```bash
+# .env
+QUOIN_ACCESS_LOG_ENABLED=False
+```
 
 ---
 

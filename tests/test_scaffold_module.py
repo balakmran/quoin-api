@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from scripts.scaffold_module import (
+    class_name,
     route_collection_name,
     scaffold_module,
     validate_module_name,
@@ -44,16 +45,34 @@ def test_scaffold_module_creates_files_and_registers_router(
         "from fastapi import APIRouter\n\n"
         'router = APIRouter(prefix="/order_items", tags=["order_items"])\n'
     )
-    for filename in (
-        "models.py",
-        "schemas.py",
-        "repository.py",
-        "service.py",
-        "exceptions.py",
-    ):
-        assert (module_dir / filename).exists()
+    # Stubs are minimally working (not empty), with PascalCase classes.
+    assert (
+        "class OrderItemRepository:"
+        in (module_dir / "repository.py").read_text()
+    )
+    assert "class OrderItemService:" in (module_dir / "service.py").read_text()
+    assert (
+        "class OrderItemBase(SQLModel):"
+        in (module_dir / "schemas.py").read_text()
+    )
+    assert (
+        "class OrderItemNotFoundError(NotFoundError):"
+        in (module_dir / "exceptions.py").read_text()
+    )
+    # models.py stays a documented empty stub (a real table needs a
+    # migration), so it has no class definition.
+    models_text = (module_dir / "models.py").read_text()
+    assert not any(
+        line.startswith("class ") for line in models_text.splitlines()
+    )
+    assert models_text.startswith('"""')
 
-    assert (tmp_path / "tests" / "modules" / "order_item").is_dir()
+    test_dir = tmp_path / "tests" / "modules" / "order_item"
+    assert test_dir.is_dir()
+    test_text = (test_dir / "test_routes.py").read_text()
+    assert "def test_order_items_router_has_prefix() -> None:" in test_text
+    assert 'assert router.prefix == "/order_items"' in test_text
+
     api_text = (tmp_path / "app" / "api.py").read_text()
     assert (
         "from app.modules.order_item import router as order_item_router"
@@ -96,3 +115,16 @@ def test_route_collection_name_pluralizes_last_segment(
 ) -> None:
     """Route collection names use a simple plural form."""
     assert route_collection_name(module) == collection
+
+
+@pytest.mark.parametrize(
+    ("module", "expected"),
+    [
+        ("product", "Product"),
+        ("order_item", "OrderItem"),
+        ("user", "User"),
+    ],
+)
+def test_class_name_pascal_cases_module(module: str, expected: str) -> None:
+    """Class prefixes are the PascalCase form of the module name."""
+    assert class_name(module) == expected
