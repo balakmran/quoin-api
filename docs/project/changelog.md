@@ -11,6 +11,25 @@
 
 ### Changed
 
+- **Database**: connection-pool sizing is now tunable via
+  `QUOIN_DB_POOL_SIZE`, `QUOIN_DB_MAX_OVERFLOW`, `QUOIN_DB_POOL_TIMEOUT`,
+  `QUOIN_DB_POOL_RECYCLE`, and `QUOIN_DB_POOL_PRE_PING` instead of the
+  hardcoded engine literals — the first knobs any real deployment tunes.
+  Defaults match the previous behaviour.
+- **Middleware**: `TimeoutMiddleware`, `RequestIDMiddleware`, and
+  `SecurityHeadersMiddleware` are now pure ASGI (they were the last
+  `BaseHTTPMiddleware` layers), shedding per-request task overhead and
+  the streaming penalty. A request timeout that fires after the response
+  has started now aborts rather than emitting an illegal second
+  response, and the `X-Request-ID` log binding is held until the app
+  fully completes so streamed log lines keep it.
+- **Security**: JWKS keys are now fetched through the shared resilient
+  HTTP client (retries, per-host circuit breaker, shared
+  `QUOIN_HTTP_TIMEOUT_SECONDS`, OpenTelemetry) instead of a fresh bare
+  `httpx.AsyncClient` per refresh. A transport-level JWKS failure (down
+  IdP, timeout, open circuit) now surfaces as a `502`/`503`/`504`
+  instead of a mislabeled `401`; a genuine JWKS HTTP error response
+  (e.g. `404`) still maps to `401`.
 - **Persistence**: transactions now follow a unit-of-work boundary.
   `get_session` commits once when a request handler returns and rolls
   back if it raises, so a request touching multiple repositories is
