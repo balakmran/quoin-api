@@ -31,7 +31,12 @@ def setup_logging() -> None:
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.TimeStamper(fmt="iso", utc=False),
+        # UTC in production so aggregated JSON logs are timezone-stable
+        # across hosts; local time in dev/test keeps console logs
+        # readable against the wall clock.
+        structlog.processors.TimeStamper(
+            fmt="iso", utc=settings.ENV == Environment.production
+        ),
     ]
 
     if settings.ENV == Environment.production:

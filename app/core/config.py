@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     # Application
     ENV: Environment = Environment.development
     LOG_LEVEL: str = "INFO"
+    ACCESS_LOG_ENABLED: bool = True
     OTEL_ENABLED: bool = True
     REQUEST_ID_HEADER: str = "X-Request-ID"
     REQUEST_TIMEOUT_SECONDS: float = 30.0

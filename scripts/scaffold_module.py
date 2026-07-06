@@ -8,13 +8,110 @@ from pathlib import Path
 
 MODULE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
-FILES = (
-    "models.py",
-    "schemas.py",
-    "repository.py",
-    "service.py",
-    "exceptions.py",
-)
+
+def class_name(module: str) -> str:
+    """Return the PascalCase class prefix for a module.
+
+    Args:
+        module: Valid snake_case module name.
+
+    Returns:
+        The PascalCase form, e.g. ``order_item`` -> ``OrderItem``.
+    """
+    module = validate_module_name(module)
+    return "".join(part.capitalize() for part in module.split("_"))
+
+
+def _models_stub(module: str) -> str:
+    """Return the ``models.py`` stub for a module."""
+    return (
+        f'"""Database models for the {module} module.\n\n'
+        "Define a SQLModel table class here (mirror\n"
+        "app/modules/user/models.py), then generate a migration with\n"
+        "``just migrate-gen``. Left empty by the scaffold because a real\n"
+        'table requires a migration.\n"""\n'
+    )
+
+
+def _schemas_stub(module: str) -> str:
+    """Return the ``schemas.py`` stub for a module."""
+    cls = class_name(module)
+    return (
+        f'"""Request/response schemas for the {module} module."""\n\n'
+        "from sqlmodel import SQLModel\n\n\n"
+        f"class {cls}Base(SQLModel):\n"
+        f'    """Shared fields for {cls} request/response schemas."""\n'
+    )
+
+
+def _exceptions_stub(module: str) -> str:
+    """Return the ``exceptions.py`` stub for a module."""
+    cls = class_name(module)
+    return (
+        f'"""Domain exceptions for the {module} module."""\n\n'
+        "from app.core.exceptions import NotFoundError\n\n\n"
+        f"class {cls}NotFoundError(NotFoundError):\n"
+        f'    """Raised when a {module} is not found."""\n\n'
+        f"    def __init__(self, {module}_id: str) -> None:\n"
+        f'        """Initialize {cls}NotFoundError."""\n'
+        "        super().__init__(\n"
+        # Split into two implicitly-concatenated pieces so the line
+        # stays under the 80-char limit for long module names; ruff
+        # format collapses it back for short ones.
+        "            message=(\n"
+        f'                f"{cls} with ID "\n'
+        f"                f\"'{{{module}_id}}' not found\"\n"
+        "            )\n"
+        "        )\n"
+    )
+
+
+def _repository_stub(module: str) -> str:
+    """Return the ``repository.py`` stub for a module."""
+    cls = class_name(module)
+    return (
+        f'"""Data-access layer for the {module} module."""\n\n'
+        "from sqlmodel.ext.asyncio.session import AsyncSession\n\n\n"
+        f"class {cls}Repository:\n"
+        f'    """Async CRUD for {cls} records.\n\n'
+        "    Mirror app/modules/user/repository.py: take a session, return\n"
+        "    models or None, and keep business logic out of this layer.\n"
+        '    """\n\n'
+        "    def __init__(self, session: AsyncSession) -> None:\n"
+        '        """Store the database session.\n\n'
+        "        Args:\n"
+        "            session: The async database session for all queries.\n"
+        '        """\n'
+        "        self.session = session\n"
+    )
+
+
+def _service_stub(module: str) -> str:
+    """Return the ``service.py`` stub for a module."""
+    cls = class_name(module)
+    return (
+        f'"""Business-logic layer for the {module} module."""\n\n'
+        f"from app.modules.{module}.repository import {cls}Repository\n\n\n"
+        f"class {cls}Service:\n"
+        f'    """Business-logic layer for {cls} operations."""\n\n'
+        f"    def __init__(self, repository: {cls}Repository) -> None:\n"
+        '        """Inject the repository used for all persistence.\n\n'
+        "        Args:\n"
+        f"            repository: The {cls}Repository to delegate to.\n"
+        '        """\n'
+        "        self.repository = repository\n"
+    )
+
+
+def _test_routes_stub(module: str, collection: str) -> str:
+    """Return the ``test_routes.py`` skeleton for a module."""
+    return (
+        f'"""Tests for the {module} routes."""\n\n'
+        f"from app.modules.{module} import router\n\n\n"
+        f"def test_{collection}_router_has_prefix() -> None:\n"
+        '    """The scaffolded router is mounted under its prefix."""\n'
+        f'    assert router.prefix == "/{collection}"\n'
+    )
 
 
 def validate_module_name(module: str) -> str:
@@ -68,11 +165,16 @@ def scaffold_module(root: Path, module: str) -> None:
         f'router = APIRouter(prefix="/{collection}", tags=["{collection}"])\n'
     )
 
-    for filename in FILES:
-        (module_dir / filename).touch()
+    (module_dir / "models.py").write_text(_models_stub(module))
+    (module_dir / "schemas.py").write_text(_schemas_stub(module))
+    (module_dir / "exceptions.py").write_text(_exceptions_stub(module))
+    (module_dir / "repository.py").write_text(_repository_stub(module))
+    (module_dir / "service.py").write_text(_service_stub(module))
 
     (test_dir / "__init__.py").touch()
-    (test_dir / "test_routes.py").touch()
+    (test_dir / "test_routes.py").write_text(
+        _test_routes_stub(module, collection)
+    )
 
     register_router(root / "app" / "api.py", module)
 
@@ -161,6 +263,15 @@ def main() -> None:
         f"app/modules/{args.module}/ and tests/modules/{args.module}/"
     )
     print(f"Router registered in app/api.py as {args.module}_router")
+    print(
+        "Stubs (repository, service, schemas, exceptions, skeleton test) "
+        "are minimal and pass 'just check' as-is."
+    )
+    print(
+        "models.py is intentionally empty: define a table then run "
+        "'just migrate-gen'. See the quoin-new-module skill / "
+        "docs/guides/creating-a-module.md to fill in the layers."
+    )
 
 
 if __name__ == "__main__":

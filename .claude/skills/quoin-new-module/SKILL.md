@@ -25,8 +25,20 @@ just new <module>
 
 This creates
 `app/modules/<module>/{__init__,models,schemas,repository,service,routes,exceptions}.py`
-and `tests/modules/<module>/test_routes.py`. It also writes a minimal
-router, exports it from `__init__.py`, and registers it in `app/api.py`.
+and `tests/modules/<module>/test_routes.py`, all as minimally-working
+stubs that pass `just check` as-is:
+
+- `routes.py` — a router with the pluralized prefix, exported from
+  `__init__.py` and registered in `app/api.py`.
+- `repository.py` / `service.py` — `<Class>Repository` /
+  `<Class>Service` classes with session/repository injection.
+- `schemas.py` — a `<Class>Base(SQLModel)` placeholder.
+- `exceptions.py` — a `<Class>NotFoundError(NotFoundError)` example.
+- `test_routes.py` — a skeleton test asserting the router prefix.
+- `models.py` — a documented **empty** stub; a real table needs a
+  migration (step 10), so define the model, then `just migrate-gen`.
+
+Fill each layer in below, replacing the placeholder shapes.
 
 ### 2. Define the model (`models.py`)
 

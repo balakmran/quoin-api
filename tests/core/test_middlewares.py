@@ -1,4 +1,7 @@
+import contextlib
 import uuid
+from collections.abc import Iterator, MutableMapping
+from typing import Any
 from unittest.mock import patch
 
 import anyio
@@ -9,9 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from httpx import ASGITransport, AsyncClient, Response
 from starlette.types import Message, Receive, Scope, Send
+from structlog.testing import capture_logs
 
+from app.core import middlewares
 from app.core.config import Environment, settings
 from app.core.middlewares import (
+    AccessLogMiddleware,
     RequestIDMiddleware,
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -213,6 +219,9 @@ def test_configure_middlewares() -> None:
         has_size_limit = any(
             m.cls == RequestSizeLimitMiddleware for m in app.user_middleware
         )
+        has_access_log = any(
+            m.cls == AccessLogMiddleware for m in app.user_middleware
+        )
 
         assert has_cors
         assert has_trusted_host
@@ -220,6 +229,7 @@ def test_configure_middlewares() -> None:
         assert has_timeout
         assert has_security_headers
         assert has_size_limit
+        assert has_access_log
 
 
 @pytest.fixture
@@ -741,3 +751,121 @@ async def test_trusted_host_rejects_bad_host_on_preflight() -> None:
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Access-Control-Allow-Origin" not in response.headers
+
+
+@pytest.fixture
+def access_log_app() -> FastAPI:
+    """Minimal app wrapping AccessLogMiddleware for access-log testing."""
+    app = FastAPI()
+    app.add_middleware(AccessLogMiddleware)
+
+    @app.get("/ok")
+    async def ok_endpoint() -> dict[str, str]:
+        return {"ok": "true"}
+
+    @app.get("/health")
+    async def health_endpoint() -> dict[str, str]:
+        return {"status": "healthy"}
+
+    return app
+
+
+@contextlib.contextmanager
+def _capture_access_logs() -> Iterator[list[MutableMapping[str, Any]]]:
+    """Capture events from the middlewares module logger.
+
+    ``capture_logs`` swaps the processor chain, but the module-level
+    ``middlewares.logger`` is realized and cached by earlier tests
+    (``cache_logger_on_first_use=True``), so it would keep the real
+    processors and bypass the capture. Swapping in a fresh, unrealized
+    proxy makes it bind to the capture processors inside the block.
+    """
+    with capture_logs() as cap_logs:
+        with patch.object(middlewares, "logger", structlog.get_logger()):
+            yield cap_logs
+
+
+@pytest.mark.asyncio
+async def test_access_log_emits_one_line(access_log_app: FastAPI) -> None:
+    """A normal request emits exactly one http_request INFO line."""
+    with _capture_access_logs() as cap_logs:
+        async with AsyncClient(
+            transport=ASGITransport(app=access_log_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/ok")
+
+    assert response.status_code == status.HTTP_200_OK
+    events = [log for log in cap_logs if log["event"] == "http_request"]
+    assert len(events) == 1
+    line = events[0]
+    assert line["method"] == "GET"
+    assert line["path"] == "/ok"
+    assert line["status"] == status.HTTP_200_OK
+    assert line["log_level"] == "info"
+    assert isinstance(line["duration_ms"], float)
+    assert line["duration_ms"] >= 0
+
+
+@pytest.mark.asyncio
+async def test_access_log_skips_probe_paths(access_log_app: FastAPI) -> None:
+    """Probe paths (/health, /ready) are excluded from the access log."""
+    with _capture_access_logs() as cap_logs:
+        async with AsyncClient(
+            transport=ASGITransport(app=access_log_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/health")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [log for log in cap_logs if log["event"] == "http_request"] == []
+
+
+@pytest.mark.asyncio
+async def test_access_log_disabled_by_setting(
+    access_log_app: FastAPI,
+) -> None:
+    """ACCESS_LOG_ENABLED=False suppresses the access log entirely."""
+    with (
+        patch.object(settings, "ACCESS_LOG_ENABLED", False),
+        _capture_access_logs() as cap_logs,
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=access_log_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.get("/ok")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [log for log in cap_logs if log["event"] == "http_request"] == []
+
+
+@pytest.mark.asyncio
+async def test_access_log_records_failed_request() -> None:
+    """A handler that raises before responding still logs status 500.
+
+    Driven at the raw ASGI level so the exception propagates (as it
+    would to an outer error handler) rather than being converted to a
+    500 response by a test transport — the point is that the ``finally``
+    still records one line with the default 500 status.
+    """
+
+    async def boom_app(scope: Scope, receive: Receive, send: Send) -> None:
+        raise RuntimeError("kaboom")
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    async def send(message: Message) -> None:
+        return None
+
+    middleware = AccessLogMiddleware(boom_app)
+    scope: Scope = {"type": "http", "method": "GET", "path": "/boom"}
+    with _capture_access_logs() as cap_logs:
+        with pytest.raises(RuntimeError, match="kaboom"):
+            await middleware(scope, receive, send)
+
+    events = [log for log in cap_logs if log["event"] == "http_request"]
+    assert len(events) == 1
+    assert events[0]["path"] == "/boom"
+    assert events[0]["status"] == status.HTTP_500_INTERNAL_SERVER_ERROR

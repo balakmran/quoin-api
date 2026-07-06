@@ -8,9 +8,31 @@
   returns 409 `UserInUseError` instead of a bare 500 — the repository
   translates the foreign-key `IntegrityError` at the unit-of-work
   boundary.
+- **Observability**: a structured access log (`AccessLogMiddleware`)
+  emits one `http_request` INFO line per request with `method`,
+  `path`, `status`, and `duration_ms` (plus the bound `request_id`),
+  so happy-path traffic is visible in logs and not only in traces.
+  Probe paths (`/health`, `/ready`) are excluded; toggle with
+  `QUOIN_ACCESS_LOG_ENABLED` (default on).
+- **Docker**: the image now ships a `HEALTHCHECK` that polls `/health`
+  via the stdlib, so Docker/Compose and orchestrators can gate on
+  container health.
 
 ### Changed
 
+- **Scaffolding**: `just new <module>` now generates minimally-working
+  stubs instead of empty files — `<Class>Repository`/`<Class>Service`
+  classes, a `<Class>Base(SQLModel)` schema, a `<Class>NotFoundError`
+  example, and a skeleton test asserting the router prefix. The output
+  passes `just check` as-is; only `models.py` stays empty (a real
+  table needs a migration).
+- **Logging**: production log timestamps are now emitted in **UTC**
+  (`TimeStamper(utc=True)`) so aggregated JSON logs share one
+  timezone; development and test keep host-local time for readable
+  console output.
+- **Docker**: the uv build stage is now pinned by manifest digest in
+  addition to its version tag, for byte-for-byte reproducible builds
+  (Dependabot still bumps both together).
 - **Testing**: the test schema is now built by running the Alembic
   migration chain (`upgrade head`, reversed with `downgrade base` at
   session teardown) instead of `SQLModel.metadata.create_all`, so
