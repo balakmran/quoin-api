@@ -57,6 +57,14 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     POSTGRES_DB: str = "app_db"
 
+    # Database connection pool — the first knobs any real deployment
+    # tunes. Promoted out of the hardcoded engine defaults.
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: float = 30.0  # seconds to wait for a checked-out conn
+    DB_POOL_RECYCLE: int = 1800  # recycle conns older than N s; -1 disables
+    DB_POOL_PRE_PING: bool = True
+
     @property
     def DATABASE_URL(self) -> PostgresDsn:  # noqa: N802
         """Assemble the database URL.

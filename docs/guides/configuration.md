@@ -95,6 +95,11 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_POSTGRES_USER`        | PostgreSQL username                                 | `postgres`                                           |
 | `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password (`SecretStr` — redacted in dumps/logs) | `postgres`                                    |
 | `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
+| `QUOIN_DB_POOL_SIZE`         | Persistent connections kept open in the pool        | `20`                                                 |
+| `QUOIN_DB_MAX_OVERFLOW`      | Extra connections allowed beyond the pool size      | `10`                                                 |
+| `QUOIN_DB_POOL_TIMEOUT`      | Seconds to wait for a free connection before erroring | `30.0`                                             |
+| `QUOIN_DB_POOL_RECYCLE`      | Recycle connections older than N seconds (`-1` = never) | `1800`                                           |
+| `QUOIN_DB_POOL_PRE_PING`     | Test connections with a ping before use (drops stale conns) | `true`                                        |
 | `QUOIN_REQUEST_TIMEOUT_SECONDS` | Per-request wall-clock timeout (0 = disabled)    | `30.0`                                              |
 | `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` | Max seconds to drain in-flight requests on shutdown (`<=0` = no wait) | `30.0`                          |
 | `QUOIN_REQUEST_ID_HEADER`    | Header name for request ID propagation              | `X-Request-ID`                                      |
@@ -151,6 +156,11 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
     # ... other POSTGRES_* fields
+
+    # Connection pool (fed into create_db_engine)
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    # ... DB_POOL_TIMEOUT / DB_POOL_RECYCLE / DB_POOL_PRE_PING
 
     # A plain @property (not a @computed_field): the credential-bearing
     # URL is never emitted by model_dump()/OpenAPI, and the password is

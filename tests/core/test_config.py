@@ -30,6 +30,34 @@ def test_settings_defaults() -> None:
         assert settings.POSTGRES_PORT == 5432  # noqa: PLR2004
 
 
+def test_db_pool_defaults() -> None:
+    """Connection-pool settings expose the previous engine literals."""
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)  # type: ignore
+        assert settings.DB_POOL_SIZE == 20  # noqa: PLR2004
+        assert settings.DB_MAX_OVERFLOW == 10  # noqa: PLR2004
+        assert settings.DB_POOL_TIMEOUT == 30.0  # noqa: PLR2004
+        assert settings.DB_POOL_RECYCLE == 1800  # noqa: PLR2004
+        assert settings.DB_POOL_PRE_PING is True
+
+
+def test_db_pool_overrides_from_env() -> None:
+    """QUOIN_DB_POOL_* env vars override the pool defaults."""
+    with patch.dict(
+        os.environ,
+        {
+            "QUOIN_DB_POOL_SIZE": "5",
+            "QUOIN_DB_MAX_OVERFLOW": "0",
+            "QUOIN_DB_POOL_PRE_PING": "false",
+        },
+        clear=True,
+    ):
+        settings = Settings()
+        assert settings.DB_POOL_SIZE == 5  # noqa: PLR2004
+        assert settings.DB_MAX_OVERFLOW == 0
+        assert settings.DB_POOL_PRE_PING is False
+
+
 def test_settings_with_env_prefix() -> None:
     """Test that settings correctly uses QUOIN_ prefix."""
     with patch.dict(
