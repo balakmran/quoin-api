@@ -272,6 +272,36 @@ per-module whitelist and raising `BadRequestError` for anything else.
 
 ---
 
+## Versioning
+
+Endpoint deprecation signalling via the RFC 8594 `Deprecation`,
+`Sunset`, and `Link` headers.
+
+### deprecated
+
+```python
+from datetime import date
+from app.core.versioning import deprecated
+
+@router.get(
+    "/legacy",
+    dependencies=[Depends(deprecated(sunset=date(2027, 1, 1), link="..."))],
+)
+async def legacy() -> ...:
+    ...
+```
+
+Returns a dependency that stamps `Deprecation: true` (plus `Sunset` and
+`Link` when configured) on every response, without changing the
+handler's return value.
+
+**Usage:** see the
+[Deprecating Endpoints guide](../guides/deprecating-endpoints.md).
+
+**Source:** [app/core/versioning.py](https://github.com/balakmran/quoin-api/blob/main/app/core/versioning.py)
+
+---
+
 ## See Also
 
 - [Configuration Guide](../guides/configuration.md) — Environment setup

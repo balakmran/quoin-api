@@ -13,6 +13,11 @@
   (unknown field → 400, never a 500). The `user` module also gains
   `is_active` and `q` (email/full-name search) filters. See the new
   [Pagination guide](../guides/pagination.md).
+- **API**: an endpoint-deprecation mechanism (`app/core/versioning.py`)
+  — `deprecated()` is a FastAPI dependency that stamps the RFC 8594
+  `Deprecation`, `Sunset`, and `Link` headers so a single endpoint can
+  be retired ahead of a URL version bump. See the new
+  [Deprecating Endpoints guide](../guides/deprecating-endpoints.md).
 - **Observability**: a structured access log (`AccessLogMiddleware`)
   emits one `http_request` INFO line per request with `method`,
   `path`, `status`, and `duration_ms` (plus the bound `request_id`),
