@@ -1,5 +1,6 @@
 import uuid
 
+from app.core.pagination import PageParams
 from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
 from app.modules.user.models import User
 from app.modules.user.repository import UserRepository
@@ -51,17 +52,32 @@ class UserService:
             raise UserNotFoundError(user_id=str(user_id))
         return user
 
-    async def list_users(self, skip: int = 0, limit: int = 100) -> list[User]:
-        """Return a paginated list of users.
+    async def list_users(
+        self,
+        params: PageParams,
+        *,
+        sort: str | None = None,
+        is_active: bool | None = None,
+        q: str | None = None,
+    ) -> tuple[list[User], int]:
+        """Return a filtered, sorted page of users and the total count.
 
         Args:
-            skip: Number of records to skip (offset).
-            limit: Maximum number of records to return.
+            params: Pagination window (limit/offset).
+            sort: Comma-separated sort fields (``-`` prefix for
+                descending).
+            is_active: Optional exact filter on the active flag.
+            q: Optional case-insensitive substring on email/full name.
 
         Returns:
-            Ordered list of User records; may be empty.
+            A ``(rows, total)`` tuple; ``total`` ignores pagination.
+
+        Raises:
+            BadRequestError: If ``sort`` names a non-sortable field.
         """
-        return await self.repository.list(skip, limit)
+        return await self.repository.list(
+            params, sort=sort, is_active=is_active, q=q
+        )
 
     async def update_user(
         self, user_id: uuid.UUID, user_update: UserUpdate
@@ -92,13 +108,18 @@ class UserService:
         return await self.repository.update(user, user_update)
 
     async def delete_user(self, user_id: uuid.UUID) -> None:
-        """Delete a user by ID.
+        """Soft-delete a user by ID.
+
+        Sets the ``deleted_at`` tombstone; the row is retained but
+        excluded from all subsequent reads. Deleting an already-deleted
+        (or non-existent) user raises, since ``get_user`` ignores
+        tombstoned rows.
 
         Args:
-            user_id: UUID of the user to remove.
+            user_id: UUID of the user to soft-delete.
 
         Raises:
-            UserNotFoundError: If no user with user_id exists.
+            UserNotFoundError: If no live user with user_id exists.
         """
         user = await self.get_user(user_id)
         await self.repository.delete(user)

@@ -38,15 +38,14 @@ vendor-specific tooling.
 ## v0.9.0 — API Contract Maturity
 
 Locks the public surface before the template-completeness milestone.
-Anything we change after this risks breaking downstream consumers, so
-the contract decisions land here. Versioning policy is set first to
-frame every other decision in the release.
+Establishes the list-response and endpoint-lifecycle conventions a
+forked template inherits.
 
 | Status | Feature |
 | :----- | :------ |
-| 📋 | **Versioning + deprecation policy** — `Sunset` and `Deprecation` headers; documented policy beyond the `/api/v1` prefix |
-| 📋 | **Pagination/filter/sort envelope** — Standard list-response shape and query-parameter conventions across all modules |
-| 📋 | **Soft delete** — Wire `User.is_active = False` semantics into `delete_user`; add `deleted_at` timestamp |
+| ✅ | **Pagination/filter/sort envelope** — standard `Page[T]` list-response shape, shared `limit`/`offset` + `sort` query parameters, and per-module filters, across all modules |
+| ✅ | **Soft delete** — `deleted_at` tombstone driving read filtering and a partial unique email index; `is_active` kept as an independent client flag |
+| 📋 | **Deprecation mechanism** — reusable `deprecated()` dependency stamping RFC 8594 `Deprecation`/`Sunset`/`Link` headers, plus a how-to guide. Scoped to the mechanism, not a stability promise about the example module (this is a fork-me template). |
 
 ---
 

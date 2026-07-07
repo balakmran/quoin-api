@@ -164,9 +164,10 @@ Database operations only — no business logic here:
 # app/modules/product/repository.py
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.pagination import PageParams
 from app.modules.product.models import Product
 from app.modules.product.schemas import ProductCreate, ProductUpdate
 
@@ -197,12 +198,26 @@ class ProductRepository:
         return result.scalars().first()
 
     async def list(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[Product]:
-        """List products with pagination."""
-        statement = select(Product).offset(skip).limit(limit)
-        result = await self.session.exec(statement)  # type: ignore
-        return list(result.scalars().all())
+        self, params: PageParams
+    ) -> tuple[list[Product], int]:
+        """List products for one page, plus the total count.
+
+        Returns a ``(rows, total)`` tuple so the route can build the
+        standard `Page` envelope. See the
+        [Pagination guide](pagination.md) for sort/filter conventions.
+        """
+        rows_stmt = (
+            select(Product)
+            .order_by(Product.created_at, Product.id)  # type: ignore
+            .offset(params.offset)
+            .limit(params.limit)
+        )
+        result = await self.session.exec(rows_stmt)  # type: ignore
+        rows = list(result.scalars().all())
+
+        count_stmt = select(func.count()).select_from(Product)
+        total = (await self.session.exec(count_stmt)).scalars().one()  # type: ignore
+        return rows, total
 
     async def update(
         self, product: Product, product_update: ProductUpdate
@@ -230,6 +245,7 @@ Business logic only — call the repository, raise domain exceptions:
 # app/modules/product/service.py
 import uuid
 
+from app.core.pagination import PageParams
 from app.modules.product.exceptions import ProductNotFoundError
 from app.modules.product.models import Product
 from app.modules.product.repository import ProductRepository
@@ -257,10 +273,10 @@ class ProductService:
         return product
 
     async def list_products(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[Product]:
-        """List all products."""
-        return await self.repository.list(skip, limit)
+        self, params: PageParams
+    ) -> tuple[list[Product], int]:
+        """List a page of products and the total count."""
+        return await self.repository.list(params)
 
     async def update_product(
         self, product_id: uuid.UUID, product_update: ProductUpdate
@@ -288,9 +304,10 @@ class ProductService:
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.pagination import Page, PageParams
 from app.db.session import get_session
 from app.modules.product.repository import ProductRepository
 from app.modules.product.schemas import (
@@ -324,14 +341,14 @@ async def create_product(
     return await service.create_product(product_create)
 
 
-@router.get("/", response_model=list[ProductRead])
+@router.get("/", response_model=Page[ProductRead])
 async def list_products(
     service: Annotated[ProductService, Depends(get_product_service)],
-    skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100)] = 100,
-) -> list[Product]:
-    """List all products."""
-    return await service.list_products(skip, limit)
+    page: Annotated[PageParams, Depends()],
+) -> Page[Product]:
+    """List products with pagination."""
+    rows, total = await service.list_products(page)
+    return Page.create(rows, total, page)
 
 
 @router.get("/{product_id}", response_model=ProductRead)

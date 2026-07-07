@@ -4,10 +4,15 @@
 
 ### Added
 
-- **Users**: deleting a user still referenced by another record now
-  returns 409 `UserInUseError` instead of a bare 500 — the repository
-  translates the foreign-key `IntegrityError` at the unit-of-work
-  boundary.
+- **API**: a standard list-response envelope, `Page[T]`
+  (`app/core/pagination.py`), returned by every list endpoint —
+  `{ items, total, limit, offset }`. `PageParams` gives shared
+  `limit`/`offset` query parameters (`offset` replaces the old `skip`),
+  and a `sort` parameter accepts comma-separated fields with a `-`
+  prefix for descending, validated against a per-module whitelist
+  (unknown field → 400, never a 500). The `user` module also gains
+  `is_active` and `q` (email/full-name search) filters. See the new
+  [Pagination guide](../guides/pagination.md).
 - **Observability**: a structured access log (`AccessLogMiddleware`)
   emits one `http_request` INFO line per request with `method`,
   `path`, `status`, and `duration_ms` (plus the bound `request_id`),
@@ -20,6 +25,19 @@
 
 ### Changed
 
+- **Users**: `DELETE /users/{id}` is now a **soft delete** — it stamps a
+  system-owned `deleted_at` tombstone instead of removing the row, and
+  every read (`get`, `get_by_email`, `list`) excludes tombstoned users.
+  The case-insensitive unique email index is now **partial**
+  (`WHERE deleted_at IS NULL`) so a deleted user's email frees up for
+  re-registration. `is_active` stays an independent, client-settable
+  business flag — it is not touched by delete. Because delete is now an
+  `UPDATE`, it can no longer FK-conflict: the `UserInUseError` (409
+  "referenced by other records") path is removed. See the new
+  [Soft Delete guide](../guides/soft-delete.md).
+- **API**: `GET /users` now returns the `Page` envelope instead of a
+  bare JSON array, and its pagination query parameter is `offset` (was
+  `skip`). Clients reading the list must switch to `response.items`.
 - **Scaffolding**: `just new <module>` now generates minimally-working
   stubs instead of empty files — `<Class>Repository`/`<Class>Service`
   classes, a `<Class>Base(SQLModel)` schema, a `<Class>NotFoundError`

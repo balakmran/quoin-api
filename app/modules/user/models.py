@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Index, func, literal_column
+from sqlalchemy import Column, DateTime, Index, func, literal_column, text
 from sqlmodel import Field, SQLModel
 
 
@@ -14,6 +14,9 @@ class User(SQLModel, table=True):
             "ix_users_email_lower",
             func.lower(literal_column("email")),
             unique=True,
+            # Partial index: a soft-deleted row keeps its email but no
+            # longer blocks re-registration of that address.
+            postgresql_where=text("deleted_at IS NULL"),
         ),
     )
 
@@ -37,4 +40,10 @@ class User(SQLModel, table=True):
             server_default=func.now(),
             onupdate=lambda: datetime.now(UTC),
         ),
+    )
+    # Soft-delete tombstone: NULL means live, a timestamp means deleted.
+    # System-owned (set by delete_user); never exposed or client-settable.
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
     )
