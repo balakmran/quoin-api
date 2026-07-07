@@ -18,11 +18,12 @@ feedback and shifting priorities.
 | 💡 | Under Consideration |
 | ❌ | Deferred / Won't Do |
 
-The path from `v0.7.0` toward template completeness runs through the
-releases below. Each is independently shippable and gated by `just
-check` plus the existing pre-push hook. The ordering: lock the public
-API contract, then ship the template-completeness milestone (which may
-become `v1.0.0`).
+The public API contract is now locked (pagination envelope, soft
+delete, and the deprecation mechanism shipped — see the
+[CHANGELOG](changelog.md)). The remaining milestone below carries
+QuoinAPI to template completeness, and is independently shippable and
+gated by `just check` plus the existing pre-push hook. It may become
+`v1.0.0`.
 
 This roadmap was trimmed in `v0.7.0` to remove features that are either
 deployer-specific (alert rules, deploy workflows, backup runbooks),
@@ -32,20 +33,6 @@ to bake into a template (audit log, PII encryption). Those items live in
 the [Backlog](#backlog) and will be revisited only if real demand
 surfaces. All monitoring follows OpenTelemetry and CNCF standards — no
 vendor-specific tooling.
-
----
-
-## v0.9.0 — API Contract Maturity
-
-Locks the public surface before the template-completeness milestone.
-Establishes the list-response and endpoint-lifecycle conventions a
-forked template inherits.
-
-| Status | Feature |
-| :----- | :------ |
-| ✅ | **Pagination/filter/sort envelope** — standard `Page[T]` list-response shape, shared `limit`/`offset` + `sort` query parameters, and per-module filters, across all modules |
-| ✅ | **Soft delete** — `deleted_at` tombstone driving read filtering and a partial unique email index; `is_active` kept as an independent client flag |
-| ✅ | **Deprecation mechanism** — reusable `deprecated()` dependency stamping RFC 8594 `Deprecation`/`Sunset`/`Link` headers, plus a how-to guide. Scoped to the mechanism, not a stability promise about the example module (this is a fork-me template). |
 
 ---
 

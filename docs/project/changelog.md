@@ -4,160 +4,126 @@
 
 ### Added
 
-- **API**: a standard list-response envelope, `Page[T]`
-  (`app/core/pagination.py`), returned by every list endpoint —
-  `{ items, total, limit, offset }`. `PageParams` gives shared
-  `limit`/`offset` query parameters (`offset` replaces the old `skip`),
-  and a `sort` parameter accepts comma-separated fields with a `-`
-  prefix for descending, validated against a per-module whitelist
-  (unknown field → 400, never a 500). The `user` module also gains
-  `is_active` and `q` (email/full-name search) filters. See the new
+- **API**: every list endpoint now returns a standard `Page[T]`
+  envelope (`{ items, total, limit, offset }`) via
+  `app/core/pagination.py`, with shared `limit`/`offset` params and a
+  whitelist-validated `sort` (unknown field → 400). The `user` module
+  adds `is_active` and `q` search filters — see the
   [Pagination guide](../guides/pagination.md).
-- **API**: an endpoint-deprecation mechanism (`app/core/versioning.py`)
-  — `deprecated()` is a FastAPI dependency that stamps the RFC 8594
-  `Deprecation`, `Sunset`, and `Link` headers so a single endpoint can
-  be retired ahead of a URL version bump. See the new
+- **API**: a `deprecated()` dependency (`app/core/versioning.py`) stamps
+  the RFC 8594 `Deprecation`, `Sunset`, and `Link` headers so a single
+  endpoint can be retired ahead of a URL version bump. See the
   [Deprecating Endpoints guide](../guides/deprecating-endpoints.md).
 - **Observability**: a structured access log (`AccessLogMiddleware`)
-  emits one `http_request` INFO line per request with `method`,
-  `path`, `status`, and `duration_ms` (plus the bound `request_id`),
-  so happy-path traffic is visible in logs and not only in traces.
-  Probe paths (`/health`, `/ready`) are excluded; toggle with
-  `QUOIN_ACCESS_LOG_ENABLED` (default on).
+  emits one `http_request` INFO line per request with `method`, `path`,
+  `status`, `duration_ms`, and `request_id`. Probe paths are excluded;
+  toggle with `QUOIN_ACCESS_LOG_ENABLED` (default on).
 - **Docker**: the image now ships a `HEALTHCHECK` that polls `/health`
-  via the stdlib, so Docker/Compose and orchestrators can gate on
-  container health.
+  via the stdlib, so orchestrators can gate on container health.
 
 ### Changed
 
-- **Users**: `DELETE /users/{id}` is now a **soft delete** — it stamps a
-  system-owned `deleted_at` tombstone instead of removing the row, and
-  every read (`get`, `get_by_email`, `list`) excludes tombstoned users.
-  The case-insensitive unique email index is now **partial**
-  (`WHERE deleted_at IS NULL`) so a deleted user's email frees up for
-  re-registration. `is_active` stays an independent, client-settable
-  business flag — it is not touched by delete. Because delete is now an
-  `UPDATE`, it can no longer FK-conflict: the `UserInUseError` (409
-  "referenced by other records") path is removed. See the new
+- **Users**: `DELETE /users/{id}` is now a soft delete — it stamps a
+  system-owned `deleted_at` tombstone (retained, excluded from all
+  reads) and the unique email index is now partial
+  (`WHERE deleted_at IS NULL`) so a deleted address frees up for reuse.
+  `is_active` stays an independent client flag, and since delete is now
+  an `UPDATE` the `UserInUseError` 409 path is gone — see the
   [Soft Delete guide](../guides/soft-delete.md).
 - **API**: `GET /users` now returns the `Page` envelope instead of a
-  bare JSON array, and its pagination query parameter is `offset` (was
-  `skip`). Clients reading the list must switch to `response.items`.
+  bare array, and its pagination param is `offset` (was `skip`). Clients
+  reading the list must switch to `response.items`.
 - **Scaffolding**: `just new <module>` now generates minimally-working
-  stubs instead of empty files — `<Class>Repository`/`<Class>Service`
-  classes, a `<Class>Base(SQLModel)` schema, a `<Class>NotFoundError`
-  example, and a skeleton test asserting the router prefix. The output
-  passes `just check` as-is; only `models.py` stays empty (a real
-  table needs a migration).
+  stubs (repository/service classes, a base schema, an example
+  exception, a router-prefix test) instead of empty files. The output
+  passes `just check` as-is; only `models.py` stays empty.
 - **Logging**: production log timestamps are now emitted in **UTC**
-  (`TimeStamper(utc=True)`) so aggregated JSON logs share one
-  timezone; development and test keep host-local time for readable
-  console output.
+  (`TimeStamper(utc=True)`) so aggregated JSON logs share one timezone,
+  while development and test keep host-local time.
 - **Docker**: the uv build stage is now pinned by manifest digest in
-  addition to its version tag, for byte-for-byte reproducible builds
-  (Dependabot still bumps both together).
+  addition to its version tag, for byte-for-byte reproducible builds.
 - **Testing**: the test schema is now built by running the Alembic
-  migration chain (`upgrade head`, reversed with `downgrade base` at
-  session teardown) instead of `SQLModel.metadata.create_all`, so
-  model/migration drift fails the suite instead of shipping silently
-  and the down-migrations are exercised too. The test DB URL is built
-  from settings parts rather than string-replaced, per-test dependency
-  overrides are removed individually instead of cleared wholesale, and
-  a genuine two-connection concurrency test now covers the email
-  uniqueness race.
+  migration chain (reversed at teardown) instead of `create_all`, so
+  model/migration drift fails the suite and down-migrations are
+  exercised. A genuine two-connection test now covers the
+  email-uniqueness race.
 - **Database**: connection-pool sizing is now tunable via
   `QUOIN_DB_POOL_SIZE`, `QUOIN_DB_MAX_OVERFLOW`, `QUOIN_DB_POOL_TIMEOUT`,
-  `QUOIN_DB_POOL_RECYCLE`, and `QUOIN_DB_POOL_PRE_PING` instead of the
-  hardcoded engine literals — the first knobs any real deployment tunes.
-  Defaults match the previous behaviour.
+  `QUOIN_DB_POOL_RECYCLE`, and `QUOIN_DB_POOL_PRE_PING` instead of
+  hardcoded literals. Defaults match the previous behaviour.
 - **Middleware**: `TimeoutMiddleware`, `RequestIDMiddleware`, and
-  `SecurityHeadersMiddleware` are now pure ASGI (they were the last
-  `BaseHTTPMiddleware` layers), shedding per-request task overhead and
-  the streaming penalty. A request timeout that fires after the response
-  has started now aborts rather than emitting an illegal second
-  response, and the `X-Request-ID` log binding is held until the app
-  fully completes so streamed log lines keep it.
+  `SecurityHeadersMiddleware` are now pure ASGI, shedding per-request
+  task overhead and the streaming penalty. A timeout firing after the
+  response has started now aborts instead of emitting an illegal second
+  response.
 - **Security**: JWKS keys are now fetched through the shared resilient
-  HTTP client (retries, per-host circuit breaker, shared
-  `QUOIN_HTTP_TIMEOUT_SECONDS`, OpenTelemetry) instead of a fresh bare
-  `httpx.AsyncClient` per refresh. A transport-level JWKS failure (down
-  IdP, timeout, open circuit) now surfaces as a `502`/`503`/`504`
-  instead of a mislabeled `401`; a genuine JWKS HTTP error response
-  (e.g. `404`) still maps to `401`.
-- **Persistence**: transactions now follow a unit-of-work boundary.
-  `get_session` commits once when a request handler returns and rolls
-  back if it raises, so a request touching multiple repositories is
-  atomic. Repositories `flush()` instead of `commit()`, surfacing
-  constraint violations early while deferring the commit to the
-  request boundary. Constraint violations are now discriminated by
-  name: only the `lower(email)` unique index maps to 409
-  `DuplicateEmailError`; any other `IntegrityError` propagates to the
-  catch-all handler as a 500 instead of being mislabeled a duplicate
-  email.
+  HTTP client (retries, circuit breaker, OpenTelemetry) instead of a
+  bare client per refresh. A transport-level JWKS failure now surfaces
+  as `502`/`503`/`504` instead of a mislabeled `401` (a genuine HTTP
+  error response like `404` still maps to `401`).
+- **Persistence**: transactions now follow a unit-of-work boundary —
+  `get_session` commits once when the handler returns and rolls back on
+  error, and repositories `flush()` instead of `commit()`. Constraint
+  violations are discriminated by name, so only the `lower(email)` index
+  maps to 409 `DuplicateEmailError` and any other `IntegrityError`
+  becomes a 500 instead of a mislabeled duplicate.
 
 ### Fixed
 
-- **Users**: `GET /users` now orders results by `created_at, id` so
-  pagination is stable across pages instead of relying on Postgres's
-  unspecified default ordering.
+- **Users**: `GET /users` now orders by `created_at, id` so pagination
+  is stable across pages instead of relying on Postgres's default
+  ordering.
 - **Users**: a uniqueness race on concurrent creates/updates with the
   same email now returns 409 `DuplicateEmailError` instead of an
-  unhandled 500 — the repository catches the commit-time
-  `IntegrityError` and translates it, on top of the existing
-  check-then-insert fast path.
-- **Users**: email is now compared and stored case-insensitively.
-  Addresses are lowercased on write and looked up via a case-
-  insensitive functional unique index, so `Foo@example.com` and
-  `foo@example.com` are treated as the same user.
+  unhandled 500. The repository catches the commit-time `IntegrityError`
+  on top of the existing check-then-insert fast path.
+- **Users**: email is now compared and stored case-insensitively
+  (lowercased on write, matched via a functional unique index), so
+  `Foo@example.com` and `foo@example.com` are the same user.
 - **Users**: `full_name`/`email` on create are now capped at 255 chars
-  (matching the DB column and the existing update schema), so an
-  over-length value is rejected with 422 instead of a raw DB error.
+  (matching the DB column), so an over-length value is rejected with 422
+  instead of a raw DB error.
 - **Users**: `created_at`/`updated_at` now have a `server_default`, so
-  non-ORM writes (raw SQL, another service, a backfill script) can no
-  longer violate `NOT NULL` on those columns.
+  non-ORM writes can no longer violate `NOT NULL` on those columns.
 - **Errors**: a bare `pydantic.ValidationError` raised while
-  constructing an internal model no longer returns a misleading 422 —
-  it now falls through to the catch-all handler and returns a generic
-  500, since it signals a server bug rather than a client mistake.
-- **Middleware**: error responses manufactured by an inner middleware
-  (504 from `TimeoutMiddleware`, 413 from `RequestSizeLimitMiddleware`)
-  now carry CORS and security headers plus `X-Request-ID`, instead of
-  arriving at the client bare. `TrustedHostMiddleware` was reordered to
-  sit outside `CORSMiddleware` so Host validation applies to every
-  request, including a CORS preflight — previously a forged `Host`
-  header on a preflight request could bypass Host validation entirely.
+  constructing an internal model now falls through to the catch-all
+  handler as a 500 instead of a misleading 422, since it signals a
+  server bug rather than a client mistake.
+- **Middleware**: inner-middleware error responses (504 timeout, 413
+  size limit) now carry CORS/security headers plus `X-Request-ID`
+  instead of arriving bare. `TrustedHostMiddleware` was reordered
+  outside `CORSMiddleware` so Host validation applies to every request
+  including a CORS preflight, closing a forged-`Host` bypass.
 - **Security**: `openapi.json` is now disabled in production, matching
   the existing `/docs`/`/redoc` behaviour.
 
 ### Security
 
 - **Fail-fast posture**: in `production`, the app now crash-loops at
-  startup when the OAuth JWKS URI, issuer, or audience is missing, or
-  when the JWKS URI is not `https://`, instead of booting and serving
-  401s while looking healthy.
+  startup when the OAuth JWKS URI, issuer, or audience is missing (or
+  the JWKS URI isn't `https://`), instead of booting and serving 401s
+  while looking healthy.
 - **Auth**: `QUOIN_OAUTH_ISSUER` is now required during token
-  validation, closing the PyJWT `issuer=None` skip — tokens are always
-  checked against `iss`, so a token from any key in the configured
-  JWKS can no longer pass regardless of issuer.
-- **Auth**: an unknown-`kid` token can no longer be used to hammer the
-  JWKS endpoint — refetches are bounded to one per
+  validation, closing the PyJWT `issuer=None` skip so tokens are always
+  checked against `iss`.
+- **Auth**: an unknown-`kid` token can no longer hammer the JWKS
+  endpoint — refetches are bounded to one per
   `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`, with the backoff armed before
   the fetch so failed fetches also back off.
 - **Config**: `POSTGRES_PASSWORD` is now a `SecretStr` and
-  `DATABASE_URL` a plain property, so the DB credential no longer leaks
-  via `model_dump()` or the OpenAPI schema. Unknown `QUOIN_*` env vars
-  are now ignored (`extra="ignore"`) rather than silently accepted, so
-  a typo can't masquerade as valid config while the real setting keeps
-  its default.
+  `DATABASE_URL` a plain property, so the credential no longer leaks via
+  `model_dump()` or the OpenAPI schema. Unknown `QUOIN_*` env vars are
+  now ignored (`extra="ignore"`) so a typo can't masquerade as valid
+  config.
 - **Observability**: inbound `X-Request-ID` is validated (safe charset,
   64-char cap) and replaced with a fresh UUID otherwise, preventing log
   injection and header reflection.
 - **Supply chain**: the `Dockerfile` pins `uv` to a released version,
-  all GitHub Actions are SHA-pinned, and a `docker` Dependabot
-  ecosystem keeps those pins fresh.
-- **Docs**: the deployment guide now states that health/readiness
-  probes must not be internet-routable and that the template assumes
-  edge rate limiting.
+  all GitHub Actions are SHA-pinned, and a `docker` Dependabot ecosystem
+  keeps those pins fresh.
+- **Docs**: the deployment guide now states that health/readiness probes
+  must not be internet-routable and that the template assumes edge rate
+  limiting.
 
 ## [0.8.0] - 2026-06-21
 
