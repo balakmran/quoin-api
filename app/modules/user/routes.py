@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.openapi import APITag
+from app.core.pagination import Page, PageParams
 from app.core.schemas import ProblemDetail
 from app.core.security import ServicePrincipal, require_roles
 from app.db.session import get_session
@@ -41,6 +42,41 @@ def get_user_service(
     return UserService(repository)
 
 
+class UserListQuery:
+    """Sort and filter query parameters for listing users.
+
+    Module-specific filters live in a dependency (rather than loose
+    route arguments) so the route signature stays flat and the filter
+    surface is documented in one place. Pagination is separate
+    (`PageParams`) because it is shared by every module.
+    """
+
+    def __init__(
+        self,
+        sort: Annotated[
+            str | None,
+            Query(description="Sort fields, e.g. `-created_at,email`."),
+        ] = None,
+        is_active: Annotated[
+            bool | None, Query(description="Filter by active flag.")
+        ] = None,
+        q: Annotated[
+            str | None,
+            Query(description="Case-insensitive search on email/full name."),
+        ] = None,
+    ) -> None:
+        """Capture the validated sort and filter inputs.
+
+        Args:
+            sort: Comma-separated sort fields (``-`` prefix descending).
+            is_active: Optional exact filter on the active flag.
+            q: Optional case-insensitive substring on email/full name.
+        """
+        self.sort = sort
+        self.is_active = is_active
+        self.q = q
+
+
 @router.post(
     "/",
     response_model=UserRead,
@@ -61,15 +97,18 @@ async def create_user(
     return await service.create_user(user_create)
 
 
-@router.get("/", response_model=list[UserRead])
+@router.get("/", response_model=Page[UserRead])
 async def list_users(
     service: Annotated[UserService, Depends(get_user_service)],
     caller: Annotated[ServicePrincipal, Depends(require_roles("users.read"))],
-    skip: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100)] = 100,
-) -> list[User]:
-    """List users."""
-    return await service.list_users(skip, limit)
+    page: Annotated[PageParams, Depends()],
+    query: Annotated[UserListQuery, Depends()],
+) -> Page[User]:
+    """List users with pagination, sorting, and filtering."""
+    rows, total = await service.list_users(
+        page, sort=query.sort, is_active=query.is_active, q=query.q
+    )
+    return Page.create(rows, total, page)
 
 
 @router.get(
@@ -120,10 +159,6 @@ async def update_user(
             "model": ProblemDetail,
             "description": "User not found",
         },
-        409: {
-            "model": ProblemDetail,
-            "description": "User is referenced by other records",
-        },
     },
 )
 async def delete_user(
@@ -131,5 +166,5 @@ async def delete_user(
     service: Annotated[UserService, Depends(get_user_service)],
     caller: Annotated[ServicePrincipal, Depends(require_roles("users.write"))],
 ) -> None:
-    """Delete a user."""
+    """Soft-delete a user (sets the deleted_at tombstone)."""
     await service.delete_user(user_id)

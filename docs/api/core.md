@@ -244,6 +244,34 @@ Disable with `QUOIN_OTEL_ENABLED=False` in `.env`.
 
 ---
 
+## Pagination
+
+Shared list-response envelope and query-parameter conventions used by
+every module's list endpoint.
+
+### Page
+
+```python
+from app.core.pagination import Page, PageParams, parse_sort
+
+class Page[T](BaseModel):
+    items: list[T]
+    total: int   # rows matching the query, ignoring pagination
+    limit: int
+    offset: int
+```
+
+`PageParams` is a FastAPI dependency exposing `limit` (1..100) and
+`offset` (>= 0). `parse_sort` turns a `?sort=-created_at,email` value
+into SQLAlchemy order-by terms, validating each field against a
+per-module whitelist and raising `BadRequestError` for anything else.
+
+**Usage:** see the [Pagination guide](../guides/pagination.md).
+
+**Source:** [app/core/pagination.py](https://github.com/balakmran/quoin-api/blob/main/app/core/pagination.py)
+
+---
+
 ## See Also
 
 - [Configuration Guide](../guides/configuration.md) — Environment setup

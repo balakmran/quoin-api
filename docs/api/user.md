@@ -39,13 +39,20 @@ class User(SQLModel, table=True):
             onupdate=lambda: datetime.now(UTC),
         ),
     )
+    # Soft-delete tombstone: NULL means live, a timestamp means deleted.
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
 ```
 
 **Table:** `users`
 
 **Indexes:**
 
-- `email` (unique, indexed)
+- `ix_users_email_lower` — case-insensitive **partial** unique index on
+  `lower(email)` `WHERE deleted_at IS NULL` (so a soft-deleted user's
+  email frees up for reuse)
 
 **Source:** [app/modules/user/models.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/models.py)
 
@@ -159,7 +166,7 @@ class UserRepository:
         ...
 
     async def delete(self, user: User) -> None:
-        """Delete a user."""
+        """Soft-delete a user (stamp the deleted_at tombstone)."""
         ...
 ```
 
@@ -203,10 +210,13 @@ class UserService:
         return user
 
     async def list_users(
-        self, skip: int = 0, limit: int = 100
-    ) -> list[User]:
-        """List all users with pagination."""
-        return await self.repository.list(skip=skip, limit=limit)
+        self, params: PageParams, *, sort: str | None = None,
+        is_active: bool | None = None, q: str | None = None,
+    ) -> tuple[list[User], int]:
+        """List a page of users and the total count."""
+        return await self.repository.list(
+            params, sort=sort, is_active=is_active, q=q
+        )
 
     async def update_user(
         self, user_id: uuid.UUID, user_update: UserUpdate
@@ -216,7 +226,7 @@ class UserService:
         return await self.repository.update(user, user_update)
 
     async def delete_user(self, user_id: uuid.UUID) -> None:
-        """Delete a user."""
+        """Soft-delete a user."""
         user = await self.get_user(user_id)  # Raises NotFoundError if not found
         await self.repository.delete(user)
 ```
@@ -253,19 +263,29 @@ curl -X POST http://localhost:8000/api/v1/users/ \
 
 #### GET /api/v1/users/
 
-List all users.
+List users, paginated, sorted, and filtered. Soft-deleted users are
+excluded.
 
 **Query Parameters:**
 
-- `skip` (int, default: 0) — Pagination offset
-- `limit` (int, default: 100) — Pagination limit
+- `limit` (int, default: 100, 1..100) — Page size
+- `offset` (int, default: 0) — Rows to skip
+- `sort` (str, optional) — Comma-separated fields, `-` prefix for
+  descending (e.g. `-created_at,email`). Sortable: `created_at`,
+  `updated_at`, `email`, `full_name`.
+- `is_active` (bool, optional) — Filter by active flag
+- `q` (str, optional) — Case-insensitive search on email/full name
 
-**Response:** `list[UserRead]` (200 OK)
+**Response:** `Page[UserRead]` (200 OK) — `{ items, total, limit, offset }`
+
+**Errors:**
+
+- `400 Bad Request` — `sort` names a non-sortable field
 
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/users/?skip=0&limit=10
+curl "http://localhost:8000/api/v1/users/?limit=10&offset=0&sort=-created_at&q=alice"
 ```
 
 #### GET /api/v1/users/{user_id}
@@ -314,7 +334,8 @@ curl -X PATCH http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-4266141
 
 #### DELETE /api/v1/users/{user_id}
 
-Delete a user.
+Soft-delete a user (sets the `deleted_at` tombstone). The row is
+retained but excluded from all subsequent reads.
 
 **Path Parameters:**
 
@@ -324,9 +345,7 @@ Delete a user.
 
 **Errors:**
 
-- `404 Not Found` — User not found
-- `409 Conflict` — User is referenced by other records and cannot be
-  deleted
+- `404 Not Found` — User not found (or already soft-deleted)
 
 **Example:**
 

@@ -1,14 +1,25 @@
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.user.exceptions import DuplicateEmailError, UserInUseError
+from app.core.pagination import PageParams, parse_sort
+from app.modules.user.exceptions import DuplicateEmailError
 from app.modules.user.models import User
 from app.modules.user.schemas import UserCreate, UserUpdate
 
 _EMAIL_UNIQUE_CONSTRAINT = "ix_users_email_lower"
+
+#: Fields the list endpoint may sort on, mapped to their columns.
+USER_SORTABLE: dict[str, Any] = {
+    "created_at": User.created_at,
+    "updated_at": User.updated_at,
+    "email": User.email,
+    "full_name": User.full_name,
+}
 
 
 def _is_email_uniqueness_violation(exc: IntegrityError) -> bool:
@@ -76,47 +87,120 @@ class UserRepository:
         return db_user
 
     async def get(self, user_id: uuid.UUID) -> User | None:
-        """Fetch a single User by primary key.
+        """Fetch a single live User by primary key.
+
+        Soft-deleted users (``deleted_at`` set) are treated as absent.
 
         Args:
             user_id: UUID of the user to look up.
 
         Returns:
-            The matching User, or None if not found.
+            The matching live User, or None if not found or deleted.
         """
-        return await self.session.get(User, user_id)
+        statement = select(User).where(
+            User.id == user_id,  # type: ignore
+            User.deleted_at.is_(None),  # type: ignore
+        )
+        result = await self.session.exec(statement)  # type: ignore
+        return result.scalars().first()
 
     async def get_by_email(self, email: str) -> User | None:
-        """Fetch a single User by email address.
+        """Fetch a single live User by email address.
+
+        Soft-deleted users are ignored, so a tombstoned email is free to
+        be registered again.
 
         Args:
             email: Email address to search for (case-insensitive).
 
         Returns:
-            The matching User, or None if not found.
+            The matching live User, or None if not found or deleted.
         """
-        statement = select(User).where(User.email == email.lower())  # type: ignore
+        statement = select(User).where(
+            User.email == email.lower(),  # type: ignore
+            User.deleted_at.is_(None),  # type: ignore
+        )
         result = await self.session.exec(statement)  # type: ignore
         return result.scalars().first()
 
-    async def list(self, skip: int = 0, limit: int = 100) -> list[User]:  # type: ignore
-        """Fetch a paginated slice of all User records.
+    @staticmethod
+    def _apply_filters(
+        statement: Select[Any],
+        *,
+        is_active: bool | None,
+        q: str | None,
+    ) -> Select[Any]:
+        """Apply the shared list filters to a select statement.
+
+        The same predicates back both the page query and its total
+        count, so they live in one place.
 
         Args:
-            skip: Number of rows to skip (offset).
-            limit: Maximum number of rows to return.
+            statement: The base select to constrain.
+            is_active: When set, restrict to users with this active flag.
+            q: When set, case-insensitive substring match on email or
+                full name.
 
         Returns:
-            Ordered list of User records; may be empty.
+            The statement with any requested filters applied.
         """
-        statement = (
-            select(User)
-            .order_by(User.created_at, User.id)  # type: ignore
-            .offset(skip)
-            .limit(limit)
+        # Soft-deleted rows are excluded from every listing.
+        statement = statement.where(User.deleted_at.is_(None))  # type: ignore
+        if is_active is not None:
+            statement = statement.where(User.is_active == is_active)  # type: ignore
+        if q:
+            pattern = f"%{q.lower()}%"
+            statement = statement.where(
+                or_(
+                    func.lower(User.email).like(pattern),
+                    func.lower(User.full_name).like(pattern),
+                )
+            )
+        return statement
+
+    async def list(
+        self,
+        params: PageParams,
+        *,
+        sort: str | None = None,
+        is_active: bool | None = None,
+        q: str | None = None,
+    ) -> tuple[list[User], int]:  # type: ignore
+        """Fetch a filtered, sorted page of User records and its total.
+
+        Args:
+            params: Pagination window (limit/offset).
+            sort: Comma-separated sort fields (``-`` prefix for
+                descending); defaults to ``created_at`` ascending.
+            is_active: Optional exact filter on the active flag.
+            q: Optional case-insensitive substring on email/full name.
+
+        Returns:
+            A ``(rows, total)`` tuple where ``total`` counts all rows
+            matching the filters, ignoring pagination.
+
+        Raises:
+            BadRequestError: If ``sort`` names a non-sortable field.
+        """
+        order_by = parse_sort(
+            sort,
+            USER_SORTABLE,
+            default=[User.created_at.asc()],  # type: ignore
         )
-        result = await self.session.exec(statement)  # type: ignore
-        return list(result.scalars().all())
+        rows_stmt = (
+            self._apply_filters(select(User), is_active=is_active, q=q)
+            .order_by(*order_by, User.id)  # type: ignore
+            .offset(params.offset)
+            .limit(params.limit)
+        )
+        result = await self.session.exec(rows_stmt)  # type: ignore
+        rows = list(result.scalars().all())
+
+        count_stmt = self._apply_filters(
+            select(func.count()).select_from(User), is_active=is_active, q=q
+        )
+        total = (await self.session.exec(count_stmt)).scalars().one()  # type: ignore
+        return rows, total
 
     async def update(self, user: User, user_update: UserUpdate) -> User:
         """Apply a partial update to an existing User record.
@@ -152,19 +236,17 @@ class UserRepository:
         return user
 
     async def delete(self, user: User) -> None:
-        """Remove a User record from the database.
+        """Soft-delete a User by stamping its ``deleted_at`` tombstone.
+
+        The row is retained; subsequent reads exclude it and its email
+        frees up for re-registration (via the partial unique index).
+        ``is_active`` is left untouched — it is an independent,
+        client-controlled business flag, not a lifecycle marker.
 
         Args:
-            user: The User instance to delete; must be attached to the
-                session.
-
-        Raises:
-            UserInUseError: If a foreign key still references this
-                user (e.g. an `ON DELETE RESTRICT` relationship),
-                preventing the delete from completing.
+            user: The live User instance to soft-delete; must be
+                attached to the session.
         """
-        await self.session.delete(user)
-        try:
-            await self.session.flush()
-        except IntegrityError as exc:
-            raise UserInUseError(user_id=str(user.id)) from exc
+        user.deleted_at = datetime.now(UTC)
+        self.session.add(user)
+        await self.session.flush()

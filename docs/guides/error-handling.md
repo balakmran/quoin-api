@@ -198,15 +198,6 @@ class DuplicateEmailError(ConflictError):
 
     def __init__(self, email: str) -> None:
         super().__init__(message=f"Email '{email}' is already registered")
-
-class UserInUseError(ConflictError):
-    """Raised when a user cannot be deleted due to referencing records."""
-
-    def __init__(self, user_id: str) -> None:
-        super().__init__(
-            message=f"User '{user_id}' cannot be deleted: "
-            "it is referenced by other records"
-        )
 ```
 
 The `type` URN in error responses is derived automatically from the
@@ -281,12 +272,10 @@ mislabeled as a duplicate email. `UserRepository.update` follows the
 same pattern. This is why the route always returns 409, never a bare
 500, even under concurrent writes to the same email.
 
-`UserRepository.delete` applies the same flush-then-inspect shape for
-foreign-key conflicts: if another table still references the user
-(e.g. via `ON DELETE RESTRICT`), the flush raises `IntegrityError`,
-which the repository translates to `UserInUseError` (409) instead of
-letting a raw `IntegrityError` reach the unhandled-exception handler
-as a 500.
+`UserRepository.delete` is a **soft delete** — it stamps a `deleted_at`
+tombstone rather than issuing a hard `DELETE`, so it cannot raise a
+foreign-key `IntegrityError` and needs no such translation. See the
+[Soft Delete guide](soft-delete.md).
 
 ---
 
