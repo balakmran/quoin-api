@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Sync project documentation files from root to docs/project/.
 
-This script copies CONTRIBUTING.md, CHANGELOG.md, ROADMAP.md, and LICENSE
-from the project root to docs/project/, adjusting image paths as needed.
+This script copies CONTRIBUTING.md, CHANGELOG.md, ROADMAP.md, SECURITY.md,
+and LICENSE from the project root to docs/project/, adjusting image paths
+as needed.
 """
 
 import re
@@ -10,7 +11,11 @@ from pathlib import Path
 
 
 def adjust_image_paths(content: str, from_root: bool = True) -> str:
-    """Adjust image paths for documentation.
+    """Adjust asset and guide link paths for documentation.
+
+    Root files link relative to the repo root (``./docs/assets/...``,
+    ``docs/guides/...``); the synced copies live in ``docs/project/`` and
+    must reach those siblings via ``../``. This rewrites both directions.
 
     Args:
         content: Markdown content
@@ -22,9 +27,13 @@ def adjust_image_paths(content: str, from_root: bool = True) -> str:
     if from_root:
         # Root -> Docs: ./docs/assets/... -> ../assets/...
         content = re.sub(r"\(\.\/docs\/assets\/", r"(../assets/", content)
+        # Root -> Docs: docs/guides/... -> ../guides/...
+        content = re.sub(r"\]\(docs\/guides\/", r"](../guides/", content)
     else:
         # Docs -> Root: ../assets/... -> ./docs/assets/...
         content = re.sub(r"\(\.\.\/assets\/", r"(./docs/assets/", content)
+        # Docs -> Root: ../guides/... -> docs/guides/...
+        content = re.sub(r"\]\(\.\.\/guides\/", r"](docs/guides/", content)
 
     return content
 
@@ -67,6 +76,7 @@ def main() -> None:
         ),
         (root / "CHANGELOG.md", docs_project / "changelog.md", False),
         (root / "ROADMAP.md", docs_project / "roadmap.md", False),
+        (root / "SECURITY.md", docs_project / "security-policy.md", True),
         (root / "LICENSE", docs_project / "license.md", False),
     ]
 
