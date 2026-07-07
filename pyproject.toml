@@ -1,6 +1,6 @@
 [project]
 name = "quoin-api"
-version = "0.8.0"
+version = "0.9.0"
 description = "The Foundation for your Python backend API"
 readme = "README.md"
 requires-python = ">=3.14"
