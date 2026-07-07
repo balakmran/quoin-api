@@ -20,9 +20,9 @@ feedback and shifting priorities.
 
 The path from `v0.7.0` toward template completeness runs through the
 releases below. Each is independently shippable and gated by `just
-check` plus the existing pre-push hook. The ordering: close the
-security quick-wins, lock the public API contract, then ship the
-template-completeness milestone (which may become `v1.0.0`).
+check` plus the existing pre-push hook. The ordering: lock the public
+API contract, then ship the template-completeness milestone (which may
+become `v1.0.0`).
 
 This roadmap was trimmed in `v0.7.0` to remove features that are either
 deployer-specific (alert rules, deploy workflows, backup runbooks),
@@ -32,27 +32,6 @@ to bake into a template (audit log, PII encryption). Those items live in
 the [Backlog](#backlog) and will be revisited only if real demand
 surfaces. All monitoring follows OpenTelemetry and CNCF standards — no
 vendor-specific tooling.
-
----
-
-## v0.8.0 — Production Hardening
-
-The procurement-and-production-readiness gate. Absorbs the security
-quick-wins, the runtime-hardening items that pair with the v0.7
-timeouts, and the small DX cleanups that have been sitting unbuilt.
-Sequenced by risk-reduction-per-day: the cheapest, highest-impact
-security fixes land first.
-
-| Status | Feature |
-| :----- | :------ |
-| ✅ | **CORS hardening** — Explicit allowlist, credentials policy, no `allow_methods=["*"]` / `allow_headers=["*"]` with credentials in non-dev environments (closes the wildcard footgun currently in `app/core/middlewares.py`) |
-| ✅ | **Security headers middleware** — HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
-| ✅ | **Request size caps** — Starlette middleware enforcing a configurable max request body size; returns 413 RFC 9457 |
-| ✅ | **Graceful shutdown** — In-flight request drain on SIGTERM; in-app counter middleware + lifespan wait with `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` |
-| ✅ | **Outbound HTTP client** — Shared `httpx.AsyncClient` lifecycle-managed in lifespan; retries with exponential backoff; circuit breaker; OTel-instrumented. Foundational — every later integration sits on this. |
-| ✅ | **Zero-downtime migration playbook** — Expand/contract patterns documented; `migrate-gen` guard flags destructive operations for review |
-| ✅ | **Auto-register routers** — `just new <module>` registers the router in `api.py` automatically |
-| ✅ | **Dependabot + secret scanning enabled** — `.github/dependabot.yml` + GitHub-native secret scanning (free for public OSS). `docs/guides/dependency-scanning.md` notes how enterprises can layer Snyk/Black Duck/GHAS on top. |
 
 ---
 

@@ -51,6 +51,7 @@ nav = [
     { "Project" = [
         { "Roadmap" = "project/roadmap.md" },
         { "Changelog" = "project/changelog.md" },
+        { "Security Policy" = "project/security-policy.md" },
         { "Contributing" = "project/contributing.md" },
         { "License" = "project/license.md" },
     ]},
