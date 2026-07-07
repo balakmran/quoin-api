@@ -45,7 +45,7 @@ forked template inherits.
 | :----- | :------ |
 | ✅ | **Pagination/filter/sort envelope** — standard `Page[T]` list-response shape, shared `limit`/`offset` + `sort` query parameters, and per-module filters, across all modules |
 | ✅ | **Soft delete** — `deleted_at` tombstone driving read filtering and a partial unique email index; `is_active` kept as an independent client flag |
-| 📋 | **Deprecation mechanism** — reusable `deprecated()` dependency stamping RFC 8594 `Deprecation`/`Sunset`/`Link` headers, plus a how-to guide. Scoped to the mechanism, not a stability promise about the example module (this is a fork-me template). |
+| ✅ | **Deprecation mechanism** — reusable `deprecated()` dependency stamping RFC 8594 `Deprecation`/`Sunset`/`Link` headers, plus a how-to guide. Scoped to the mechanism, not a stability promise about the example module (this is a fork-me template). |
 
 ---
 

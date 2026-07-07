@@ -24,6 +24,7 @@ nav = [
             { "Error Handling" = "guides/error-handling.md" },
             { "Pagination & Filtering" = "guides/pagination.md" },
             { "Soft Delete" = "guides/soft-delete.md" },
+            { "Deprecating Endpoints" = "guides/deprecating-endpoints.md" },
             { "Outbound HTTP Client" = "guides/outbound-http.md" },
             { "Testing" = "guides/testing.md" },
             { "Quality Checks" = "guides/quality-checks.md" },
