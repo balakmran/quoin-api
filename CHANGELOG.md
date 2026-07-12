@@ -14,14 +14,16 @@
 ### Changed
 
 - **Docs**: reorganised the documentation-site navigation for better
-  discoverability — the landing tab is now **Overview**, the Guides
-  **Development** section is split into **Building / API Design /
-  Quality**, Troubleshooting folds into **Operations**, the duplicate
+  discoverability. The redundant **Overview** page (`docs.md`) is
+  retired — its recipes table and badges fold into **Getting Started**,
+  which is promoted to a top-level tab. The Guides **Development**
+  section is split into **Building / API Design / Quality**;
+  Configuration and Troubleshooting join **Operations**. The duplicate
   "Overview" entries are disambiguated (**Architecture Overview** /
-  **API Overview**), and the versioning policy/workflow docs (API
-  Stability, Release Workflow) move under **Project**. The changelog is
-  promoted to a top-level **Release Notes** tab. No document URLs
-  changed.
+  **API Overview**), the versioning policy/workflow docs (API Stability,
+  Release Workflow) move under **Project**, and **Roadmap** and
+  **Release Notes** (the changelog) become top-level tabs. No surviving
+  document's URL changed.
 
 ## [0.9.0] - 2026-07-07
 
