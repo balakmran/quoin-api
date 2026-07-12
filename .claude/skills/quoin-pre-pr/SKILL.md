@@ -12,7 +12,8 @@ description: Use this skill whenever the user is about to open a pull request,
 
 # Pre-PR Checklist
 
-Three steps must happen before opening a PR. None is optional.
+These steps precede opening a PR. Steps 1, 3, and 4 are never skipped; the
+changelog (step 2) has one carve-out, noted below.
 
 ## 1. Pass the full quality gate
 
@@ -42,6 +43,12 @@ sub-label when it helps scanning (see existing entries for the style).
 
 If `[Unreleased]` already has an accurate entry for this work, skip ahead.
 
+**Docs-only / chore carve-out.** If the change has no user-visible behaviour —
+a README or badge refresh, a docs-audit fix, a comment or skill cleanup — skip
+the changelog; an entry for it is just noise. The test: would a user of the API
+notice? If not, no entry. (This is why a pure README/badges PR ships without
+touching `CHANGELOG.md`.)
+
 ## 3. Run the docs build
 
 ```bash
@@ -57,6 +64,12 @@ similarly for `CONTRIBUTING.md`, `ROADMAP.md`, `LICENSE`). **Commit the
 synced files** — they are checked-in build artifacts, not gitignored.
 
 If `just docb` fails, fix the docs issue before continuing.
+
+**If this PR changed a dependency version or `requires-python`,** update the
+matching Shields badge in **both** `README.md` and
+`docs/guides/getting-started.md` (FastAPI/SQLModel/Python/`PostgreSQL-<major>`).
+The two badge blocks are duplicated and drift apart otherwise — see the
+[quoin-docs-audit](../quoin-docs-audit/SKILL.md) skill for the full parity check.
 
 ## 4. Create the PR
 
