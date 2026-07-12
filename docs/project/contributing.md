@@ -4,7 +4,7 @@ Thank you for your interest in contributing to the QuoinAPI project! This
 guide will help you set up your development environment and understand the
 project structure.
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 Ensure you have the following tools installed:
 
@@ -15,7 +15,7 @@ Ensure you have the following tools installed:
 - [OrbStack](https://orbstack.dev/) (recommended) or
   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-## ⚡️ Development Setup
+## Development Setup
 
 ```bash
 # 1. Clone the Repository
@@ -32,7 +32,7 @@ just setup
 just dev
 ```
 
-## 📸 Application Home Page
+## Application Home Page
 
 After running the server, you can visit [http://localhost:8000](http://localhost:8000) to see the application's home page:
 
@@ -44,7 +44,7 @@ This confirms the application is running correctly. The page includes:
   dependencies.
 - **Quick Links**: Direct access to API documentation and other resources.
 
-## 🤝 Contribution Workflow
+## Contribution Workflow
 
 ### Fixing Bugs
 
@@ -79,7 +79,7 @@ We enforce strict coding standards to maintain a high-quality codebase.
 - **Commits**: Follow
   [Conventional Commits](https://www.conventionalcommits.org/).
 
-## 📜 Development Commands
+## Development Commands
 
 We use `just` to manage project commands. Run `just --list` to see all available
 commands.
@@ -105,7 +105,7 @@ commands.
 | `just bump part`         | Bump version (part: `patch`, `minor`, `major`)            |
 | `just tag`               | Create and push git tag for current version               |
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
@@ -115,7 +115,7 @@ commands.
 │   ├── db/             # Database session and base models
 │   ├── modules/        # Feature modules (e.g., user)
 │   └── main.py         # Application entry point
-├── docs/               # Project documentation (MkDocs)
+├── docs/               # Project documentation (Zensical)
 ├── tests/              # Test suite
 ├── docker-compose.yml  # Docker services configuration
 ├── Dockerfile          # Application container definition
@@ -124,7 +124,7 @@ commands.
 └── README.md           # Project documentation
 ```
 
-## 🧪 Quality Assurance
+## Quality Assurance
 
 This project maintains high code quality standards using:
 
