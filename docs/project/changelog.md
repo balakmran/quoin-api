@@ -11,6 +11,18 @@
   deprecations are handled. It explicitly does not cover the example
   `user` module's `/api/v1` routes, which remain yours to change freely.
 
+### Changed
+
+- **Docs**: reorganised the documentation-site navigation for better
+  discoverability — the landing tab is now **Overview**, the Guides
+  **Development** section is split into **Building / API Design /
+  Quality**, Troubleshooting folds into **Operations**, the duplicate
+  "Overview" entries are disambiguated (**Architecture Overview** /
+  **API Overview**), and the versioning policy/workflow docs (API
+  Stability, Release Workflow) move under **Project**. The changelog is
+  promoted to a top-level **Release Notes** tab. No document URLs
+  changed.
+
 ## [0.9.0] - 2026-07-07
 
 ### Added
