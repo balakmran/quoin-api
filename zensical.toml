@@ -36,6 +36,7 @@ nav = [
             { "Observability" = "guides/observability.md" },
             { "Deployment" = "guides/deployment.md" },
             { "Release Workflow" = "guides/release-workflow.md" },
+            { "API Stability & SemVer" = "guides/api-stability.md" },
         ]},
         { "Support" = [
             { "Troubleshooting" = "guides/troubleshooting.md" },

@@ -45,7 +45,7 @@ releases are shipped and the scope is clear.
 
 | Status | Feature |
 | :----- | :------ |
-| 📋 | **API stability + semver policy** — Public guarantee on what changes are breaking and how deprecations land |
+| ✅ | **API stability + semver policy** — Public guarantee on what changes are breaking and how deprecations land |
 | 📋 | **Copier feature flags** — `auth` as an opt-in boolean variable in `copier.yml` |
 | 📋 | **Launch checklist** — Every preceding phase verified complete |
 
