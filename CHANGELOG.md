@@ -24,6 +24,12 @@
   Release Workflow) move under **Project**, and **Roadmap** and
   **Release Notes** (the changelog) become top-level tabs. No surviving
   document's URL changed.
+- **Docs**: pruned the roadmap backlog from 29 items to 18 demand-gated
+  features — removed operational runbooks (deploy/rollback, backup/PITR,
+  incident templates, alert rules), tooling nits, marketing items, and
+  the off-thesis WebSocket/mTLS entries; narrowed the connection-pool
+  item to read-replica routing (pool sizing already shipped). The two
+  paragraphs framing the milestone were refreshed to current status.
 
 ## [0.9.0] - 2026-07-07
 
