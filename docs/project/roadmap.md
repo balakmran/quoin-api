@@ -18,21 +18,22 @@ feedback and shifting priorities.
 | 💡 | Under Consideration |
 | ❌ | Deferred / Won't Do |
 
-The public API contract is now locked (pagination envelope, soft
-delete, and the deprecation mechanism shipped — see the
-[CHANGELOG](changelog.md)). The remaining milestone below carries
-QuoinAPI to template completeness, and is independently shippable and
-gated by `just check` plus the existing pre-push hook. It may become
+The public API contract is locked — the pagination envelope, soft
+delete, and deprecation mechanism shipped in `0.9.0`, and the API
+stability and semver policy is now published (see the
+[CHANGELOG](changelog.md)). The one remaining milestone below carries
+QuoinAPI to template completeness; it is independently shippable, gated
+by `just check` plus the existing pre-push hook, and may become
 `v1.0.0`.
 
-This roadmap was trimmed in `v0.7.0` to remove features that are either
-deployer-specific (alert rules, deploy workflows, backup runbooks),
-duplicate existing infrastructure (OTel metrics on top of OTLP traces,
-secrets-manager adapters on top of env vars), or too business-specific
-to bake into a template (audit log, PII encryption). Those items live in
-the [Backlog](#backlog) and will be revisited only if real demand
-surfaces. All monitoring follows OpenTelemetry and CNCF standards — no
-vendor-specific tooling.
+The backlog below is deliberately narrow: it lists only demand-gated
+*features* — application code we would ship behind a feature flag or as
+an example module when a concrete user is blocked. Operational and
+deployer-specific concerns (alert thresholds, deploy/rollback workflows,
+backup runbooks) and rot-prone checklists were dropped outright rather
+than parked — they belong in your infrastructure repo, not a backend
+code template. All observability follows OpenTelemetry and CNCF
+standards — no vendor-specific tooling.
 
 ---
 
@@ -63,31 +64,20 @@ not "it would be nice to have".
 | 💡 | **Rate limiting (`slowapi`)** | In-memory backend is dev-only and shared-state in prod requires Redis (also backlog). Most production deployers rate-limit at the edge (NGINX, Cloudflare, API gateway, ALB); in-app rate limiting is niche enough to demand-gate. |
 | 💡 | **ETag / `If-Match` optimistic concurrency** | Genuinely useful for some apps but most CRUD APIs don't need it. Pattern can be documented in `docs/guides/` without code in the template. |
 | 💡 | **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
-| 💡 | **`just typecheck-strict`** | `ty` already runs at default strictness in the `Stop` hook + `just check`. A second escalated mode adds maintenance without a stated consumer. |
-| 💡 | **OWASP API Top-10 self-review doc** | Pure checklist; rots when OWASP publishes a new revision. Users will run their own review against their org's checklist. |
 | 💡 | **OTel Metrics + `/metrics` endpoint** | RED metrics can be derived from the existing OTLP trace stream in the OTel Collector. Direct Prometheus scrape is duplicate plumbing unless a deployer specifically needs it. |
 | 💡 | **Audit log table + actor propagation** | Structured logs already carry `request_id`, `trace_id`, caller subject, and path. A dedicated `audit` table is a compliance feature whose design depends on retention, immutability, and export needs that are business-specific. |
-| 💡 | **SLOs + alert rules YAML** | Alert thresholds are deployer-specific; shipping defaults invites copy-paste of wrong values. |
 | 💡 | **Secrets manager adapter** | `pydantic-settings` already reads env vars. Vault/Doppler/ASM have battle-tested sidecars and init-containers that inject env at runtime; an in-app adapter duplicates that and couples the template to one abstraction. |
 | 💡 | **PII classification + field-level encryption** | Huge design surface (key rotation, search-on-encrypted, KMS integration) that's deeply business-specific. Build when a real PII column needs it. |
-| 💡 | **Test factories (`polyfactory`)** | Current hand-rolled fixtures are explicit and work fine; polyfactory adds magic for marginal LOC savings. |
 | 💡 | **Schemathesis contract testing in CI** | Pays off when external consumers lock against the schema. Adds CI minutes and flaky-test risk before that point. |
 | 💡 | **Cursor-based pagination** | Premature unless a module hits million-row tables. Offset pagination is sufficient through `1.0`. |
-| 💡 | **Published performance benchmarks** | Marketing more than function. |
-| 💡 | **Incident + post-mortem templates** | Pure markdown; every org has its own (Notion/Linear/Jira/Docs). Doesn't belong in a backend code repo. |
-| 💡 | **Backup + PITR runbook + restore drill** | Always handled by the managed-DB provider (RDS, Cloud SQL, Aurora, Neon, Supabase). Generic-in-repo guidance will be either useless or wrong. |
-| 💡 | **Blue/green or canary deploy workflow** | Deployer-specific (k8s? ECS? Fly? Render?). Belongs in the operator's infra repo. |
-| 💡 | **Rollback runbook** | Same — tied to the deploy target. |
 | 💡 | **Feature flags (Unleash/GrowthBook compatible)** | Large surface (DB-backed module + swappable interface) with no stated demand. |
-| 💡 | **WebSocket support** | Off-thesis for a procurement-grade request/response backend template. |
 | 💡 | **Background task worker** | Persistent async task queue for emails, webhooks, and long-running work; evaluate Arq (asyncio-native) vs Dramatiq (broker-agnostic). |
 | 💡 | **Redis cache layer** | Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale. |
 | 💡 | **Multi-tenancy pattern** | Tenant-scoped query pattern with an example module. |
 | 💡 | **Organizations + memberships + scopes** | Richer authorization model beyond `require_roles`. |
 | 💡 | **API keys** | Hashed at rest, scoped, rotatable; for service-to-service callers. |
-| 💡 | **Connection pool tuning + read-replica routing** | Repository-layer routing of reads to replicas. |
+| 💡 | **Read-replica routing** | Repository-layer routing of reads to replicas. Pool sizing itself is already tunable via `QUOIN_DB_POOL_*`. |
 | 💡 | **Retention / erasure jobs** | GDPR Article 17 erasure on soft-deleted rows. |
-| ❌ | **mTLS for internal service-to-service** | Out of scope until QuoinAPI is multi-service. |
 
 ---
 
