@@ -1,45 +1,48 @@
 # QuoinAPI
 
 [![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
-[![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.136.3-teal.svg)](https://fastapi.tiangolo.com/)
-[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
+[![Docs](https://github.com/balakmran/quoin-api/actions/workflows/docs.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/docs.yml)
+[![Release](https://img.shields.io/github/v/release/balakmran/quoin-api)](https://github.com/balakmran/quoin-api/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**The Foundation for your Python backend API.**
+[![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.138.0-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/badge/ty-type_checked-8b5cf6)](https://github.com/astral-sh/ty)
+[![prek](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/j178/prek/master/docs/assets/badge-v0.json)](https://github.com/j178/prek)
 
-![QuoinAPI](docs/assets/images/quoin-api-banner.png)
+**The Foundation for your Python backend API.**
 
 QuoinAPI (pronounced "koyn") is a production-ready Python backend
 foundation built with FastAPI, SQLModel, and the Astral stack
 (uv, ruff, ty). It gives you a battle-tested starting point with
 type safety, observability, and clean architecture out of the box.
 
+## Contents
+
+- [Key Highlights](#key-highlights)
+- [Tech Stack](#tech-stack)
+- [Use as a Template](#use-as-a-template)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [AI-Assisted Development](#ai-assisted-development)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [Changelog](#changelog)
+- [License](#license)
+
 ## Key Highlights
 
-### High-Performance Core
-
-- **Async-first** patterns with FastAPI and async PostgreSQL via `asyncpg`
-- **Lightning-fast tooling** powered by `uv` for dependency management
-- **Optimized** for production workloads with connection pooling
-
-### Type Safety
-
-- **100% type-annotated** code verified by `ty` and strict linting via `ruff`
-- **Domain-driven design** with module-level exceptions and rich error context
-- **API versioning** with `/api/v1/` prefix for future-proof evolution
-
-### Built-in Observability
-
-- **Integrated OpenTelemetry** for distributed tracing
-- **Structured logging** with Structlog for machine-readable logs
-- **Health checks** and readiness endpoints out of the box
-
-### Developer Experience
-
-- **Ready-to-use template** that eliminates boilerplate
-- **Environment-based configuration** with `.env` file selection
-- **Just-based automation** for common development tasks
+- **Async-first** — FastAPI with async PostgreSQL via `asyncpg` and connection pooling
+- **Type-safe** — 100% annotated, checked by `ty` and linted by `ruff`
+- **Clean architecture** — domain-driven modules with rich, module-level exceptions
+- **Versioned API** — `/api/v1/` prefix for future-proof evolution
+- **Observable** — OpenTelemetry tracing, Structlog structured logs, health/readiness probes
+- **Batteries included** — `.env` config, `just` automation, and a Copier template to skip the boilerplate
 
 ## Tech Stack
 
@@ -47,33 +50,36 @@ type safety, observability, and clean architecture out of the box.
 - **Database:** PostgreSQL (using `asyncpg` driver)
 - **ORM:** SQLModel (SQLAlchemy wrapper)
 - **Migrations:** Alembic
-- **Package Manager:** `uv` (Fast Python package installer)
+- **Package Manager:** `uv` (Fast Python project & package manager)
 - **Task Runner:** `just`
 - **Linting/Formatting:** Ruff
 - **Type Checking:** ty (Static type checker)
 - **Testing:** Pytest, pytest-cov
 - **Observability:** OpenTelemetry, Structlog
-- **Documentation:** Zensical (MkDocs Material)
+- **Documentation:** Zensical
 
 ## Use as a Template
 
-QuoinAPI is designed to be used as a project generator via [Copier](https://copier.readthedocs.io/). To create a new API project using this architecture, first install Copier:
+QuoinAPI is a project generator via [Copier](https://copier.readthedocs.io/).
+Generate a new API in one command — [`uvx`](https://docs.astral.sh/uv/) runs
+Copier without installing it:
 
 ```bash
-uv tool install copier
-# OR
-pipx install copier
+uvx copier copy https://github.com/balakmran/quoin-api.git my-awesome-api --trust
 ```
 
-Then generate your project:
-
-```bash
-copier copy https://github.com/balakmran/quoin-api.git my-awesome-api --trust
-```
-
-Copier will prompt you for your project name, database prefixes, and other configuration variables.
+Copier prompts for your project name, database prefixes, and other configuration.
 
 ## Quick Start
+
+### Prerequisites
+
+- [Python 3.14+](https://www.python.org/downloads/)
+- [`uv`](https://docs.astral.sh/uv/) — package & environment manager
+- [`just`](https://github.com/casey/just) — task runner
+- [Docker](https://www.docker.com/) — for the local PostgreSQL and mock OAuth services
+
+### Setup
 
 ```bash
 # 1. Clone the repository and configure environment
@@ -91,6 +97,9 @@ just dev
 Visit the API documentation at
 [http://localhost:8000/docs](http://localhost:8000/docs).
 
+Run the full quality gate (format, lint, typecheck, test) any time with
+`just check`.
+
 ## Project Structure
 
 ```plaintext
@@ -99,15 +108,23 @@ Visit the API documentation at
 │   │   ├── config.py             # Pydantic settings
 │   │   ├── exceptions.py         # Custom exceptions
 │   │   ├── exception_handlers.py # Global exception handlers
+│   │   ├── lifecycle.py          # Graceful-shutdown request tracking
 │   │   ├── logging.py            # Structlog configuration
 │   │   ├── metadata.py           # Application metadata
 │   │   ├── middlewares.py        # Middleware configuration
 │   │   ├── openapi.py            # OpenAPI metadata & config
-│   │   └── telemetry.py          # OpenTelemetry instrumentation
+│   │   ├── pagination.py         # Pagination & sorting for lists
+│   │   ├── schemas.py            # Shared response schemas (Problem Details)
+│   │   ├── security.py           # OAuth2/OIDC auth & require_roles (RBAC)
+│   │   ├── telemetry.py          # OpenTelemetry instrumentation
+│   │   └── versioning.py         # Endpoint deprecation signalling
 │   ├── db/                       # Database connection & base models
 │   │   ├── session.py            # Database session
 │   │   └── base.py               # Base models
+│   ├── http/                     # Outbound HTTP client
+│   │   └── client.py             # Shared async httpx client
 │   ├── modules/
+│   │   ├── system/               # Health, readiness & home-page routes
 │   │   └── user/                 # Example domain module
 │   │       ├── exceptions.py     # Domain-specific exceptions
 │   │       ├── models.py         # SQLModel database tables
@@ -132,9 +149,19 @@ Visit the API documentation at
 └── zensical.toml                 # Documentation config
 ```
 
-## Changelog
+## Documentation
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
+Full documentation is published at
+**[balakmran.github.io/quoin-api](https://balakmran.github.io/quoin-api/)**.
+Start here:
+
+- [Getting Started](docs/guides/getting-started.md) — install, run, and explore the API
+- [Configuration](docs/guides/configuration.md) — every `QUOIN_` setting and its default
+- [Authentication](docs/guides/authentication.md) — OAuth 2.0 / OIDC and role-based access
+- [Creating a Module](docs/guides/creating-a-module.md) — add a new domain to the API
+
+Browse the full set under [`docs/guides/`](docs/guides/), or serve them
+locally with `just docs-serve`.
 
 ## AI-Assisted Development
 
@@ -143,14 +170,18 @@ quality-enforcement hooks, and live SDK documentation via MCP.
 See the [AI-Assisted Development guide](docs/guides/ai-setup.md) for
 the full reference.
 
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features and upcoming milestones.
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this
 project.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and upcoming milestones.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## License
 
