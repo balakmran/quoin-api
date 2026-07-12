@@ -116,7 +116,7 @@ async def test_validation_exception_handler() -> None:
         class TestModel(BaseModel):
             value: int
 
-        TestModel(value="not_an_int")  # type: ignore
+        TestModel(value="not_an_int")
     except PydanticValidationError as exc:
         response = await validation_exception_handler(request, exc)
         assert response.status_code == 422  # noqa: PLR2004
