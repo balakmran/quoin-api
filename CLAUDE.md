@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code (and other agents via the `AGENTS.md` / `GEMINI.md` symlinks) working in this repo.
+Guidance for Claude Code (and other agents via the `AGENTS.md` symlink) working in this repo.
 
 ## Project
 
