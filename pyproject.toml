@@ -43,7 +43,7 @@ dev = [
 ]
 docs = [
     "mkdocstrings-python>=2.0.5",
-    "zensical==0.0.46",
+    "zensical==0.0.50",
 ]
 test = [
     "pytest>=9.1.1",
@@ -51,9 +51,9 @@ test = [
     "pytest-cov>=7.1.0",
 ]
 tooling = [
-    "prek==0.4.5",
-    "ruff==0.15.18",
-    "ty==0.0.51",
+    "prek==0.4.9",
+    "ruff==0.15.21",
+    "ty==0.0.58",
 ]
 
 [tool.coverage.run]
