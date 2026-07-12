@@ -167,9 +167,9 @@
     ghLink.appendChild(ghText);
 
     const docsLink = document.createElement("a");
-    docsLink.href = "docs/";
+    docsLink.href = "guides/getting-started/";
     docsLink.className = "quoin-header__nav-link";
-    docsLink.textContent = "Docs";
+    docsLink.textContent = "Get Started";
 
     const nav = document.createElement("div");
     nav.className = "quoin-header__nav";
