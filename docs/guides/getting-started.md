@@ -1,5 +1,12 @@
 # Getting Started
 
+[![CI](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml/badge.svg)](https://github.com/balakmran/quoin-api/actions/workflows/ci.yml)
+[![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.136.3-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.38-blue.svg)](https://sqlmodel.tiangolo.com/)
+[![prek](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/j178/prek/master/docs/assets/badge-v0.json)](https://github.com/j178/prek)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Start a new project
 
 Use QuoinAPI as a [Copier](https://copier.readthedocs.io/) template to
@@ -15,6 +22,21 @@ just dev
 ```
 
 Visit [http://localhost:8000](http://localhost:8000) once the server is up.
+
+## Common recipes
+
+`just` is the task runner. The commands you'll reach for most:
+
+| Command | What it does |
+|---|---|
+| `just setup` | Install deps and wire commit hooks — run once |
+| `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
+| `just new <module>` | Scaffold and register a complete DDD module |
+| `just check` | Run format → lint → typecheck → test in one gate |
+| `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
+| `just token` | Mint a signed JWT against the local mock OAuth server |
+
+!!! tip "Run `just --list` for the full menu."
 
 ---
 

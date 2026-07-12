@@ -11,12 +11,8 @@ repo_url = "https://github.com/balakmran/quoin-api"
 repo_name = "balakmran/quoin-api"
 nav = [
     { "Home" = "index.md" },
-    { "Overview" = "docs.md" },
+    { "Getting Started" = "guides/getting-started.md" },
     { "Guides" = [
-        { "Setup" = [
-            { "Getting Started" = "guides/getting-started.md" },
-            { "Configuration" = "guides/configuration.md" },
-        ]},
         { "Building" = [
             { "Creating a Module" = "guides/creating-a-module.md" },
             { "Database Migrations" = "guides/database-migrations.md" },
@@ -35,6 +31,7 @@ nav = [
             { "AI-Assisted Development" = "guides/ai-setup.md" },
         ]},
         { "Operations" = [
+            { "Configuration" = "guides/configuration.md" },
             { "Security" = "guides/security.md" },
             { "Dependency Scanning" = "guides/dependency-scanning.md" },
             { "Observability" = "guides/observability.md" },
@@ -53,13 +50,13 @@ nav = [
         { "User" = "api/user.md" },
     ]},
     { "Project" = [
-        { "Roadmap" = "project/roadmap.md" },
         { "API Stability & SemVer" = "guides/api-stability.md" },
         { "Release Workflow" = "guides/release-workflow.md" },
         { "Security Policy" = "project/security-policy.md" },
         { "Contributing" = "project/contributing.md" },
         { "License" = "project/license.md" },
     ]},
+    { "Roadmap" = "project/roadmap.md" },
     { "Release Notes" = "project/changelog.md" },
 ]
 extra_css = ["stylesheets/extra.css"]
