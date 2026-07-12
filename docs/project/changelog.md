@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Docs**: an [API Stability & SemVer guide](../guides/api-stability.md)
+  publishes the versioning guarantee on the template surface — `app/core`
+  contracts, `QUOIN_*` settings, CLI recipes, scaffold output, and
+  `copier.yml` variables — and how `copier update` compatibility and
+  deprecations are handled. It explicitly does not cover the example
+  `user` module's `/api/v1` routes, which remain yours to change freely.
+
 ## [0.9.0] - 2026-07-07
 
 ### Added
