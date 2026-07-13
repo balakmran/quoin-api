@@ -123,6 +123,7 @@ Now that the app is running, here are the logical next steps:
 | Add a database column | [Database Migrations](database-migrations.md) |
 | Write tests | [Testing](testing.md) |
 | Explore the live API | [localhost:8000/docs](http://localhost:8000/docs) |
+| Work with Claude Code | [AI-Assisted Development](ai-setup.md) |
 
 ---
 
