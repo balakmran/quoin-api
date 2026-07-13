@@ -8,6 +8,7 @@ description: Use this skill whenever the user wants to verify that QuoinAPI's
   broken docs build (that is `just docb`), writing a brand-new guide for a
   feature you just shipped (do that inline per the CLAUDE.md docs-coverage
   rule), or syncing root docs into `docs/project/` (that is `just docb` too).
+allowed-tools: Read, Edit, Grep, Glob, Bash, WebFetch
 ---
 
 # Auditing QuoinAPI Docs Against the Code

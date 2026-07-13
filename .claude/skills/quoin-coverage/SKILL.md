@@ -8,6 +8,7 @@ description: Use this skill whenever the user wants to raise or close test
   line uncovered", or pasting a `pytest --cov` / coverage table with a
   `Missing` column. Do NOT use for scaffolding a brand-new module's test suite
   from scratch (that is `quoin-write-tests`) or for configuring pytest itself.
+allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
 # Closing Coverage Gaps in QuoinAPI
