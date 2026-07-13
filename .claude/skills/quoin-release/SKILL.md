@@ -1,6 +1,8 @@
 ---
 name: quoin-release
-description: Use this skill whenever the user wants to cut a release, ship a version, bump the version, tag a release, publish a new version, prepare a changelog entry, or do anything that ends with a `vX.Y.Z` git tag on this QuoinAPI project. Triggers include phrases like "release 0.7.0", "cut a patch release", "ship a new version", "bump the minor version", "tag the release", "prepare the changelog for release", or "let's release". Do NOT use for: editing the changelog mid-development without releasing, hotfix branch strategy questions, or generating release notes for an already-tagged version.
+description: Use this skill whenever the user wants to cut a release, ship a version, bump the version, tag a release, publish a new version, prepare a changelog entry, or do anything that ends with a `vX.Y.Z` git tag on this QuoinAPI project. Triggers include phrases like "release 0.7.0", "cut a patch release", "ship a new version", "bump the minor version", "tag the release", "prepare the changelog for release", or "let's release". Do NOT use for: editing the changelog mid-development without releasing, hotfix/emergency-patch releases (that is `quoin-hotfix`), or generating release notes for an already-tagged version.
+allowed-tools: Read, Edit, Bash
+model: haiku
 ---
 
 # Releasing QuoinAPI

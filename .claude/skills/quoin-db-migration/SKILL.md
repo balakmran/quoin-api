@@ -1,6 +1,7 @@
 ---
 name: quoin-db-migration
 description: Use this skill whenever the user wants to change the QuoinAPI database schema in any way — adding a column, adding an index, renaming a field, changing a type, dropping something, adding a new table to an existing module, or generally modifying anything in `app/modules/*/models.py` that affects the database. Triggers include phrases like "add a column", "add a field to", "make X nullable", "add an index on", "change the type of", "drop the Y column", "rename the Z field", "alter the table", or any request that implies an Alembic migration. Do NOT use for: creating an entire new module from scratch (that is `quoin-new-module`'s job), pure non-table SQLModel changes (request/response schemas in `schemas.py`), or fixing a buggy in-flight migration that hasn't been committed yet.
+allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
 ---
 
 # Modifying the QuoinAPI Schema
@@ -25,7 +26,10 @@ Good messages: `"add email_verified to user"`, `"index user.created_at"`, `"drop
 
 ### 3. Review the generated script — this is the important step
 
-Open the new file in `alembic/versions/` and read it line by line. Autogenerate is good but not infallible. Check:
+Open the new file in `alembic/versions/` and read it line by line, or delegate
+this pass to the `migration-reviewer` agent (`.claude/agents/migration-reviewer.md`),
+which runs the same checklist against just the newest script. Either way,
+autogenerate is good but not infallible. Check:
 
 - **Did it pick up exactly the columns/indexes/constraints you intended?** Diff your model change against the migration; anything that doesn't correspond is suspicious.
 - **Did it accidentally pick up unrelated drift?** If `op.drop_table(...)` or `op.drop_column(...)` appears for something you didn't touch, your local DB is out of sync with `head` — abort and resync, don't apply.

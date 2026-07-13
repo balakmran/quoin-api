@@ -1,6 +1,7 @@
 ---
 name: quoin-new-module
 description: Use this skill whenever the user wants to add a new feature module, domain, or resource to the QuoinAPI codebase. Triggers include phrases like "add a product module", "scaffold an orders feature", "create a new resource for X", "set up a payments module", "I want to add a new domain for Y", or any request that implies creating a fresh `app/modules/<name>/` package with its own model, schemas, service, repository, routes, and tests. Do NOT use for adding fields/columns to an existing model (that is a migration task), editing an existing module, or adding a single new endpoint to a module that already exists — only for greenfield modules where the directory doesn't yet exist.
+allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
 # Creating a New QuoinAPI Module

@@ -8,6 +8,8 @@ description: Use this skill whenever the user is about to open a pull request,
   straight to `gh pr create`. Do NOT use for: mid-development commits, the
   release tagging flow (that is `quoin-release`), or hotfix branches where
   the changelog entry was already written.
+allowed-tools: Read, Edit, Bash
+model: haiku
 ---
 
 # Pre-PR Checklist

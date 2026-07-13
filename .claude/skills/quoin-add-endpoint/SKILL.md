@@ -1,6 +1,7 @@
 ---
 name: quoin-add-endpoint
 description: Use this skill whenever the user wants to add a single new endpoint (route) to an existing QuoinAPI module — a new operation on a resource that already has its own `app/modules/<name>/` package. Triggers include phrases like "add an endpoint to the user module", "add a GET /users/by-email route", "expose a search endpoint on products", "add a deactivate action to users", "add a bulk-create route", or any request to add one route plus the service/repository/schema plumbing behind it. Do NOT use for: scaffolding a brand-new module whose directory doesn't exist yet (that is `quoin-new-module`), changing only the auth/`require_roles` on an existing route (that is `quoin-auth-route`), or altering the DB schema/columns (that is `quoin-db-migration`).
+allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
 # Adding an Endpoint to an Existing QuoinAPI Module

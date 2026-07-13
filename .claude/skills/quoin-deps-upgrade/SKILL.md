@@ -8,6 +8,7 @@ description: Use this skill whenever the user wants to upgrade dependencies or
   ty", or "check the actions for new versions". Do NOT use for adding a single
   new dependency to support a feature (just `uv add` it), or for the release /
   version-bump flow (that is `quoin-release`).
+allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
 ---
 
 # Upgrading Dependencies & Tooling
