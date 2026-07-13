@@ -49,4 +49,10 @@ case "$f" in
     deny "Refusing to edit applied alembic migrations. Generate a new migration via: just migrate-gen \"<message>\". Editing existing migrations breaks consumers who already ran them." ;;
 esac
 
+# Generated docs synced from root files by 'just docb'
+case "$f" in
+  *docs/project/*.md)
+    deny "Refusing to edit docs/project/$base — it is a build artifact synced by 'just docb' from a root file (CHANGELOG.md, CONTRIBUTING.md, ROADMAP.md, SECURITY.md, or LICENSE). Edit the root file instead, then run 'just docb'." ;;
+esac
+
 exit 0

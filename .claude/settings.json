@@ -46,6 +46,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/migration-reminder.sh\"",
             "timeout": 10,
             "statusMessage": "Checking for missing migration..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/http-exception-check.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking for HTTPException in service/repository..."
           }
         ]
       }
