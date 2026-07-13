@@ -43,6 +43,7 @@ type safety, observability, and clean architecture out of the box.
 - **Versioned API** — `/api/v1/` prefix for future-proof evolution
 - **Observable** — OpenTelemetry tracing, Structlog structured logs, health/readiness probes
 - **Batteries included** — `.env` config, `just` automation, and a Copier template to skip the boilerplate
+- **AI-ready** — project-specific Claude Code skills, quality-enforcement hooks, and subagents, pre-wired
 
 ## Tech Stack
 

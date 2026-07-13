@@ -73,6 +73,10 @@ We enforce strict coding standards to maintain a high-quality codebase.
 
 - **AI Agents**: Please refer to [CLAUDE.md](https://github.com/balakmran/quoin-api/blob/main/CLAUDE.md)
   for architectural and stylistic rules (also symlinked as `AGENTS.md`).
+- **Using Claude Code**: this repo ships project-specific skills, quality
+  hooks, and subagents that activate automatically in a Claude Code session
+  — see the [AI-Assisted Development guide](docs/guides/ai-setup.md) to get
+  the most out of them while contributing.
 - **Style**: We use [Ruff](https://github.com/astral-sh/ruff) for formatting and
   linting.
 - **Types**: 100% type coverage is required.
