@@ -4,6 +4,16 @@
 
 ### Added
 
+- **Security**: `just audit` (alias `just au`) scans the locked
+  dependency tree for known CVEs via `uv audit` and the OSV database,
+  reading `uv.lock` without building an environment. `just audit-prod`
+  narrows the scan to what ships in the container, and
+  `just audit-fix <package>` bumps a single package and re-checks.
+  Scanning is on-demand rather than a CI gate — an advisory published
+  overnight should not block unrelated work — so the release checklist
+  and the dependency-upgrade flow call it out instead. Accepted
+  advisories go in `audit_ignore` in the `justfile`. See the
+  [Dependency Scanning guide](docs/guides/dependency-scanning.md).
 - **Docs**: an [API Stability & SemVer guide](docs/guides/api-stability.md)
   publishes the versioning guarantee on the template surface — `app/core`
   contracts, `QUOIN_*` settings, CLI recipes, scaffold output, and
@@ -35,6 +45,11 @@
   ty 0.0.58 → 0.0.61, prek 0.4.9 → 0.4.10, zensical 0.0.50 → 0.0.51.
   Transitive lock refresh via `uv lock --upgrade` (starlette,
   sentry-sdk, opentelemetry stack, sqlalchemy, uvicorn, and others).
+- **Dependencies**: added `httpx2` to the `test` group. Starlette 1.3.1
+  deprecated using `httpx` with `starlette.testclient` and prefers
+  `httpx2` when installed, so this silences the warning with no code
+  change. Runtime code stays on `httpx`; see the note in the
+  [Outbound HTTP guide](docs/guides/outbound-http.md).
 
 ## [0.9.0] - 2026-07-07
 
