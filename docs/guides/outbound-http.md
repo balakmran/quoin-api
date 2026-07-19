@@ -6,6 +6,24 @@ prefer it over instantiating ad-hoc `httpx.AsyncClient()` objects, which
 leak connection pools and skip the retry, circuit-breaking, and tracing
 behaviour described below.
 
+!!! note "Runtime code uses `httpx`, not `httpx2`"
+
+    Both packages are installed. `starlette.testclient` prefers
+    **`httpx2`** (it is a `test`-group dependency purely to satisfy
+    that), while all runtime code — `app/http/client.py` and
+    `app/core/telemetry.py` — is still on **`httpx`**.
+
+    This split is historical, not a constraint:
+    `opentelemetry-instrumentation-httpx` **0.65b0 ships a working
+    `HTTPX2ClientInstrumentor`** (added upstream in [PR #4730][pr4730],
+    merged 2026-07-15), so porting the shared client to `httpx2` would
+    keep outbound tracing intact — it is a one-line instrumentor swap in
+    `instrument_http_client`. Note that `httpx` itself cannot be dropped
+    from the tree either way: `fastapi[standard]` pulls it in via
+    `fastapi-cli` and `fastapi-cloud-cli`.
+
+[pr4730]: https://github.com/open-telemetry/opentelemetry-python-contrib/pull/4730
+
 ## Why a shared client
 
 - **One connection pool.** The client is created once during application
