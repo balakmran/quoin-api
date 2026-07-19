@@ -160,6 +160,8 @@ git commit -m "docs: update deployment guide"
 Before creating a release:
 
 - [ ] All tests pass (`just check`)
+- [ ] No known CVEs in the locked dependencies (`just audit`) — see
+      [Dependency Scanning](dependency-scanning.md#uv-audit)
 - [ ] `CHANGELOG.md` is updated with all changes
 - [ ] Version is bumped (`just bump part="..."`)
 - [ ] Changes are merged to `main` branch

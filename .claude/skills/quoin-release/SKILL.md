@@ -17,6 +17,10 @@ Confirm three things with the user (or from the repo state) before touching anyt
 2. **Branch** — you should be on a clean working branch off `main`, not on `main` directly. The changelog/version commit goes through PR review like any other change.
 3. **What's actually shipping** — skim `git log <last-tag>..HEAD` so the changelog reflects reality. The `[Unreleased]` section is often stale or incomplete.
 
+Then run `just audit` — CVE scanning is not in CI, so a release is the
+last checkpoint before shipping vulnerable dependencies. Remediation
+ladder in [docs/guides/dependency-scanning.md](../../../docs/guides/dependency-scanning.md).
+
 ## Workflow
 
 ### 1. Curate the `[Unreleased]` section in `CHANGELOG.md`

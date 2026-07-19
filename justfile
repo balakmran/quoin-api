@@ -10,6 +10,7 @@ default:
 # Aliases
 alias pi := prek-install
 alias pr := prek-run
+alias au := audit
 alias docb := docs-build
 alias ds := docs-serve
 alias release := tag
@@ -175,6 +176,28 @@ check:
     @echo ""
     @echo "All checks passed!"
     @echo ""
+
+# =============================================================================
+# Security
+# =============================================================================
+
+# Advisory IDs accepted after review. Every entry needs a dated comment in
+# docs/guides/dependency-scanning.md explaining why it is tolerated.
+audit_ignore := ""
+
+# Scan the locked dependency tree for known CVEs (queries OSV; needs network)
+audit *args:
+    @uv audit --preview-features audit-command --locked {{ audit_ignore }} {{ args }}
+
+# Audit only what ships in the container (runtime deps, no dev/test/docs groups)
+audit-prod:
+    @just audit --no-default-groups
+
+# Bump one package to its newest compatible release, then re-audit
+audit-fix package:
+    @uv lock --upgrade-package {{ package }}
+    @uv sync --all-groups
+    @just audit
 
 # =============================================================================
 # Documentation
