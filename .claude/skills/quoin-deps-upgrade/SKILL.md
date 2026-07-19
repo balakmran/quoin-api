@@ -38,6 +38,8 @@ especially for major bumps.
    uv sync --all-groups
    ```
    Review the `uv.lock` diff — never hand-edit the lock (a hook blocks it).
+   Then run `just audit` to confirm the new lock is clean; if a CVE surfaces,
+   follow the remediation ladder in `docs/guides/dependency-scanning.md`.
 3. **Python version bump** (e.g. 3.14): the interpreter is managed by uv. Update
    `requires-python` in `pyproject.toml`, install the target with
    `uv python install <version>`, and re-lock. Then run the stale-reference
@@ -77,6 +79,7 @@ config-drift Stop hook will also flag this).
 
 ```bash
 just check    # format, lint, typecheck, tests at 100%
+just audit    # no known CVEs in the new lock
 ```
 
 Then hand off to [quoin-pre-pr](../quoin-pre-pr/SKILL.md) — it covers the

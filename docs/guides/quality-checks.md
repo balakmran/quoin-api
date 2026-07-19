@@ -135,6 +135,12 @@ All quality checks run automatically on every push via GitHub Actions:
   run: coverage report --fail-under=95
 ```
 
+Dependency CVE scanning is **not** part of this pipeline or of
+`just check` — it needs network access and its result depends on the
+OSV database rather than on your code. Run `just audit` by hand after
+dependency changes; see
+[Dependency Scanning](dependency-scanning.md#uv-audit).
+
 Pull requests cannot be merged until all checks pass ✅
 
 ---
@@ -164,6 +170,7 @@ The project maintains strict quality standards:
 | Run tests      | `just test`      |
 | Install hooks  | `just pi`        |
 | Run hooks      | `just pr`        |
+| Audit deps for CVEs | `just audit` |
 | Sync `main` after a merge | `just sync-main` |
 
 ---
