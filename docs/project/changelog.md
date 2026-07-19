@@ -30,6 +30,11 @@
   the off-thesis WebSocket/mTLS entries; narrowed the connection-pool
   item to read-replica routing (pool sizing already shipped). The two
   paragraphs framing the milestone were refreshed to current status.
+- **Dependencies**: FastAPI 0.138.0 → 0.139.2, SQLModel 0.0.38 →
+  0.0.39, greenlet 3.5.2 → 3.5.3. Tooling: ruff 0.15.21 → 0.15.22,
+  ty 0.0.58 → 0.0.61, prek 0.4.9 → 0.4.10, zensical 0.0.50 → 0.0.51.
+  Transitive lock refresh via `uv lock --upgrade` (starlette,
+  sentry-sdk, opentelemetry stack, sqlalchemy, uvicorn, and others).
 
 ## [0.9.0] - 2026-07-07
 

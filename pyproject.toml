@@ -13,8 +13,8 @@ license-files = ["LICENSE"]
 dependencies = [
     "alembic>=1.18.4",
     "asyncpg>=0.31.0",
-    "fastapi[standard]==0.138.0",
-    "greenlet==3.5.2",
+    "fastapi[standard]==0.139.2",
+    "greenlet==3.5.3",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "opentelemetry-api>=1.42.1",
@@ -26,7 +26,7 @@ dependencies = [
     "purgatory>=3.0.1",
     "pydantic-settings>=2.14.2",
     "PyJWT[crypto]>=2.13.0",
-    "sqlmodel==0.0.38",
+    "sqlmodel==0.0.39",
     "stamina>=26.1.0",
     "structlog>=26.1.0",
 ]
@@ -43,7 +43,7 @@ dev = [
 ]
 docs = [
     "mkdocstrings-python>=2.0.5",
-    "zensical==0.0.50",
+    "zensical==0.0.51",
 ]
 test = [
     "pytest>=9.1.1",
@@ -51,9 +51,9 @@ test = [
     "pytest-cov>=7.1.0",
 ]
 tooling = [
-    "prek==0.4.9",
-    "ruff==0.15.21",
-    "ty==0.0.58",
+    "prek==0.4.10",
+    "ruff==0.15.22",
+    "ty==0.0.61",
 ]
 
 [tool.coverage.run]
