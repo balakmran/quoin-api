@@ -23,7 +23,7 @@ graph TD
     C --> D[Commit Changelog<br/>docs: update changelog]
     D --> E[Merge to main]
     E --> F[Create Tag<br/>just tag]
-    F --> G[GitHub Release<br/>automatic]
+    F --> G[Copier Update Check<br/>automatic]
 ```
 
 ---
@@ -111,22 +111,54 @@ just tag
 
 This command:
 
-1. Creates an annotated Git tag (e.g., `v1.2.0`)
+1. Creates a Git tag (e.g., `v1.2.0`)
 2. Pushes the tag to the remote repository
-3. Triggers the GitHub Release workflow
+3. Triggers the [Copier Update Check](#6-copier-update-verification-automatic)
+   workflow
 
 ---
 
 ### 5. GitHub Release
 
-The GitHub Actions workflow automatically:
+Pushing the tag does **not** create a GitHub Release automatically —
+there is no workflow for it. If you want one, create it yourself once
+the tag is pushed:
 
-- Creates a GitHub Release from the tag
-- Extracts release notes from `CHANGELOG.md`
-- Attaches build artifacts (if configured)
+```bash
+gh release create v1.2.0 --title v1.2.0 --notes-from-tag
+```
 
-View releases at:
-[https://github.com/balakmran/quoin-api/releases](https://github.com/balakmran/quoin-api/releases)
+Or use `--notes-file` to paste in the relevant `CHANGELOG.md` section
+instead of GitHub's auto-generated notes. Either way, the tag itself
+(not a GitHub Release) is what `copier copy`, `copier update`, and
+`just verify-template-update` resolve against.
+
+View tags at:
+[https://github.com/balakmran/quoin-api/tags](https://github.com/balakmran/quoin-api/tags)
+
+---
+
+### 6. Copier Update Verification (automatic)
+
+Pushing a `v*` tag also triggers the **Copier Update Check** workflow
+(`.github/workflows/copier-update.yml`). It generates a project from the
+previous release tag, runs `copier update` to the tag just pushed, and
+fails the job if the update leaves `.rej` conflict files or the
+generated project's `.copier-answers.yml` doesn't end up pointing at the
+new tag. On the very first release (no earlier tag exists) the job is a
+no-op.
+
+This only checks that the *update mechanism* itself still works — it
+does not run `just check` against the generated project. Whether a
+freshly generated (or updated) scaffold passes `just check` out of the
+box is tracked separately as template completeness work (see
+`ROADMAP.md`).
+
+You can run the same check locally before tagging:
+
+```bash
+just verify-template-update v0.8.0 v0.9.0
+```
 
 ---
 
@@ -166,7 +198,10 @@ Before creating a release:
 - [ ] Version is bumped (`just bump part="..."`)
 - [ ] Changes are merged to `main` branch
 - [ ] Tag is created and pushed (`just tag`)
-- [ ] GitHub Release is created automatically
+- [ ] Copier Update Check passes on the new tag (automatic; see
+      [above](#6-copier-update-verification-automatic))
+- [ ] GitHub Release is created, if desired (`gh release create`; not
+      automatic)
 - [ ] Documentation is deployed
 
 ---

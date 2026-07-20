@@ -1,0 +1,61 @@
+name: Copier Update Check
+
+# Verifies the template's `copier update` path still works across a real
+# release. This only runs on release tags, not every push/PR — it proves
+# the update mechanism itself, not scaffold polish (that's tracked
+# separately in ROADMAP.md), so it isn't worth paying its cost on every
+# change.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  verify-update:
+    name: Verify copier update path
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout with full tag history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Determine previous release tag
+        id: tags
+        run: |
+          CURRENT_TAG="${GITHUB_REF_NAME}"
+          PREV_TAG=$(git tag --sort=-v:refname | awk -v cur="$CURRENT_TAG" 'found{print; exit} $0==cur{found=1}')
+          echo "current=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
+          echo "previous=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          if [ -z "$PREV_TAG" ]; then
+            echo "No earlier release tag found — this is the first release, nothing to verify an update from."
+          fi
+
+      - name: Install uv
+        if: steps.tags.outputs.previous != ''
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        if: steps.tags.outputs.previous != ''
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install just
+        if: steps.tags.outputs.previous != ''
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+
+      - name: Install dependencies
+        if: steps.tags.outputs.previous != ''
+        run: just install
+
+      - name: Verify copier update from the previous release
+        if: steps.tags.outputs.previous != ''
+        env:
+          PREVIOUS_TAG: ${{ steps.tags.outputs.previous }}
+          CURRENT_TAG: ${{ steps.tags.outputs.current }}
+        run: just verify-template-update "$PREVIOUS_TAG" "$CURRENT_TAG"
