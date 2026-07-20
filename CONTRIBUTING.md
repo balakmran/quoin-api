@@ -9,7 +9,7 @@ project structure.
 Ensure you have the following tools installed:
 
 - [Git](https://git-scm.com/) - Version control
-- [Python 3.14+](https://www.python.org/downloads/)
+- [Python 3.12+](https://www.python.org/downloads/)
 - [uv](https://github.com/astral-sh/uv) - Python package manager
 - [just](https://github.com/casey/just) - Command runner
 - [OrbStack](https://orbstack.dev/) (recommended) or

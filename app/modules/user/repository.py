@@ -165,7 +165,7 @@ class UserRepository:
         sort: str | None = None,
         is_active: bool | None = None,
         q: str | None = None,
-    ) -> tuple[list[User], int]:  # type: ignore
+    ) -> tuple[list[User], int]:
         """Fetch a filtered, sorted page of User records and its total.
 
         Args:
