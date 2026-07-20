@@ -4,52 +4,35 @@
 
 ### Added
 
-- **Security**: `just audit` (alias `just au`) scans the locked
-  dependency tree for known CVEs via `uv audit` and the OSV database,
-  reading `uv.lock` without building an environment. `just audit-prod`
-  narrows the scan to what ships in the container, and
-  `just audit-fix <package>` bumps a single package and re-checks.
-  Scanning is on-demand rather than a CI gate — an advisory published
-  overnight should not block unrelated work — so the release checklist
-  and the dependency-upgrade flow call it out instead. Accepted
-  advisories go in `audit_ignore` in the `justfile`. See the
+- **CI**: a `Copier Update Check` workflow runs on every `v*` tag push,
+  verifying that `copier update` from the previous release applies
+  cleanly. Also runnable locally via `just verify-template-update`.
+- **Security**: `just audit` scans the locked dependencies for known
+  CVEs (via `uv audit` / OSV), with `audit-prod` and `audit-fix`
+  variants. See the
   [Dependency Scanning guide](../guides/dependency-scanning.md).
-- **Docs**: an [API Stability & SemVer guide](../guides/api-stability.md)
-  publishes the versioning guarantee on the template surface — `app/core`
-  contracts, `QUOIN_*` settings, CLI recipes, scaffold output, and
-  `copier.yml` variables — and how `copier update` compatibility and
-  deprecations are handled. It explicitly does not cover the example
-  `user` module's `/api/v1` routes, which remain yours to change freely.
+- **Docs**: an
+  [API Stability & SemVer guide](../guides/api-stability.md) documents
+  the versioning guarantee across the template surface.
 
 ### Changed
 
-- **Docs**: reorganised the documentation-site navigation for better
-  discoverability. The redundant **Overview** page (`docs.md`) is
-  retired — its recipes table and badges fold into **Getting Started**,
-  which is promoted to a top-level tab. The Guides **Development**
-  section is split into **Building / API Design / Quality**;
-  Configuration and Troubleshooting join **Operations**. The duplicate
-  "Overview" entries are disambiguated (**Architecture Overview** /
-  **API Overview**), the versioning policy/workflow docs (API Stability,
-  Release Workflow) move under **Project**, and **Roadmap** and
-  **Release Notes** (the changelog) become top-level tabs. No surviving
-  document's URL changed.
-- **Docs**: pruned the roadmap backlog from 29 items to 18 demand-gated
-  features — removed operational runbooks (deploy/rollback, backup/PITR,
-  incident templates, alert rules), tooling nits, marketing items, and
-  the off-thesis WebSocket/mTLS entries; narrowed the connection-pool
-  item to read-replica routing (pool sizing already shipped). The two
-  paragraphs framing the milestone were refreshed to current status.
-- **Dependencies**: FastAPI 0.138.0 → 0.139.2, SQLModel 0.0.38 →
-  0.0.39, greenlet 3.5.2 → 3.5.3. Tooling: ruff 0.15.21 → 0.15.22,
-  ty 0.0.58 → 0.0.61, prek 0.4.9 → 0.4.10, zensical 0.0.50 → 0.0.51.
-  Transitive lock refresh via `uv lock --upgrade` (starlette,
-  sentry-sdk, opentelemetry stack, sqlalchemy, uvicorn, and others).
-- **Dependencies**: added `httpx2` to the `test` group. Starlette 1.3.1
-  deprecated using `httpx` with `starlette.testclient` and prefers
-  `httpx2` when installed, so this silences the warning with no code
-  change. Runtime code stays on `httpx`; see the note in the
-  [Outbound HTTP guide](../guides/outbound-http.md).
+- **Tooling**: lowered `requires-python` from `>=3.14` to `>=3.12` and
+  added a CI matrix across 3.12–3.14 to widen adoption. The dev
+  toolchain and production image stay on 3.14.
+- **Docs**: reorganised the documentation-site navigation for
+  discoverability; no document URLs changed.
+- **Docs**: pruned the roadmap backlog to demand-gated features only.
+- **Dependencies**: upgraded FastAPI, SQLModel, greenlet, and the
+  ruff/ty/prek/zensical toolchain, plus a transitive lock refresh.
+- **Dependencies**: added `httpx2` to the `test` group to silence a
+  Starlette testclient deprecation; runtime code stays on `httpx`.
+
+### Fixed
+
+- **Template**: generated projects now persist a `.copier-answers.yml`,
+  so `copier update` works — previously the template omitted the answers
+  file entirely, leaving every generated project unable to take updates.
 
 ## [0.9.0] - 2026-07-07
 

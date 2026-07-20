@@ -39,9 +39,21 @@ If `## [Unreleased]` has no `### Added` / `### Changed` / `### Fixed` section
 yet, create the appropriate one. Section order within a release:
 Added → Changed → Deprecated → Removed → Fixed → Security.
 
-Keep entries user-visible and impact-focused — what changed and why it
-matters, not what files were edited. Group related bullets under a bold
-sub-label when it helps scanning (see existing entries for the style).
+Keep entries **concise and high-level** — one or two sentences per bullet,
+covering what changed and why it matters, not how it was implemented. Prefix
+each bullet with a bold sub-label (`**API**`, `**Tooling**`, `**Docs**`,
+`**Dependencies**`, …). Leave implementation detail — version-number tables,
+PEP/RFC citations, internal mechanics, file-level notes — to the commit and
+the guides; the changelog is a scannable summary, not a design doc.
+
+Example of the target register:
+
+```markdown
+- **Tooling**: lowered `requires-python` from `>=3.14` to `>=3.12` and
+  added a CI matrix across 3.12–3.14 to widen adoption.
+```
+
+not a multi-paragraph bullet enumerating every touched file or fixed edge case.
 
 If `[Unreleased]` already has an accurate entry for this work, skip ahead.
 
