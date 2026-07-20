@@ -264,7 +264,7 @@ def scan(text: str) -> list[Flag]:
     """
     try:
         tree = ast.parse(text)
-    except SyntaxError, ValueError:
+    except (SyntaxError, ValueError):
         return []
 
     receivers = {"op"} | _batch_receivers(tree)

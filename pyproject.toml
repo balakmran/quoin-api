@@ -3,7 +3,7 @@ name = "quoin-api"
 version = "0.9.0"
 description = "The Foundation for your Python backend API"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 authors = [
     { name = "Balakumaran Manoharan", email = "bala@balakmran.dev" }
 ]
@@ -82,7 +82,7 @@ python_files = ["test_*.py"]
 
 [tool.ruff]
 line-length = 80
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.format]
 docstring-code-format = true

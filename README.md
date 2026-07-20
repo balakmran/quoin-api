@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/balakmran/quoin-api)](https://github.com/balakmran/quoin-api/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139.2-teal.svg)](https://fastapi.tiangolo.com/)
 [![SQLModel](https://img.shields.io/badge/SQLModel-0.0.39-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -75,7 +75,7 @@ Copier prompts for your project name, database prefixes, and other configuration
 
 ### Prerequisites
 
-- [Python 3.14+](https://www.python.org/downloads/)
+- [Python 3.12+](https://www.python.org/downloads/)
 - [`uv`](https://docs.astral.sh/uv/) — package & environment manager
 - [`just`](https://github.com/casey/just) — task runner
 - [Docker](https://www.docker.com/) — for the local PostgreSQL and mock OAuth services

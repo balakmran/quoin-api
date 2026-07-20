@@ -14,6 +14,16 @@ logger = structlog.get_logger(__name__)
 
 _PROBLEM_MEDIA_TYPE = "application/problem+json"
 
+# CPython's HTTPStatus.phrase wording tracks RFC updates (e.g. 422's
+# phrase changed from "Unprocessable Entity" to "Unprocessable Content"),
+# so deriving titles from it would make the response body depend on
+# which Python version is running the server. Pin the phrases QuoinAPI
+# actually raises so the RFC 9457 `title` field is stable across the
+# supported interpreter range.
+_PROBLEM_TITLES = {
+    HTTPStatus.UNPROCESSABLE_ENTITY: "Unprocessable Content",
+}
+
 
 def _problem_type(exc: Exception) -> str:
     """Derive a URN problem type from the exception class name."""
@@ -25,9 +35,10 @@ def _problem_type(exc: Exception) -> str:
 def _problem_title(status_code: int) -> str:
     """Return the standard HTTP reason phrase for a status code."""
     try:
-        return HTTPStatus(status_code).phrase
+        status = HTTPStatus(status_code)
     except ValueError:
         return "Error"
+    return _PROBLEM_TITLES.get(status, status.phrase)
 
 
 def _problem_response(
