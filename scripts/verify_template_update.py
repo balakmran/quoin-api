@@ -143,6 +143,13 @@ def verify(previous_tag: str, current_tag: str) -> None:
                 "update",
                 "--defaults",
                 "--trust",
+                # Force .rej conflict files. Copier's default `inline`
+                # mode writes conflict markers into the files and deletes
+                # the .rej witnesses, which `_check_no_conflicts` (a .rej
+                # glob) would then miss — silently passing a conflicted
+                # update.
+                "--conflict",
+                "rej",
                 "--vcs-ref",
                 current_tag,
             ],
