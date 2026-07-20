@@ -155,6 +155,13 @@ def run_replacements() -> None:
             # CHANGELOG and README are rewritten fresh - skip general pass
             if file_name in {"CHANGELOG.md", "README.md"}:
                 continue
+            # The answers file records _src_path (the template's git URL).
+            # The blanket "quoin-api" -> PROJECT_SLUG / "balakmran" ->
+            # GITHUB_USERNAME rules below would corrupt that recorded path
+            # into a URL that never existed, permanently breaking future
+            # `copier update` runs for this project.
+            if file_name == ".copier-answers.yml":
+                continue
             process_file(file_path)
 
 
