@@ -193,7 +193,8 @@ class RequestIDMiddleware:
         try:
             await self.app(scope, receive, send_with_id)
         finally:
-            structlog.contextvars.unbind_contextvars("request_id")
+            # `caller` is bound by get_current_caller on authenticated routes.
+            structlog.contextvars.unbind_contextvars("request_id", "caller")
 
 
 class SecurityHeadersMiddleware:

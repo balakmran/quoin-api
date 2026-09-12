@@ -57,7 +57,7 @@ Human-readable console output:
 
 ```
 2026-02-15T15:30:00.123456 [info     ] user_created email=test@example.com user_id=abc123
-2026-02-15T15:30:05.789012 [warning  ] app_error message=User not found status_code=404 path=/api/v1/users/xyz
+2026-02-15T15:30:05.789012 [info     ] app_error message=User not found status_code=404 path=/api/v1/users/xyz
 ```
 
 #### Production (`QUOIN_ENV=production`)
@@ -179,6 +179,32 @@ QUOIN_REQUEST_ID_HEADER=X-Correlation-ID
 
 This affects both the inbound lookup and the outbound response header,
 so callers and the application always agree on the name.
+
+### Caller
+
+Once a route authenticates, `get_current_caller` binds the token's
+`sub` to the log context as `caller`. Every later log line in that
+request then says who made it, including the `http_request` access log
+line. `RequestIDMiddleware` unbinds it along
+with `request_id` when the request ends. Public routes have no caller
+and log none.
+
+### Error Response Levels
+
+The exception handlers log each error response at a level that matches
+who has to act on it:
+
+| Status | Level | Traceback |
+| :----- | :---- | :-------- |
+| 5xx | `error` | yes |
+| 401, 403 | `warning` | no |
+| Any other 4xx, including 404 and 405 | `info` | no |
+
+A deliberate 503 from `/ready`, or an outbound call that has exhausted
+its retries, needs an operator. A scanner probing unknown paths does
+not. So `QUOIN_LOG_LEVEL=WARNING` hides routine client errors but
+keeps denials and server faults. An unhandled exception always logs at
+`error` with its traceback.
 
 ### Access Log
 

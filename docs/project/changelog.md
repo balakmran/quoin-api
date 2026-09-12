@@ -83,6 +83,20 @@
 
 ### Changed
 
+- **Logging**: error responses are now logged at a level that
+  matches who has to act on them.
+  - A 5xx domain error, such as a `ServiceUnavailableError` from
+    `/ready` or an outbound 502/503/504, logs at ERROR with its
+    traceback.
+  - 401 and 403 stay at WARNING.
+  - Every other 4xx, including Starlette's 404 and 405, drops to
+    INFO.
+
+  All of them used to share WARNING, with no traceback. After
+  authentication, the token's `sub` is bound to the log context as
+  `caller`, so later lines in the request say who made it. If you
+  alert on WARNING-level error-response lines, move 5xx alerts to
+  ERROR.
 - **CORS**: the request-ID header is now added to the allowed and
   exposed header lists from `QUOIN_REQUEST_ID_HEADER`, so
   `QUOIN_BACKEND_CORS_ALLOW_HEADERS` defaults to

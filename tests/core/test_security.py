@@ -12,6 +12,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from httpx import Response
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
+from structlog.contextvars import get_contextvars, unbind_contextvars
 from structlog.testing import capture_logs
 
 from app.core import security as security_module
@@ -674,10 +675,17 @@ async def test_get_current_caller_resolves_identity(
     )
 
     claims = {"sub": "svc-xyz", "roles": ["api.read"]}
-    caller = await get_current_caller(claims=claims)
+    try:
+        caller = await get_current_caller(claims=claims)
+        bound = get_contextvars()
+    finally:
+        unbind_contextvars("caller")
+
     assert caller.subject == "svc-xyz"
     assert caller.roles == ["api.read"]
     assert caller.claims == claims
+    # Binds the subject so later log lines in the request name the caller.
+    assert bound["caller"] == "svc-xyz"
 
 
 async def test_get_token_claims_no_credentials() -> None:

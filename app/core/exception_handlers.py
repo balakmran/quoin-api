@@ -110,12 +110,31 @@ def _problem_response(
     )
 
 
+def _log_error_response(
+    event: str, status_code: int, exc: BaseException, **fields: Any
+) -> None:
+    """Log an error response at the level matching who has to act on it.
+
+    A 5xx is the server's fault: ERROR, with the traceback an operator
+    needs. 401/403 stay at WARNING, where repeated denials are worth
+    watching. Any other 4xx -- including every scanner's 404 -- is the
+    client's mistake and routine: INFO.
+    """
+    if status_code >= 500:  # noqa: PLR2004
+        logger.error(event, status_code=status_code, exc_info=exc, **fields)
+    elif status_code in (401, 403):
+        logger.warning(event, status_code=status_code, **fields)
+    else:
+        logger.info(event, status_code=status_code, **fields)
+
+
 async def quoin_exception_handler(request: Request, exc: Any) -> Response:
     """Handle QuoinError exceptions."""
     quoin_exc: QuoinError = exc
-    logger.warning(
+    _log_error_response(
         "quoin_error",
-        status_code=quoin_exc.status_code,
+        quoin_exc.status_code,
+        quoin_exc,
         message=quoin_exc.message,
         path=request.url.path,
     )
@@ -146,9 +165,10 @@ async def http_exception_handler(request: Request, exc: Any) -> Response:
     dependencies — since it is a subclass.
     """
     http_exc: StarletteHTTPException = exc
-    logger.warning(
+    _log_error_response(
         "http_exception",
-        status_code=http_exc.status_code,
+        http_exc.status_code,
+        http_exc,
         detail=http_exc.detail,
         path=request.url.path,
     )
