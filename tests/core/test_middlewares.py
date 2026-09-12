@@ -375,6 +375,27 @@ async def test_request_id_middleware_binds_and_clears_structlog(
     assert captured["request_id"] == "ctx-test-id"
 
 
+@pytest.mark.asyncio
+async def test_request_id_middleware_unbinds_caller_after_request(
+    request_id_app: FastAPI,
+) -> None:
+    """A caller bound during one request never leaks into the next."""
+
+    @request_id_app.get("/bind-caller")
+    async def bind_caller() -> dict[str, str]:
+        structlog.contextvars.bind_contextvars(caller="svc-a")
+        return {}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=request_id_app), base_url="http://test"
+    ) as ac:
+        await ac.get("/bind-caller")
+
+    context = structlog.contextvars.get_contextvars()
+    assert "caller" not in context
+    assert "request_id" not in context
+
+
 def test_configure_cors_rejects_wildcard_with_credentials_in_prod() -> None:
     """In production, wildcard methods/headers + credentials must error."""
     app = FastAPI()

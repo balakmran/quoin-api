@@ -384,6 +384,9 @@ async def get_current_caller(
     if not subject:
         raise UnauthorizedError("Token subject is empty")
     roles = extract_roles(claims)
+    # Later log lines in this request say who the caller was;
+    # RequestIDMiddleware unbinds it when the request ends.
+    structlog.contextvars.bind_contextvars(caller=subject)
     return ServicePrincipal(subject=subject, roles=roles, claims=claims)
 
 

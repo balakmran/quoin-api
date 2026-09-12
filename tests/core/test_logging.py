@@ -160,7 +160,7 @@ async def test_capture_logs_survives_repeated_create_app_calls() -> None:
 
     events = [log for log in cap_logs if log["event"] == "quoin_error"]
     assert len(events) == 1
-    assert events[0]["log_level"] == "warning"
+    assert events[0]["log_level"] == "info"  # a 400 is routine client error
 
 
 def test_add_otel_context_injects_fields_when_span_valid() -> None:

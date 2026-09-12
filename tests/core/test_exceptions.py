@@ -393,17 +393,25 @@ async def test_quoin_request_validation_handling() -> None:
 
 
 @pytest.mark.asyncio
-async def test_quoin_exception_handler_logs() -> None:
-    """quoin_exception_handler emits a structured warning log."""
+@pytest.mark.parametrize(
+    ("status_code", "level", "has_traceback"),
+    [
+        (status.HTTP_400_BAD_REQUEST, "info", False),
+        (status.HTTP_404_NOT_FOUND, "info", False),
+        (status.HTTP_403_FORBIDDEN, "warning", False),
+        (status.HTTP_503_SERVICE_UNAVAILABLE, "error", True),
+    ],
+)
+async def test_quoin_exception_handler_logs(
+    status_code: int, level: str, has_traceback: bool
+) -> None:
+    """The level follows who has to act; only a 5xx carries a traceback."""
     app = FastAPI()
     add_exception_handlers(app)
 
     @app.get("/error")
     async def raise_error() -> None:
-        raise QuoinError(
-            message="log test error",
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
+        raise QuoinError(message="log test error", status_code=status_code)
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -412,7 +420,40 @@ async def test_quoin_exception_handler_logs() -> None:
             await ac.get("/error")
 
     assert len(cap_logs) == 1
-    assert cap_logs[0]["event"] == "quoin_error"
-    assert cap_logs[0]["status_code"] == status.HTTP_400_BAD_REQUEST
-    assert cap_logs[0]["message"] == "log test error"
-    assert cap_logs[0]["log_level"] == "warning"
+    entry = cap_logs[0]
+    assert entry["event"] == "quoin_error"
+    assert entry["status_code"] == status_code
+    assert entry["message"] == "log test error"
+    assert entry["log_level"] == level
+    assert isinstance(entry.get("exc_info"), QuoinError) is has_traceback
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "path", "status_code"),
+    [
+        ("GET", "/missing", status.HTTP_404_NOT_FOUND),
+        ("POST", "/only-get", status.HTTP_405_METHOD_NOT_ALLOWED),
+    ],
+)
+async def test_http_exception_handler_logs_routing_misses_at_info(
+    method: str, path: str, status_code: int
+) -> None:
+    """A scanner's 404 or a wrong-method 405 is routine, not a warning."""
+    app = FastAPI()
+    add_exception_handlers(app)
+
+    @app.get("/only-get")
+    async def only_get() -> dict[str, str]:
+        return {}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        with capture_logs() as cap_logs:
+            await ac.request(method, path)
+
+    assert len(cap_logs) == 1
+    assert cap_logs[0]["event"] == "http_exception"
+    assert cap_logs[0]["status_code"] == status_code
+    assert cap_logs[0]["log_level"] == "info"
