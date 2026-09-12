@@ -51,7 +51,7 @@ Automatically formats all Python files using Ruff.
 
 **What it fixes**:
 
-- Line length (max 80 characters)
+- Line length (wraps code at 80 characters)
 - Import ordering
 - Trailing whitespace
 - Quote normalization
@@ -197,6 +197,11 @@ The project maintains strict quality standards:
 | **Type Hints**  | 100% coverage  | ty     |
 | **Tests**       | 100% coverage  | Pytest |
 | **Line Length** | ≤80 chars      | Ruff   |
+
+Write to 80 columns; the formatter wraps code there. Lint (E501) only
+fails past 100. A generated project substitutes its settings prefix
+into docstrings and comments, which no formatter reflows, and the slack
+keeps a long project name lint-clean.
 
 ---
 

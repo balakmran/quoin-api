@@ -25,8 +25,31 @@ concurrency:
 
 jobs:
   smoke:
-    name: Generate and gate a fresh project
+    name: Generate and gate a fresh project (${{ matrix.answers }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `--defaults` leaves `project_name` as "QuoinAPI", so the
+          # prefix derives as "QUOINAPI" -- deliberately NOT this repo's
+          # "QUOIN", which is the point: a wrong prefix means the
+          # generated project ignores the database settings below.
+          - answers: defaults
+            env_prefix: QUOINAPI
+            copier_data: ""
+          # The defaults are the one answer set short enough to fit every
+          # line they are substituted into. A longer name lengthens each
+          # docstring and comment that names a setting, and no formatter
+          # reflows prose. A 30-character prefix is what the lint headroom
+          # is sized for; see tests/test_template_substitution.py.
+          - answers: long-names
+            env_prefix: NORTHWIND_TRADERS_PLATFORM_API
+            copier_data: >-
+              --data "project_name=Northwind Traders Platform API"
+              --data "author_name=Maximiliana Featherstonehaugh"
+              --data "github_username=northwind-traders"
 
     services:
       postgres:
@@ -42,19 +65,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
-    env:
-      # The generated project's settings prefix. `--defaults` leaves
-      # `project_name` as "QuoinAPI", so `env_prefix` derives as
-      # "QUOINAPI" -- deliberately NOT this repo's "QUOIN", which is the
-      # point: a wrong prefix here means the generated project ignores
-      # every variable below and fails against a database that isn't there.
-      QUOINAPI_ENV: test
-      QUOINAPI_POSTGRES_HOST: localhost
-      QUOINAPI_POSTGRES_PORT: 5432
-      QUOINAPI_POSTGRES_USER: postgres
-      QUOINAPI_POSTGRES_PASSWORD: postgres
-      QUOINAPI_POSTGRES_DB: postgres
 
     steps:
       - name: Checkout
@@ -80,9 +90,24 @@ jobs:
         # `--vcs-ref=HEAD` is load-bearing. Against a local git template
         # Copier defaults to the latest *tag*, which would silently
         # smoke-test the previous release instead of this commit.
+        # `copier_data` is a static matrix value, so inlining it (quotes
+        # and all) is safe; it overrides the defaults it names.
         run: |
           uvx copier copy --defaults --trust --vcs-ref=HEAD \
-            . "${RUNNER_TEMP}/smoke-project"
+            ${{ matrix.copier_data }} . "${RUNNER_TEMP}/smoke-project"
+
+      - name: Point the generated project at the service database
+        env:
+          PREFIX: ${{ matrix.env_prefix }}
+        run: |
+          {
+            echo "${PREFIX}_ENV=test"
+            echo "${PREFIX}_POSTGRES_HOST=localhost"
+            echo "${PREFIX}_POSTGRES_PORT=5432"
+            echo "${PREFIX}_POSTGRES_USER=postgres"
+            echo "${PREFIX}_POSTGRES_PASSWORD=postgres"
+            echo "${PREFIX}_POSTGRES_DB=postgres"
+          } >> "$GITHUB_ENV"
 
       - name: Confirm the project is de-branded
         working-directory: ${{ runner.temp }}/smoke-project

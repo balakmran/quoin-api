@@ -96,6 +96,12 @@ select = ["E", "F", "I", "B", "UP", "PL", "RUF", "D", "N"]
 ignore = ["D100", "D104"] # Ignore missing docstring in public module/package
 pydocstyle.convention = "google"
 
+# The formatter wraps at 80; E501 fires only past 100. Copier substitutes
+# the settings prefix into docstrings and comments, which no formatter
+# reflows, so the slack keeps long project names lint-clean. Write to 80.
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
     "fastapi.Depends",
