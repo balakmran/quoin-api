@@ -2,68 +2,23 @@
 
 ## [Unreleased]
 
-### Fixed
+## [0.13.0] - 2026-09-12
 
-- **Docs**: corrected drift found by the 2026-09-08 analysis.
-  - The release guide said the Copier Update Check runs no
-    `just check`. It has run the updated project's gate since
-    `0.12.0`.
-  - `CLAUDE.md` described three of the six hooks, leaving out the
-    sensitive-file guard that agents most need to know about.
-  - The testing guide never mentioned the problem-details contract
-    hook on the `client` fixture, which fails any test whose error
-    response breaks RFC 9457.
-- **Security**: a JWKS endpoint that returns JSON which is not a JWKS
-  document now yields a 401 ("Unable to fetch OAuth signing keys").
-  That covers an array, a string, or a `keys` value that is not a
-  list. It used to raise an unhandled 500 that repeated for the whole
-  backoff window. A `keys` entry that is not an object is skipped
-  with a `jwks_key_unparseable` warning, like any other malformed
-  key.
-- **Telemetry**: traces now carry `deployment.environment.name`, the
-  key that replaced `deployment.environment` in the OpenTelemetry
-  semantic conventions. Backends filtering on the current name now
-  see these spans. The old key is still emitted in this release and
-  will be removed in the next, so move dashboards to the new one.
-- **Template**: a generated project no longer carries the template's
-  name or the maintainer's identity beyond what the adopter answered.
-  - `QuoinRequestValidationError` is renamed
-    `AppRequestValidationError` at generation, and its test alias
-    `QuoinValidationError` becomes `AppValidationError`.
-  - The base exception's docstring no longer says "Quoin".
-  - `SECURITY.md`'s contact address is now the `author_email`
-    answer. It used to become `bala@<github_username>.dev`.
+Hardening: the fixes the 2026-09-08 analysis surfaced, and the
+regression guards that would have caught them. That analysis was
+the first run against generated projects rather than the template
+alone.
 
-  The setup task reruns on `copier update`, so the rename also
-  reaches references in your own modules. Lowercase `quoin-` names
-  (skills, CSS classes, the container user) are internal and stay.
-- **Release**: the Copier Update Check now sorts tags with
-  `versionsort.suffix=-rc`, so `v1.0.0-rc.N` orders below `v1.0.0`.
-  Without it, the first patch after `1.0.0` would have verified its
-  update path from a release candidate instead of from `1.0.0`. The
-  bug stayed hidden until the first pre-release tag.
-- **Docs**: the release and hotfix guides wrote `just bump
-  part="patch"`, which passes `part=patch` to the script, and the
-  script rejected it. They now say `just bump patch`.
-- **Users**: `PATCH /api/v1/users/{id}` with an explicit `null` for
-  `email` or `is_active` now returns a 422 naming the field. It used to
-  return a 500 from the `NOT NULL` violation. Omitting a field still
-  leaves it unchanged, and `null` for `full_name` still clears it. The
-  OpenAPI schema no longer advertises `null` for the two non-nullable
-  fields. The module guide's `ProductUpdate` now teaches the same
-  pattern. **Manual reconciliation**: update schemas in your own modules
-  copied from the old guide have the same bug. Add a validator that
-  rejects `None` for each non-nullable field, and mark that `None` with
-  `SkipJsonSchema`.
-- **Template**: a project generated with a name longer than the default
-  no longer fails its own `just lint` on day one. Copier substitutes the
-  settings prefix into docstrings and comments, and `ruff format`
-  cannot reflow prose. As a result, "Acme Ledger" produced one E501 and
-  "Northwind Traders Platform" produced 34.
-  `[tool.ruff.lint.pycodestyle] max-line-length` is now 100, while the
-  formatter's `line-length` stays at 80. Code is unchanged, and prose
-  now has room for a settings prefix of up to 30 characters.
-  Contributors still write to 80.
+- A generated project now lints clean for any project name, and
+  carries none of the template's name or the maintainer's identity.
+- The release tooling can cut the `1.0.0-rc.1` rehearsal.
+- The request path's remaining edges are closed: a null PATCH,
+  headers browsers could not read, log levels, and a malformed JWKS
+  response.
+
+`copier update` from `0.12.0` is expected to apply cleanly. One
+change needs **manual reconciliation**: update schemas copied from
+the old module guide (see **Fixed**).
 
 ### Added
 
@@ -131,6 +86,69 @@
   `X-Request-ID` keeps working, and the header is not duplicated.
 - **Developer Experience**: the sensitive-file hook no longer blocks
   edits to Jinja templates. The Copier config file stays guarded.
+
+### Fixed
+
+- **Docs**: corrected drift found by the 2026-09-08 analysis.
+  - The release guide said the Copier Update Check runs no
+    `just check`. It has run the updated project's gate since
+    `0.12.0`.
+  - `CLAUDE.md` described three of the six hooks, leaving out the
+    sensitive-file guard that agents most need to know about.
+  - The testing guide never mentioned the problem-details contract
+    hook on the `client` fixture, which fails any test whose error
+    response breaks RFC 9457.
+- **Security**: a JWKS endpoint that returns JSON which is not a JWKS
+  document now yields a 401 ("Unable to fetch OAuth signing keys").
+  That covers an array, a string, or a `keys` value that is not a
+  list. It used to raise an unhandled 500 that repeated for the whole
+  backoff window. A `keys` entry that is not an object is skipped
+  with a `jwks_key_unparseable` warning, like any other malformed
+  key.
+- **Telemetry**: traces now carry `deployment.environment.name`, the
+  key that replaced `deployment.environment` in the OpenTelemetry
+  semantic conventions. Backends filtering on the current name now
+  see these spans. The old key is still emitted in this release and
+  will be removed in the next, so move dashboards to the new one.
+- **Template**: a generated project no longer carries the template's
+  name or the maintainer's identity beyond what the adopter answered.
+  - `QuoinRequestValidationError` is renamed
+    `AppRequestValidationError` at generation, and its test alias
+    `QuoinValidationError` becomes `AppValidationError`.
+  - The base exception's docstring no longer says "Quoin".
+  - `SECURITY.md`'s contact address is now the `author_email`
+    answer. It used to become `bala@<github_username>.dev`.
+
+  The setup task reruns on `copier update`, so the rename also
+  reaches references in your own modules. Lowercase `quoin-` names
+  (skills, CSS classes, the container user) are internal and stay.
+- **Release**: the Copier Update Check now sorts tags with
+  `versionsort.suffix=-rc`, so `v1.0.0-rc.N` orders below `v1.0.0`.
+  Without it, the first patch after `1.0.0` would have verified its
+  update path from a release candidate instead of from `1.0.0`. The
+  bug stayed hidden until the first pre-release tag.
+- **Docs**: the release and hotfix guides wrote `just bump
+  part="patch"`, which passes `part=patch` to the script, and the
+  script rejected it. They now say `just bump patch`.
+- **Users**: `PATCH /api/v1/users/{id}` with an explicit `null` for
+  `email` or `is_active` now returns a 422 naming the field. It used to
+  return a 500 from the `NOT NULL` violation. Omitting a field still
+  leaves it unchanged, and `null` for `full_name` still clears it. The
+  OpenAPI schema no longer advertises `null` for the two non-nullable
+  fields. The module guide's `ProductUpdate` now teaches the same
+  pattern. **Manual reconciliation**: update schemas in your own modules
+  copied from the old guide have the same bug. Add a validator that
+  rejects `None` for each non-nullable field, and mark that `None` with
+  `SkipJsonSchema`.
+- **Template**: a project generated with a name longer than the default
+  no longer fails its own `just lint` on day one. Copier substitutes the
+  settings prefix into docstrings and comments, and `ruff format`
+  cannot reflow prose. As a result, "Acme Ledger" produced one E501 and
+  "Northwind Traders Platform" produced 34.
+  `[tool.ruff.lint.pycodestyle] max-line-length` is now 100, while the
+  formatter's `line-length` stays at 80. Code is unchanged, and prose
+  now has room for a settings prefix of up to 30 characters.
+  Contributors still write to 80.
 
 ## [0.12.0] - 2026-09-09
 
@@ -952,7 +970,8 @@ written down at all.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/balakmran/quoin-api/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/balakmran/quoin-api/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/balakmran/quoin-api/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/balakmran/quoin-api/compare/v0.9.0...v0.10.0
