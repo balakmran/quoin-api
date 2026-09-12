@@ -46,6 +46,14 @@
 
 ### Added
 
+- **CORS**: browsers can now read `X-Request-ID` and the
+  `Deprecation`, `Sunset`, and `Link` headers. `expose_headers` was
+  never set, so a front end got `null` for all four: it could not
+  quote the request ID in a bug report or see that an endpoint was
+  deprecated. The new `QUOIN_BACKEND_CORS_EXPOSE_HEADERS` defaults
+  to the three deprecation headers, and the request-ID header is
+  always added to it. Additive: the new setting's default is what
+  the API needs, so no configuration change is required.
 - **CI**: the Scaffold Smoke Test's long-names entry now also
   answers `author_email`, and fails if `Quoin` or the maintainer's
   name, handle, or address appears anywhere in the generated tree.
@@ -75,6 +83,13 @@
 
 ### Changed
 
+- **CORS**: the request-ID header is now added to the allowed and
+  exposed header lists from `QUOIN_REQUEST_ID_HEADER`, so
+  `QUOIN_BACKEND_CORS_ALLOW_HEADERS` defaults to
+  `["Authorization","Content-Type"]`. It used to list
+  `X-Request-ID` literally, so renaming the header silently stopped
+  browsers from sending it. An existing list that still names
+  `X-Request-ID` keeps working, and the header is not duplicated.
 - **Developer Experience**: the sensitive-file hook no longer blocks
   edits to Jinja templates. The Copier config file stays guarded.
 

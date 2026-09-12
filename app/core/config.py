@@ -130,11 +130,14 @@ class Settings(BaseSettings):
         "DELETE",
         "OPTIONS",
     ]
+    # REQUEST_ID_HEADER is added to both header lists when CORS is
+    # configured, so renaming it needs no CORS change.
     BACKEND_CORS_ALLOW_HEADERS: list[str] = [
         "Authorization",
         "Content-Type",
-        "X-Request-ID",
     ]
+    # Response headers a browser script may read; the rest stay hidden.
+    BACKEND_CORS_EXPOSE_HEADERS: list[str] = ["Deprecation", "Sunset", "Link"]
     BACKEND_CORS_ALLOW_CREDENTIALS: bool = True
 
     # Security headers

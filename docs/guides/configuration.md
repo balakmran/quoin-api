@@ -112,7 +112,8 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_ALLOWED_HOSTS`        | Trusted host list (**required in production**)      | `["localhost", "127.0.0.1", "test", "*.orb.local"]`  |
 | `QUOIN_BACKEND_CORS_ORIGINS` | CORS allowed origins (empty = CORS disabled)        | `["http://localhost:3000", "http://localhost:8000"]` |
 | `QUOIN_BACKEND_CORS_ALLOW_METHODS` | Allowed HTTP methods for CORS                 | `["GET","POST","PUT","PATCH","DELETE","OPTIONS"]`    |
-| `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | Allowed request headers for CORS             | `["Authorization","Content-Type","X-Request-ID"]`   |
+| `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | Allowed request headers for CORS; `QUOIN_REQUEST_ID_HEADER` is always added | `["Authorization","Content-Type"]`   |
+| `QUOIN_BACKEND_CORS_EXPOSE_HEADERS` | Response headers browser scripts may read; `QUOIN_REQUEST_ID_HEADER` is always added | `["Deprecation","Sunset","Link"]` |
 | `QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS` | Allow cookies/credentials in CORS requests | `true`                                          |
 | `QUOIN_SECURITY_HEADERS_ENABLED` | Enable security response headers middleware     | `true`                                              |
 | `QUOIN_SECURITY_HSTS_MAX_AGE` | HSTS `max-age` in seconds (`0` = disabled)         | `31536000`                                          |

@@ -403,6 +403,95 @@ def test_configure_cors_allows_wildcard_in_development() -> None:
     assert any(m.cls == CORSMiddleware for m in app.user_middleware)
 
 
+def test_configure_cors_rejects_wildcard_expose_headers_in_prod() -> None:
+    """A wildcard expose list is ignored by browsers for credentialed calls."""
+    app = FastAPI()
+    with (
+        patch.object(settings, "ENV", Environment.production),
+        patch.object(settings, "BACKEND_CORS_ORIGINS", ["https://example.com"]),
+        patch.object(settings, "BACKEND_CORS_EXPOSE_HEADERS", ["*"]),
+        patch.object(settings, "BACKEND_CORS_ALLOW_CREDENTIALS", True),
+    ):
+        with pytest.raises(RuntimeError, match="expose_headers"):
+            configure_cors(app)
+
+
+def test_with_request_id_header_does_not_duplicate() -> None:
+    """The request-ID header is added once, matched case-insensitively."""
+    assert middlewares._with_request_id_header(["Authorization"]) == [
+        "Authorization",
+        settings.REQUEST_ID_HEADER,
+    ]
+    already_listed = ["Authorization", settings.REQUEST_ID_HEADER.lower()]
+    assert middlewares._with_request_id_header(already_listed) == already_listed
+    assert middlewares._with_request_id_header(["*"]) == ["*"]
+
+
+_CORS_ORIGIN = "https://app.example.com"
+
+
+def _cors_app() -> FastAPI:
+    """App with only CORS configured from the current settings."""
+    app = FastAPI()
+    configure_cors(app)
+
+    @app.get("/x")
+    async def endpoint() -> dict[str, str]:
+        return {}
+
+    return app
+
+
+def _header_set(value: str) -> set[str]:
+    """Parse a comma-separated header list into lowercase names."""
+    return {name.strip().lower() for name in value.split(",")}
+
+
+async def test_cors_exposes_request_id_and_deprecation_headers() -> None:
+    """A browser script can read the headers support and deprecation use."""
+    with patch.object(settings, "BACKEND_CORS_ORIGINS", [_CORS_ORIGIN]):
+        app = _cors_app()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        response = await ac.get("/x", headers={"Origin": _CORS_ORIGIN})
+
+    assert _header_set(response.headers["access-control-expose-headers"]) == {
+        "x-request-id",
+        "deprecation",
+        "sunset",
+        "link",
+    }
+
+
+async def test_cors_follows_a_renamed_request_id_header() -> None:
+    """Renaming the request-ID header keeps it sendable and readable."""
+    with (
+        patch.object(settings, "BACKEND_CORS_ORIGINS", [_CORS_ORIGIN]),
+        patch.object(settings, "REQUEST_ID_HEADER", "X-Correlation-ID"),
+    ):
+        app = _cors_app()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        preflight = await ac.options(
+            "/x",
+            headers={
+                "Origin": _CORS_ORIGIN,
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "x-correlation-id",
+            },
+        )
+        response = await ac.get("/x", headers={"Origin": _CORS_ORIGIN})
+
+    assert preflight.status_code == status.HTTP_200_OK
+    allowed = _header_set(preflight.headers["access-control-allow-headers"])
+    assert "x-correlation-id" in allowed
+    exposed = _header_set(response.headers["access-control-expose-headers"])
+    assert "x-correlation-id" in exposed
+    assert "x-request-id" not in exposed
+
+
 @pytest.fixture
 def security_headers_app() -> FastAPI:
     """Minimal app with SecurityHeadersMiddleware."""
