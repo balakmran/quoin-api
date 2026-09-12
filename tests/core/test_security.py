@@ -269,6 +269,44 @@ async def test_jwks_cache_refresh_raises_on_http_error() -> None:
         await cache._refresh(_fake_http_client(response=mock_response))
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [["not", "an", "object"], "just a string", {"keys": "not-a-list"}],
+    ids=["array", "string", "keys-not-a-list"],
+)
+async def test_jwks_cache_refresh_rejects_json_that_is_not_jwks(
+    payload: object,
+) -> None:
+    """JSON that is not a JWKS document is a 401, not a repeating 500."""
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = payload
+    mock_response.raise_for_status.return_value = None
+    cache = JWKSCache("http://example.com/jwks")
+
+    with pytest.raises(
+        UnauthorizedError, match="Unable to fetch OAuth signing keys"
+    ):
+        await cache._refresh(_fake_http_client(response=mock_response))
+
+
+async def test_jwks_cache_refresh_skips_non_object_key(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A `keys` entry that is not an object is skipped like a malformed key."""
+    good = json.loads(RSAAlgorithm.to_jwk(rsa_public_key))
+    good["kid"] = "good-key"
+    mock_response = MagicMock(spec=Response)
+    mock_response.json.return_value = {"keys": ["not-a-key", good]}
+    mock_response.raise_for_status.return_value = None
+
+    cache = JWKSCache("http://example.com/jwks")
+    with capture_logs() as cap_logs:
+        await cache._refresh(_fake_http_client(response=mock_response))
+
+    assert set(cache._keys) == {"good-key"}
+    assert [log["event"] for log in cap_logs] == ["jwks_key_unparseable"]
+
+
 async def test_jwks_cache_get_signing_key_found(
     rsa_private_key: rsa.RSAPrivateKey,
     rsa_public_key: rsa.RSAPublicKey,

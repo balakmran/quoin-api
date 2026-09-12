@@ -140,6 +140,8 @@ def setup_opentelemetry(app: FastAPI) -> None:
         {
             SERVICE_NAME: metadata.APP_NAME,
             "service.version": metadata.VERSION,
+            "deployment.environment.name": settings.ENV.value,
+            # Deprecated key, kept for one release.
             "deployment.environment": settings.ENV.value,
         }
     )

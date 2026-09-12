@@ -99,7 +99,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_POSTGRES_HOST`        | PostgreSQL host                                     | `localhost`                                          |
 | `QUOIN_POSTGRES_PORT`        | PostgreSQL port                                     | `5432`                                               |
 | `QUOIN_POSTGRES_USER`        | PostgreSQL username                                 | `postgres`                                           |
-| `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password (`SecretStr` — redacted in dumps/logs) | `postgres`                                    |
+| `QUOIN_POSTGRES_PASSWORD`    | PostgreSQL password (`SecretStr` — redacted in dumps/logs); production warns if left at the default | `postgres`                                    |
 | `QUOIN_POSTGRES_DB`          | PostgreSQL database name                            | `app_db`                                             |
 | `QUOIN_DB_POOL_SIZE`         | Persistent connections kept open in the pool        | `20`                                                 |
 | `QUOIN_DB_MAX_OVERFLOW`      | Extra connections allowed beyond the pool size      | `10`                                                 |
