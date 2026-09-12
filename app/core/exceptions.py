@@ -6,7 +6,7 @@ from pydantic_core import ValidationError as PydanticValidationError
 
 
 class QuoinError(Exception):
-    """Base exception for all Quoin application errors."""
+    """Base exception for all application errors."""
 
     def __init__(
         self,

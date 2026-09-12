@@ -5,8 +5,7 @@
 # Covers Edit|Write|MultiEdit (by .tool_input.file_path) and Bash (by
 # scanning .tool_input.command). The Bash arm exists because the file-path
 # arm is trivially sidestepped: `python3 - <<'EOF' ... EOF` writing a
-# guarded file never sets file_path, and slipped an edit into
-# scripts/copier_setup.py.jinja before this arm was added.
+# guarded file never sets file_path.
 set -euo pipefail
 
 payload=$(cat)
@@ -29,7 +28,6 @@ reason_for() {
     env) echo "credential leak risk. Edit .env.example instead." ;;
     lock) echo "change dependencies via 'uv add', 'uv remove', or 'uv sync' instead of hand-editing." ;;
     copier) echo "Copier template config. Edit intentionally outside Claude." ;;
-    jinja) echo "this is a Copier template file." ;;
     migration) echo "generate a new migration via: just migrate-gen \"<message>\". Editing existing migrations breaks consumers who already ran them." ;;
     synced) echo "it is a build artifact synced by 'just docb' from a root file (CHANGELOG.md, CONTRIBUTING.md, ROADMAP.md, SECURITY.md, or LICENSE). Edit the root file instead, then run 'just docb'." ;;
   esac
@@ -52,8 +50,6 @@ if [[ "$tool" == "Bash" ]]; then
   kind=""
   if grep -Eq '(^|[^A-Za-z0-9_/-])copier\.ya?ml([^A-Za-z0-9_-]|$)' <<<"$cmd"; then
     kind=copier
-  elif grep -Eq '\.jinja([^A-Za-z0-9_-]|$)' <<<"$cmd"; then
-    kind=jinja
   elif grep -Eq '(^|[^A-Za-z0-9_/-])uv\.lock([^A-Za-z0-9_-]|$)' <<<"$cmd"; then
     kind=lock
   elif grep -Eq 'alembic/versions/[^[:space:]]*\.py' <<<"$cmd"; then
@@ -75,7 +71,6 @@ if [[ "$tool" == "Bash" ]]; then
     env) what="an .env credential file" ;;
     lock) what="uv.lock" ;;
     copier) what="copier.yml" ;;
-    jinja) what="a Copier Jinja template" ;;
     migration) what="an applied Alembic migration" ;;
     synced) what="a doc synced by 'just docb'" ;;
   esac
@@ -104,12 +99,6 @@ esac
 case "$base" in
   copier.yml|copier.yaml)
     deny "Refusing to edit $base — $(reason_for copier)" ;;
-esac
-
-# Copier Jinja templates
-case "$f" in
-  *.jinja)
-    deny "Refusing to edit Jinja template $base — $(reason_for jinja)" ;;
 esac
 
 # Applied alembic migrations

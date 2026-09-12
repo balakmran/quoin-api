@@ -49,6 +49,7 @@ jobs:
             copier_data: >-
               --data "project_name=Northwind Traders Platform API"
               --data "author_name=Maximiliana Featherstonehaugh"
+              --data "author_email=maximiliana@northwind-traders.example"
               --data "github_username=northwind-traders"
 
     services:
@@ -129,6 +130,20 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Confirm no template identity leaked
+        # Only meaningful with non-default answers: `--defaults` *is* the
+        # maintainer's identity. Lowercase `quoin-` names (skills, CSS
+        # classes, the container user) are internal, not branding.
+        if: matrix.answers == 'long-names'
+        working-directory: ${{ runner.temp }}/smoke-project
+        run: |
+          pattern='(^|[^A-Za-z])Quoin|balakmran|Balakumaran|Manoharan'
+          if grep -rnIE "$pattern" . \
+              --exclude-dir=.git --exclude=.copier-answers.yml; then
+            echo "::error::template identity leaked into the generated project"
+            exit 1
+          fi
 
       - name: Install the generated project's dependencies
         working-directory: ${{ runner.temp }}/smoke-project

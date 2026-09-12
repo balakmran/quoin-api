@@ -119,7 +119,7 @@ from app.core.exceptions import QuoinError
 
 
 class QuoinError(Exception):
-    """Base exception for all Quoin application errors."""
+    """Base exception for all application errors."""
 
     def __init__(
         self,
