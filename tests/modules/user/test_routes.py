@@ -208,6 +208,54 @@ async def test_update_user_duplicate_email(admin_client: AsyncClient) -> None:
     assert "already registered" in response.json()["detail"]
 
 
+@pytest.mark.parametrize("field", ["email", "is_active"])
+async def test_update_user_null_for_non_nullable_field_returns_422(
+    admin_client: AsyncClient, field: str
+) -> None:
+    """Regression: null for a NOT NULL column is a 422, not a 500."""
+    create_res = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": f"null-{field.replace('_', '-')}@example.com"},
+    )
+    user_id = create_res.json()["id"]
+
+    response = await admin_client.patch(
+        f"/api/v1/users/{user_id}", json={field: None}
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    error = response.json()["errors"][0]
+    assert error["loc"] == ["body", field]
+    assert "must not be null" in error["msg"]
+
+
+async def test_update_user_null_full_name_clears_it(
+    admin_client: AsyncClient,
+) -> None:
+    """Null stays valid for a nullable column, where it clears the value."""
+    create_res = await admin_client.post(
+        "/api/v1/users/",
+        json={"email": "null-full-name@example.com", "full_name": "Named"},
+    )
+    user_id = create_res.json()["id"]
+
+    response = await admin_client.patch(
+        f"/api/v1/users/{user_id}", json={"full_name": None}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["full_name"] is None
+
+
+def test_user_update_schema_advertises_null_only_for_full_name() -> None:
+    """OpenAPI must not offer null for fields the database rejects."""
+    properties = UserUpdate.model_json_schema()["properties"]
+
+    assert "anyOf" not in properties["email"]
+    assert "anyOf" not in properties["is_active"]
+    assert {"type": "null"} in properties["full_name"]["anyOf"]
+
+
 async def test_list_users_stable_order(
     read_client: AsyncClient, db_session: AsyncSession
 ) -> None:

@@ -96,7 +96,8 @@ Keep request/response shapes separate from the database model:
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 class ProductBase(BaseModel):
@@ -113,11 +114,19 @@ class ProductCreate(ProductBase):
 
 
 class ProductUpdate(BaseModel):
-    """Schema for updating a product (all fields optional)."""
+    """Schema for updating a product (all fields optional, none null)."""
 
-    name: str | None = None
-    price: float | None = None
-    is_active: bool | None = None
+    name: str | SkipJsonSchema[None] = None
+    price: float | SkipJsonSchema[None] = None
+    is_active: bool | SkipJsonSchema[None] = None
+
+    @field_validator("name", "price", "is_active")
+    @classmethod
+    def _reject_null(cls, value: object) -> object:
+        """Reject an explicit null; omit the field to leave it unchanged."""
+        if value is None:
+            raise ValueError("must not be null; omit the field instead")
+        return value
 
 
 class ProductRead(ProductBase):
@@ -128,6 +137,23 @@ class ProductRead(ProductBase):
     created_at: datetime
     updated_at: datetime
 ```
+
+!!! warning "Optional is not nullable"
+
+    In an update schema, `None` should only ever mean "omitted". Pydantic
+    accepts a literal `null` for a `T | None` field, and
+    `model_dump(exclude_unset=True)` passes it through. For a `NOT NULL`
+    column, the flush then fails and the client gets a 500.
+
+    For every non-nullable column:
+
+    - Reject `None` in a validator. Validators don't run on defaults,
+      so omitting the field still works.
+    - Wrap `None` in `SkipJsonSchema` so OpenAPI doesn't advertise
+      `null`.
+
+    A nullable column keeps a plain `T | None`, and there `null` clears
+    the value.
 
 ### 4. Define Domain Exceptions
 

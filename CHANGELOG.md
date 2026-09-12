@@ -4,6 +4,16 @@
 
 ### Fixed
 
+- **Users**: `PATCH /api/v1/users/{id}` with an explicit `null` for
+  `email` or `is_active` now returns a 422 naming the field. It used to
+  return a 500 from the `NOT NULL` violation. Omitting a field still
+  leaves it unchanged, and `null` for `full_name` still clears it. The
+  OpenAPI schema no longer advertises `null` for the two non-nullable
+  fields. The module guide's `ProductUpdate` now teaches the same
+  pattern. **Manual reconciliation**: update schemas in your own modules
+  copied from the old guide have the same bug. Add a validator that
+  rejects `None` for each non-nullable field, and mark that `None` with
+  `SkipJsonSchema`.
 - **Template**: a project generated with a name longer than the default
   no longer fails its own `just lint` on day one. Copier substitutes the
   settings prefix into docstrings and comments, and `ruff format`

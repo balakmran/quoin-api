@@ -94,12 +94,16 @@ class UserCreate(UserBase):
 
 ```python
 class UserUpdate(BaseModel):
-    """Schema for updating a user."""
+    """Schema for partially updating a user."""
 
-    email: str | None = None
+    email: EmailStr | SkipJsonSchema[None] = None
     full_name: str | None = None
-    is_active: bool | None = None
+    is_active: bool | SkipJsonSchema[None] = None
 ```
+
+Omit a field to leave it unchanged. Only `full_name` accepts `null`,
+which clears it; `null` for `email` or `is_active` is a 422, because
+those columns cannot store it.
 
 ### UserRead
 
