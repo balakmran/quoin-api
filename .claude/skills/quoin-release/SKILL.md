@@ -43,10 +43,13 @@ Each entry is a bullet describing user-visible impact, not the diff. Group relat
 ### 2. Bump the version
 
 ```bash
-just bump part="patch"   # or minor, or major
+just bump patch          # or minor, or major
+just bump major --rc     # first release candidate, e.g. 0.14.0 -> 1.0.0-rc.1
+just bump rc             # next candidate, 1.0.0-rc.1 -> 1.0.0-rc.2
+just bump release        # finalise, 1.0.0-rc.2 -> 1.0.0
 ```
 
-This updates the version string in **both** `pyproject.toml` and `app/__init__.py` via `scripts/bump_version.py`. It does not touch the changelog or git.
+This updates the version string in **both** `pyproject.toml` and `app/__init__.py` via `scripts/bump_version.py`, and refuses if they disagree. From a candidate, `major`/`minor`/`patch` are refused; use `rc` or `release`. It does not touch the changelog or git.
 
 After running, note the new version — you'll use it in the next two steps.
 
@@ -92,7 +95,7 @@ just tag --no-release
 
 The release matches every tag since `v0.8.0`: title is the bare tag (`v0.11.0`, no prose), body is the changelog section starting at `### Added`, neither draft nor pre-release.
 
-Note: the script's version pattern is strictly `X.Y.Z`, so it cannot tag a pre-release such as `v1.0.0-rc.1` — that needs both a wider pattern and `--prerelease`.
+A release candidate (`vX.Y.Z-rc.N`) goes through the same steps, with its own `## [X.Y.Z-rc.N] - date` changelog section; `just tag` publishes it as a GitHub pre-release. Only the `-rc.N` suffix is supported.
 
 ## After the tag
 

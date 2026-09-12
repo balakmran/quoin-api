@@ -106,7 +106,7 @@ commands.
 | `just migrate-gen "msg"` | Generate a new Alembic migration with a message           |
 | `just migrate-up`        | Apply all pending migrations                              |
 | `just migrate-down`      | Rollback the last migration                               |
-| `just bump part`         | Bump version (part: `patch`, `minor`, `major`)            |
+| `just bump part`         | Bump version (`patch`, `minor`, `major`; `--rc`, `rc`, `release` for candidates) |
 | `just tag`               | Create and push git tag for current version               |
 
 ## Project Structure

@@ -17,9 +17,8 @@ checked *before* the tag is created — a missing prerequisite then costs
 nothing, rather than leaving a pushed tag with no release. Pass
 `--no-release` to tag only; that path needs no `gh` at all.
 
-Note: the version pattern is strictly `X.Y.Z`, so a pre-release such as
-`1.0.0-rc.1` cannot be tagged by this script today. Supporting one means
-widening that pattern *and* passing `--prerelease` to `gh` for it.
+A release candidate (`X.Y.Z-rc.N`, from `just bump <part> --rc`) is
+tagged the same way and published as a GitHub pre-release.
 """
 
 import argparse
@@ -31,7 +30,7 @@ from pathlib import Path
 
 INIT_PATH = Path("app/__init__.py")
 CHANGELOG_PATH = Path("CHANGELOG.md")
-_VERSION_RE = re.compile(r'__version__ = "(\d+\.\d+\.\d+)"')
+_VERSION_RE = re.compile(r'__version__ = "(\d+\.\d+\.\d+(?:-rc\.\d+)?)"')
 
 
 def read_version() -> str:
@@ -127,20 +126,23 @@ def publish_release(tag_name: str, body: str) -> None:
         return
 
     print(f"Publishing release {tag_name}...")
+    args = [
+        "gh",
+        "release",
+        "create",
+        tag_name,
+        "--title",
+        tag_name,
+        # Fails loudly if the tag never reached origin, rather than
+        # creating a release against a tag nobody else can fetch.
+        "--verify-tag",
+        "--notes-file",
+        "-",
+    ]
+    if "-rc." in tag_name:
+        args.append("--prerelease")
     result = subprocess.run(
-        [
-            "gh",
-            "release",
-            "create",
-            tag_name,
-            "--title",
-            tag_name,
-            # Fails loudly if the tag never reached origin, rather than
-            # creating a release against a tag nobody else can fetch.
-            "--verify-tag",
-            "--notes-file",
-            "-",
-        ],
+        args,
         input=body,
         text=True,
         check=False,

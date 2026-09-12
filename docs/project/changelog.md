@@ -4,6 +4,14 @@
 
 ### Fixed
 
+- **Release**: the Copier Update Check now sorts tags with
+  `versionsort.suffix=-rc`, so `v1.0.0-rc.N` orders below `v1.0.0`.
+  Without it, the first patch after `1.0.0` would have verified its
+  update path from a release candidate instead of from `1.0.0`. The
+  bug stayed hidden until the first pre-release tag.
+- **Docs**: the release and hotfix guides wrote `just bump
+  part="patch"`, which passes `part=patch` to the script, and the
+  script rejected it. They now say `just bump patch`.
 - **Users**: `PATCH /api/v1/users/{id}` with an explicit `null` for
   `email` or `is_active` now returns a 422 naming the field. It used to
   return a 500 from the `NOT NULL` violation. Omitting a field still
@@ -26,6 +34,18 @@
 
 ### Added
 
+- **Release**: release candidates.
+  - `just bump <major|minor|patch> --rc` starts one (`0.14.0` →
+    `1.0.0-rc.1`), `just bump rc` advances it, and `just bump
+    release` finalises it.
+  - From a candidate, `major`, `minor`, and `patch` are refused.
+  - `just tag` accepts `X.Y.Z-rc.N` and publishes it as a GitHub
+    pre-release.
+  - `just bump` now also refuses to run when `pyproject.toml` and
+    `app/__init__.py` disagree.
+  - The release guide's pre-release section used to prescribe a
+    hand edit and a bare `git tag`, which published no release. It
+    now uses these commands.
 - **Tests**: `tests/test_template_substitution.py` runs the real
   post-generation substitution over a copy of the tree with worst-case
   answers and lints the result. `just check` in this repository now

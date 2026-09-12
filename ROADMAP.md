@@ -84,7 +84,7 @@ the fixed pattern also lives in adopters' own modules.
 | :----- | :--- | :------ |
 | ✅ | **Generated projects lint clean for any answers** — give prose lines headroom (`[tool.ruff.lint.pycodestyle] max-line-length` above the formatter's 80, or shorten the lines that carry a substitutable token), add a long-name answer set to the smoke matrix, and add a template-side test that applies the substitution map with worst-case answers and lints the result, so `just check` *here* fails before an adopter does | Probe on `main`: "Acme Ledger" (prefix six characters longer than `QUOIN`) → one E501 and the gate stops at lint; "Northwind Traders Platform" → 34 E501 across 15 files. With that one line wrapped, the renamed project passes everything else: types, `alembic check`, 315 tests at 100% coverage. The mechanism works; only the headroom is missing |
 | ✅ | **Explicit `null` in a PATCH → 422, not 500** — `UserUpdate` accepts `null` for `email` and `is_active`, both `NOT NULL`, so the flush fails and the client gets a 500. Reject `None` for non-nullable columns, add the regression test, and document the pattern in the module guide, whose `ProductUpdate` example teaches the same shape. **Manual reconciliation**: any update schema copied from it | Probe: `{"email": null}` → 500, `{"is_active": null}` → 500, `{"full_name": null}` → 200. Every generated module inherits the shape |
-| 📋 | **Pre-releases in the release tooling** — `just bump rc` and `just tag` accept `X.Y.Z-rc.N` and pass `--prerelease`; the update-check workflow sorts with `versionsort.suffix=-rc` so a patch after `1.0.0` compares against `1.0.0`, not `rc.2` | Blocks the rehearsal below. The mis-sort was reproduced: with `v1.0.0-rc.2` present, `git tag --sort=-v:refname` puts it above `v1.0.0` |
+| ✅ | **Pre-releases in the release tooling** — `just bump <part> --rc`, `rc`, and `release`, and `just tag` accept `X.Y.Z-rc.N` and pass `--prerelease`; the update-check workflow sorts with `versionsort.suffix=-rc` so a patch after `1.0.0` compares against `1.0.0`, not `rc.2` | Blocks the rehearsal below. The mis-sort was reproduced: with `v1.0.0-rc.2` present, `git tag --sort=-v:refname` puts it above `v1.0.0` |
 | 📋 | **Finish de-branding** — `QuoinRequestValidationError` and a stray "Quoin" docstring survive `copier copy`; rename them at generation and grep the generated tree for `Quoin` and for the maintainer's identity, using non-default author answers | The smoke job checks leaked *files*, not identifiers, and with `--defaults` it cannot see an identity leak at all |
 | 📋 | **CORS exposes the headers the API relies on** — `QUOIN_BACKEND_CORS_EXPOSE_HEADERS`, defaulting to `X-Request-ID`, `Deprecation`, `Sunset`, and `Link`; derive the allow-list entry from `QUOIN_REQUEST_ID_HEADER` instead of hard-coding it. Additive | A browser caller cannot read `X-Request-ID` today — `expose_headers` is never set — so a front end cannot quote it in a bug report, and the deprecation headers are invisible to the clients they exist for |
 | 📋 | **Log-level hygiene** — 5xx domain errors at ERROR with a traceback, 404/405 at INFO, and the caller's `sub` bound to the log context for the rest of the request. Additive | A deliberate 503 from `/ready` and a scanner's 404 share the WARNING channel, and no log line records who the caller was |
@@ -115,7 +115,7 @@ only; no application behaviour changes.
 Cut a pre-release tag rather than a `0.15`. It costs nothing and buys
 two things: the `v*` workflows run against a candidate that can still
 be withdrawn, and the launch checklist below is executed once for real
-before it counts. Cut it with `just bump rc` and `just tag` once `0.13`
+before it counts. Cut it with `just bump major --rc` and `just tag` once `0.13`
 lands; the Copier Update Check then verifies `v0.14.0 → v1.0.0-rc.1`
 with the updated project's gate.
 
@@ -248,7 +248,6 @@ instead). Empty is the steady state, not a gap in review.
 
 | Status | Issue | Found |
 | :----- | :---- | :---- |
-| 📋 | The Copier Update Check picks the previous tag with `git tag --sort=-v:refname`, which orders `v1.0.0-rc.2` above `v1.0.0`; the first patch after `1.0.0` would verify its update path from the wrong tag. Latent until the first pre-release tag exists. Fix in `0.13.0` | 2026-09-08 analysis, git probe |
 
 ---
 

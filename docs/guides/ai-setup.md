@@ -161,7 +161,7 @@ regressed, not the doc.
 **Triggers on:** "cut a release", "bump the version", "tag the release",
 "prepare the changelog"
 
-Five-step release ritual: curate `[Unreleased]` → `just bump part="..."` →
+Five-step release ritual: curate `[Unreleased]` → `just bump <part>` →
 promote changelog heading → commit and merge to `main` → `just tag`. Covers
 changelog section ordering, tag-from-main-only rule, and what to do if the
 GitHub Actions release workflow fails.

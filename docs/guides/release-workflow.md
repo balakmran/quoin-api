@@ -18,7 +18,7 @@ Visual overview of the complete release process:
 
 ```mermaid
 graph TD
-    A[Update CHANGELOG.md<br/>Unreleased section] --> B[Bump Version<br/>just bump part='...']
+    A[Update CHANGELOG.md<br/>Unreleased section] --> B[Bump Version<br/>just bump minor]
     B --> C[Move Unreleased to Version<br/>in CHANGELOG.md]
     C --> D[Commit Changelog<br/>docs: update changelog]
     D --> E[Merge to main]
@@ -69,6 +69,9 @@ This command automatically:
 
 - Updates version in `pyproject.toml`
 - Updates `__version__` in `app/__init__.py`
+
+It refuses to run if the two files disagree. For release candidates, see
+[Pre-releases](#pre-releases).
 
 ---
 
@@ -210,7 +213,7 @@ Before creating a release:
 - [ ] No known CVEs in the locked dependencies (`just audit`) — see
       [Dependency Scanning](dependency-scanning.md#uv-audit)
 - [ ] `CHANGELOG.md` is updated with all changes
-- [ ] Version is bumped (`just bump part="..."`)
+- [ ] Version is bumped (`just bump <part>`)
 - [ ] Changes are merged to `main` branch
 - [ ] Tag is pushed and the GitHub Release is published (`just tag`)
 - [ ] Copier Update Check passes on the new tag (automatic; see
@@ -252,19 +255,27 @@ For critical bug fixes that need immediate release:
 
 ## Pre-releases
 
-For beta or release candidate versions:
+Release candidates use the `X.Y.Z-rc.N` form and go through the same
+bump → changelog → merge → tag flow as any other release. Other
+pre-release labels (`-beta.N`, `-alpha.N`) are not supported.
 
 ```bash
-# Manual version bump (not automated by just)
-# In pyproject.toml and app/__init__.py
-__version__ = "1.2.0-beta.1"
-
-# Create pre-release tag
-git tag v1.2.0-beta.1
-git push origin v1.2.0-beta.1
+just bump major --rc   # 0.14.0 → 1.0.0-rc.1 (also minor/patch --rc)
+just bump rc           # 1.0.0-rc.1 → 1.0.0-rc.2
+just bump release      # 1.0.0-rc.2 → 1.0.0
 ```
 
-Mark as "Pre-release" in GitHub when creating the release.
+From a candidate, `major`, `minor`, and `patch` are refused, so
+`1.0.0-rc.2` cannot become `2.0.0` by accident.
+
+Each candidate gets its own changelog section (`## [1.0.0-rc.1] -
+YYYY-MM-DD`). `just tag` then tags `v1.0.0-rc.1` and publishes it as a
+GitHub **pre-release**, which GitHub never marks as the latest release.
+
+The Copier Update Check sorts candidates below their final release. So
+`v1.0.0-rc.1` verifies its update from the previous final tag,
+`v1.0.0` verifies from the last candidate, and `v1.0.1` verifies from
+`v1.0.0`.
 
 ---
 
