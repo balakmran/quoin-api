@@ -62,7 +62,7 @@ pass. A hotfix that breaks CI isn't faster, it's blocked.
 ### 4. Bump the patch version
 
 ```bash
-just bump part="patch"
+just bump patch
 ```
 
 Hotfixes are patch releases by definition — if the fix needs a minor or

@@ -225,9 +225,9 @@ docs-serve:
 # Release
 # =============================================================================
 
-# Bump version
-bump part="patch":
-    @uv run python scripts/bump_version.py {{part}}
+# Bump version: patch, minor, or major (add --rc for a candidate); rc; release
+bump part="patch" *flags:
+    @uv run python scripts/bump_version.py {{part}} {{flags}}
 
 # Tag the current version and publish its GitHub Release
 # (pass --no-release to tag only; that path does not need gh)

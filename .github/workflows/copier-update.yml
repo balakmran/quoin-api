@@ -52,7 +52,9 @@ jobs:
         id: tags
         run: |
           CURRENT_TAG="${GITHUB_REF_NAME}"
-          PREV_TAG=$(git tag --sort=-v:refname | awk -v cur="$CURRENT_TAG" 'found{print; exit} $0==cur{found=1}')
+          # versionsort.suffix sorts v1.0.0-rc.N below v1.0.0; without it
+          # the first patch after 1.0.0 would verify from an rc tag.
+          PREV_TAG=$(git -c versionsort.suffix=-rc tag --sort=-v:refname | awk -v cur="$CURRENT_TAG" 'found{print; exit} $0==cur{found=1}')
           echo "current=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
           echo "previous=$PREV_TAG" >> "$GITHUB_OUTPUT"
           if [ -z "$PREV_TAG" ]; then
