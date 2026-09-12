@@ -476,30 +476,49 @@ def _has_wildcard(values: list[str]) -> bool:
     return any(v.strip() == "*" for v in values)
 
 
+def _with_request_id_header(values: list[str]) -> list[str]:
+    """Add ``REQUEST_ID_HEADER`` to a CORS header list if it is missing.
+
+    Header names are case-insensitive, and a wildcard already covers it.
+    """
+    header = settings.REQUEST_ID_HEADER
+    if _has_wildcard(values) or header.lower() in {v.lower() for v in values}:
+        return list(values)
+    return [*values, header]
+
+
 def configure_cors(app: FastAPI) -> None:
     """Configure CORS middleware with an explicit allowlist.
 
-    Rejects wildcard ``allow_methods`` / ``allow_headers`` combined with
-    ``allow_credentials=True`` outside development; that combination is
-    rejected by browsers and silently disables credentialed CORS.
+    ``REQUEST_ID_HEADER`` is always allowed and exposed: a browser client
+    needs to send it for correlation and read it to quote in a report.
+
+    Rejects a wildcard in ``allow_methods``, ``allow_headers``, or
+    ``expose_headers`` combined with ``allow_credentials=True`` outside
+    development; browsers do not honour ``*`` for credentialed requests,
+    so that combination silently disables credentialed CORS.
     """
     if not settings.BACKEND_CORS_ORIGINS:
         return
 
     methods = settings.BACKEND_CORS_ALLOW_METHODS
-    headers = settings.BACKEND_CORS_ALLOW_HEADERS
+    headers = _with_request_id_header(settings.BACKEND_CORS_ALLOW_HEADERS)
+    expose_headers = _with_request_id_header(
+        settings.BACKEND_CORS_EXPOSE_HEADERS
+    )
     allow_credentials = settings.BACKEND_CORS_ALLOW_CREDENTIALS
 
     if (
         settings.ENV != Environment.development
         and allow_credentials
-        and (_has_wildcard(methods) or _has_wildcard(headers))
+        and any(map(_has_wildcard, (methods, headers, expose_headers)))
     ):
         raise RuntimeError(
-            "CORS misconfiguration: allow_credentials=True with wildcard "
-            "allow_methods/allow_headers is rejected outside development. "
-            "Set QUOIN_BACKEND_CORS_ALLOW_METHODS and "
-            "QUOIN_BACKEND_CORS_ALLOW_HEADERS to explicit lists."
+            "CORS misconfiguration: allow_credentials=True with a wildcard "
+            "in allow_methods, allow_headers, or expose_headers is rejected "
+            "outside development. Set QUOIN_BACKEND_CORS_ALLOW_METHODS, "
+            "QUOIN_BACKEND_CORS_ALLOW_HEADERS, and "
+            "QUOIN_BACKEND_CORS_EXPOSE_HEADERS to explicit lists."
         )
 
     app.add_middleware(
@@ -508,6 +527,7 @@ def configure_cors(app: FastAPI) -> None:
         allow_credentials=allow_credentials,
         allow_methods=methods,
         allow_headers=headers,
+        expose_headers=expose_headers,
     )
 
 

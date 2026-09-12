@@ -18,20 +18,38 @@ configured in `app/core/middlewares.py`.
 | :--- | :--- | :--- |
 | `QUOIN_BACKEND_CORS_ORIGINS` | `["http://localhost:3000", "http://localhost:8000"]` | Empty list disables CORS entirely |
 | `QUOIN_BACKEND_CORS_ALLOW_METHODS` | `["GET","POST","PUT","PATCH","DELETE","OPTIONS"]` | |
-| `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | `["Authorization","Content-Type","X-Request-ID"]` | |
+| `QUOIN_BACKEND_CORS_ALLOW_HEADERS` | `["Authorization","Content-Type"]` | The request-ID header is always added |
+| `QUOIN_BACKEND_CORS_EXPOSE_HEADERS` | `["Deprecation","Sunset","Link"]` | The request-ID header is always added |
 | `QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS` | `true` | See warning below |
+
+### Headers a browser can read
+
+A cross-origin script sees only the CORS-safelisted response headers
+unless the server exposes more. The API exposes the request-ID header
+(`QUOIN_REQUEST_ID_HEADER`, `X-Request-ID` by default), so a front end
+can quote it in a bug report. It also exposes the `Deprecation`,
+`Sunset`, and `Link` headers that
+[deprecated endpoints](deprecating-endpoints.md) set, so their clients can see
+the warning.
+
+The request-ID header is added to both the allowed and exposed lists
+from `QUOIN_REQUEST_ID_HEADER` itself. Renaming it, for example to
+`X-Correlation-ID`, needs no CORS change. Add your own response headers
+to `QUOIN_BACKEND_CORS_EXPOSE_HEADERS`.
 
 ### Wildcard footgun protection
 
 Browsers silently refuse credentialed CORS responses when the server
 responds with `Access-Control-Allow-Methods: *` or
-`Access-Control-Allow-Headers: *`. QuoinAPI detects this at startup and
-**raises a `RuntimeError`** if you combine wildcards with
-`allow_credentials=True` outside `development`:
+`Access-Control-Allow-Headers: *`. They also ignore
+`Access-Control-Expose-Headers: *` for credentialed requests. QuoinAPI
+detects these at startup and **raises a `RuntimeError`** if you combine
+wildcards with `allow_credentials=True` outside `development`:
 
 ```
-RuntimeError: CORS misconfiguration: allow_credentials=True with wildcard
-allow_methods/allow_headers is rejected outside development.
+RuntimeError: CORS misconfiguration: allow_credentials=True with a wildcard
+in allow_methods, allow_headers, or expose_headers is rejected outside
+development.
 ```
 
 This is intentional — a silent browser refusal is harder to debug than
