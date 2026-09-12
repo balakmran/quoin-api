@@ -4,6 +4,18 @@
 
 ### Fixed
 
+- **Security**: a JWKS endpoint that returns JSON which is not a JWKS
+  document now yields a 401 ("Unable to fetch OAuth signing keys").
+  That covers an array, a string, or a `keys` value that is not a
+  list. It used to raise an unhandled 500 that repeated for the whole
+  backoff window. A `keys` entry that is not an object is skipped
+  with a `jwks_key_unparseable` warning, like any other malformed
+  key.
+- **Telemetry**: traces now carry `deployment.environment.name`, the
+  key that replaced `deployment.environment` in the OpenTelemetry
+  semantic conventions. Backends filtering on the current name now
+  see these spans. The old key is still emitted in this release and
+  will be removed in the next, so move dashboards to the new one.
 - **Template**: a generated project no longer carries the template's
   name or the maintainer's identity beyond what the adopter answered.
   - `QuoinRequestValidationError` is renamed
@@ -46,6 +58,10 @@
 
 ### Added
 
+- **Security**: a production boot that still uses the default
+  database password logs a `production_default_database_password`
+  warning. It warns rather than refusing to boot, because the
+  database belongs to the deployer.
 - **CORS**: browsers can now read `X-Request-ID` and the
   `Deprecation`, `Sunset`, and `Link` headers. `expose_headers` was
   never set, so a front end got `null` for all four: it could not

@@ -41,6 +41,9 @@ match env:
 #: real request — see `validate_production_settings`.
 DEFAULT_ALLOWED_HOSTS = ("localhost", "127.0.0.1", "test", "*.orb.local")
 
+#: Development database password, warned about on a production boot.
+DEFAULT_POSTGRES_PASSWORD = "postgres"
+
 #: Development-only CORS origins, warned about on a production boot.
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000", "http://localhost:8000")
 
@@ -91,7 +94,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
+    POSTGRES_PASSWORD: SecretStr = SecretStr(DEFAULT_POSTGRES_PASSWORD)
     POSTGRES_DB: str = "app_db"
 
     # Database connection pool — the first knobs any real deployment
@@ -238,7 +241,9 @@ def validate_production_settings(s: Settings = settings) -> None:
 
     Localhost CORS origins are warned about rather than rejected: they
     are a smell in production but harmless on their own, and a deployment
-    may legitimately keep one for a bastion.
+    may legitimately keep one for a bastion. The default database
+    password is warned about for the same reason: the database belongs
+    to the deployer, and a private network may make it harmless.
 
     Args:
         s: The settings instance to validate (defaults to the module
@@ -255,6 +260,7 @@ def validate_production_settings(s: Settings = settings) -> None:
     _validate_production_oauth(s)
     _validate_production_hosts(s)
     _warn_on_local_cors_origins(s)
+    _warn_on_default_database_password(s)
 
 
 def _validate_production_oauth(s: Settings) -> None:
@@ -322,4 +328,17 @@ def _warn_on_local_cors_origins(s: Settings) -> None:
             origins=local,
             hint="Set QUOIN_BACKEND_CORS_ORIGINS to the real browser "
             "origins, or an empty list if no browser calls this API.",
+        )
+
+
+def _warn_on_default_database_password(s: Settings) -> None:
+    """Log a warning if production still uses the default DB password.
+
+    Args:
+        s: The settings instance to inspect.
+    """
+    if s.POSTGRES_PASSWORD.get_secret_value() == DEFAULT_POSTGRES_PASSWORD:
+        logger.warning(
+            "production_default_database_password",
+            hint="Set QUOIN_POSTGRES_PASSWORD to a strong password.",
         )

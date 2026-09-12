@@ -54,6 +54,9 @@ def setup_opentelemetry(app: FastAPI) -> None:
         {
             SERVICE_NAME: metadata.APP_NAME,
             "service.version": metadata.VERSION,
+            "deployment.environment.name": settings.ENV.value,
+            # Replaced by the key above in the semantic conventions; kept
+            # for one release so dashboards built on it keep matching.
             "deployment.environment": settings.ENV.value,
         }
     )

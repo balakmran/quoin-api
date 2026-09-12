@@ -96,8 +96,9 @@ class JWKSCache:
         Transport-level failures (connection refused, timeout, open
         circuit) propagate as the client's 5xx domain exceptions —
         a down IdP is our upstream failing, not a bad caller token.
-        Only a genuine HTTP error *response* (e.g. 404 JWKS) or an
-        unparseable body maps back to ``UnauthorizedError``.
+        Only a genuine HTTP error *response* (e.g. 404 JWKS), an
+        unparseable body, or JSON that is not a JWKS document maps back
+        to ``UnauthorizedError``.
 
         Args:
             client: The shared resilient HTTP client (retries, per-host
@@ -115,8 +116,22 @@ class JWKSCache:
                 "Unable to fetch OAuth signing keys"
             ) from exc
 
+        # Valid JSON is not necessarily a JWKS document. An array or a
+        # string here would otherwise raise AttributeError as a 500.
+        key_list = jwks.get("keys", []) if isinstance(jwks, dict) else None
+        if not isinstance(key_list, list):
+            raise UnauthorizedError("Unable to fetch OAuth signing keys")
+
         keys: dict[str, Any] = {}
-        for key_data in jwks.get("keys", []):
+        for key_data in key_list:
+            if not isinstance(key_data, dict):
+                logger.warning(
+                    "jwks_key_unparseable",
+                    kid=None,
+                    kty=None,
+                    error=f"expected an object, got {type(key_data).__name__}",
+                )
+                continue
             if key_data.get("use") not in ("sig", None):
                 continue
             kid = key_data.get("kid", "")

@@ -226,6 +226,22 @@ def test_production_silent_on_remote_cors_origins() -> None:
     ]
 
 
+def test_production_warns_on_default_database_password() -> None:
+    """The development DB password warns in production but still boots."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(_prod())
+    events = [log["event"] for log in cap_logs]
+    assert events.count("production_default_database_password") == 1
+
+
+def test_production_silent_on_a_real_database_password() -> None:
+    """A password other than the default emits no warning."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(_prod(POSTGRES_PASSWORD="a-real-one"))
+    events = [log["event"] for log in cap_logs]
+    assert "production_default_database_password" not in events
+
+
 def test_superuser_bypass_is_configurable() -> None:
     """The bypass role and its on/off switch are both settings (S3).
 
