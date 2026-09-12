@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Template**: a project generated with a name longer than the default
+  no longer fails its own `just lint` on day one. Copier substitutes the
+  settings prefix into docstrings and comments, and `ruff format`
+  cannot reflow prose. As a result, "Acme Ledger" produced one E501 and
+  "Northwind Traders Platform" produced 34.
+  `[tool.ruff.lint.pycodestyle] max-line-length` is now 100, while the
+  formatter's `line-length` stays at 80. Code is unchanged, and prose
+  now has room for a settings prefix of up to 30 characters.
+  Contributors still write to 80.
+
+### Added
+
+- **Tests**: `tests/test_template_substitution.py` runs the real
+  post-generation substitution over a copy of the tree with worst-case
+  answers and lints the result. `just check` in this repository now
+  fails before a generated project would. The test skips in generated
+  projects, which do not ship the setup script.
+- **CI**: the **Scaffold Smoke Test** now also generates with a long
+  project name, author, and GitHub handle, alongside `--defaults`. The
+  defaults are the one answer set short enough to hide this class of
+  bug.
+
 ## [0.12.0] - 2026-09-09
 
 Proof, not behaviour: every item here is a CI job, a script, or a

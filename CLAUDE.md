@@ -40,7 +40,7 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **Run `just check` after every code change.** Format, lint, typecheck, migration check, and tests must all pass before you end a turn.
 - **100% type hints.** Use blanket `# type: ignore` — never `# type: ignore[arg-type]` or other MyPy-style tags. The project uses `ty` (Pyright), which rejects unrecognized tag names.
 - **FastAPI exception handlers** registered via `app.add_exception_handler` must type the `exc` parameter as `Any` (Pyright requirement).
-- **80-char line limit** for Python and Markdown. Tables and code blocks are exempt.
+- **80-char line limit** for Python and Markdown. Tables and code blocks are exempt. The formatter wraps code at 80, but ruff's E501 only fires past 100 (`[tool.ruff.lint.pycodestyle]`). That slack exists for generated projects, where Copier substitutes a longer settings prefix into prose. It's not for you: still write to 80.
 - **Async-first** — every DB call, repository method, and service method is `async def`.
 - **Google-style docstrings** on public functions and classes.
 - **Keep code comments concise.** Explain the non-obvious *why* in a
