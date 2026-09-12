@@ -119,8 +119,13 @@ def process_file(file_path: Path) -> None:
     # urn:quoin:error:quoin_error maps to app_error (the snake_case of the
     # QuoinError base, which is renamed AppError above) rather than letting the
     # generic "quoin_" -> prefix rule turn it into "<prefix>_error".
+    # The maintainer's address must go before the "balakmran" rule, which
+    # would otherwise turn it into bala@<username>.dev.
     replacements = {
+        "bala@balakmran.dev": AUTHOR_EMAIL,
         "QuoinAPI": PROJECT_NAME,
+        "QuoinRequestValidationError": "AppRequestValidationError",
+        "QuoinValidationError": "AppValidationError",
         "QuoinError": "AppError",
         "urn:quoin:error:quoin_error": f"urn:{PROJECT_SLUG}:error:app_error",
         "urn:quoin:error": f"urn:{PROJECT_SLUG}:error",

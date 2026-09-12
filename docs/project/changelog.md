@@ -4,6 +4,18 @@
 
 ### Fixed
 
+- **Template**: a generated project no longer carries the template's
+  name or the maintainer's identity beyond what the adopter answered.
+  - `QuoinRequestValidationError` is renamed
+    `AppRequestValidationError` at generation, and its test alias
+    `QuoinValidationError` becomes `AppValidationError`.
+  - The base exception's docstring no longer says "Quoin".
+  - `SECURITY.md`'s contact address is now the `author_email`
+    answer. It used to become `bala@<github_username>.dev`.
+
+  The setup task reruns on `copier update`, so the rename also
+  reaches references in your own modules. Lowercase `quoin-` names
+  (skills, CSS classes, the container user) are internal and stay.
 - **Release**: the Copier Update Check now sorts tags with
   `versionsort.suffix=-rc`, so `v1.0.0-rc.N` orders below `v1.0.0`.
   Without it, the first patch after `1.0.0` would have verified its
@@ -34,6 +46,11 @@
 
 ### Added
 
+- **CI**: the Scaffold Smoke Test's long-names entry now also
+  answers `author_email`, and fails if `Quoin` or the maintainer's
+  name, handle, or address appears anywhere in the generated tree.
+  `tests/test_template_substitution.py` runs the same scan over the
+  substituted sources, so `just check` catches a leak locally.
 - **Release**: release candidates.
   - `just bump <major|minor|patch> --rc` starts one (`0.14.0` →
     `1.0.0-rc.1`), `just bump rc` advances it, and `just bump
@@ -55,6 +72,11 @@
   project name, author, and GitHub handle, alongside `--defaults`. The
   defaults are the one answer set short enough to hide this class of
   bug.
+
+### Changed
+
+- **Developer Experience**: the sensitive-file hook no longer blocks
+  edits to Jinja templates. The Copier config file stays guarded.
 
 ## [0.12.0] - 2026-09-09
 
