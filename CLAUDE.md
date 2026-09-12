@@ -59,9 +59,11 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 
 ## Automated quality gates
 
-This repo enforces quality at three points — assume they exist when reasoning about what's safe to ship:
+This repo enforces quality at five points — assume they exist when reasoning about what's safe to ship. All six Claude hooks live in `.claude/settings.json`:
 
-- **End of every Claude turn** — a `Stop` hook in `.claude/settings.json` runs `just format && just lint && just typecheck` whenever the working tree is dirty. Failures block the turn until fixed. Tests are deliberately excluded here (too slow per turn). Two further **advisory** `Stop` hooks warn (without blocking): one when `app/core/config.py` changed but `.env.example` / `docs/guides/configuration.md` didn't, and one when a `models.py` changed but no new `alembic/versions/` script was added.
+- **Before every edit** — a `PreToolUse` hook (`.claude/hooks/block-sensitive.sh`) refuses Edit/Write, and Bash commands that look like writes, to files that must not be hand-edited: `.env` credential files (`.env.example` and `.env.test` are fine), `uv.lock`, `copier.yml`, applied `alembic/versions/` migrations, and the `docs/project/` pages `just docb` syncs. The Bash arm matches command text, so a command that merely names one of those paths next to an interpreter or redirect is refused too; reword the command rather than working around the guard.
+- **After every edit** — a `PostToolUse` hook runs `ruff format` on an edited `.py` file. Re-read before an edit that targets lines it may have reformatted.
+- **End of every Claude turn** — a `Stop` hook runs `just format && just lint && just typecheck` whenever the working tree is dirty. Failures block the turn until fixed. Tests are deliberately excluded here (too slow per turn). Three further **advisory** `Stop` hooks warn without blocking: when `app/core/config.py` changed but `.env.example` / `docs/guides/configuration.md` didn't; when a `models.py` changed but no new `alembic/versions/` script was added; and when a changed `service.py` or `repository.py` references `HTTPException`.
 - **`git commit`** — `prek` runs ruff format, ruff check, and `ty` on changed files (configured in `prek.toml`).
 - **`git push`** — `prek` runs the full pytest suite. **Postgres must be running** (`just db`) or the push aborts. Use `git push --no-verify` only in emergencies; it defeats the gate.
 
