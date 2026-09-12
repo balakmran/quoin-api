@@ -122,7 +122,7 @@ This runs format → lint → typecheck → test. Fix anything that fails before
 These bite people often enough that they're worth restating here rather than buried in docs:
 
 - **100% type hints.** When you need to suppress a type error, write the bare `# type: ignore` — never `# type: ignore[arg-type]` or any other MyPy-style tag. The project uses `ty` (Pyright engine), which rejects unrecognized tag names.
-- **80-character line limit** for both Python and Markdown. Tables and code blocks are exempt.
+- **80-character line limit** for both Python and Markdown. Tables and code blocks are exempt. Lint tolerates up to 100 only so a generated project's longer settings prefix fits in prose; write to 80 regardless.
 - **Async-first.** Every DB call, repository method, and service method is `async def`. If you find yourself writing a sync function in a module, stop and reconsider.
 - **Google-style docstrings** on public functions and classes. The Ruff config enforces this.
 - **No raw `HTTPException`** in service or repository code — raise a domain exception and let the global handler translate it.

@@ -183,8 +183,20 @@ uv add --group dev ruff # Add dev dependency
 **Configuration:**
 
 ```toml
+[tool.ruff]
 line-length = 80
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
 ```
+
+The formatter wraps code at 80 columns, but E501 only fires past 100.
+Copier substitutes the adopter's settings prefix into docstrings and
+comments, which no formatter reflows. At a strict 80, any project name
+longer than the default fails its own `just lint` on day one. The
+20-column slack covers settings prefixes up to 30 characters, and
+`tests/test_template_substitution.py` guards that bound. Still write
+prose to 80.
 
 **Trade-offs:**
 
