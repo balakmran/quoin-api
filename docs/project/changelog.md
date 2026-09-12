@@ -4,6 +4,15 @@
 
 ### Fixed
 
+- **Docs**: corrected drift found by the 2026-09-08 analysis.
+  - The release guide said the Copier Update Check runs no
+    `just check`. It has run the updated project's gate since
+    `0.12.0`.
+  - `CLAUDE.md` described three of the six hooks, leaving out the
+    sensitive-file guard that agents most need to know about.
+  - The testing guide never mentioned the problem-details contract
+    hook on the `client` fixture, which fails any test whose error
+    response breaks RFC 9457.
 - **Security**: a JWKS endpoint that returns JSON which is not a JWKS
   document now yields a 401 ("Unable to fetch OAuth signing keys").
   That covers an array, a string, or a `keys` value that is not a

@@ -158,18 +158,18 @@ async def db_session(
 
 ### `client` — Async HTTP Client
 
-Overrides the `get_session` dependency to inject the test session,
-so HTTP requests use the same rolled-back transaction:
+Overrides the `get_session` dependency to inject the test session, so
+HTTP requests use the same rolled-back transaction. It also attaches the
+problem-details contract hook to every response:
 
 ```python
 @pytest.fixture
-async def client(
-    db_session: AsyncSession,
-) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     fastapi_app.dependency_overrides[get_session] = lambda: db_session
     async with AsyncClient(
         transport=ASGITransport(app=fastapi_app),
         base_url="http://test",
+        event_hooks={"response": [_assert_problem_details_contract]},
     ) as c:
         yield c
     # Pop only the override this fixture added — clearing everything
@@ -183,6 +183,19 @@ async def client(
     requesting `client` in a test automatically sets up a fresh,
     isolated database transaction. You never need to call
     `initialize_db` manually.
+
+!!! warning "Every error response is checked"
+    The `response` event hook runs on every response a test makes
+    through `client`, including `read_client` and `admin_client`, which
+    yield the same client. The test fails if any 4xx or 5xx response:
+
+    - is not `application/problem+json`, or
+    - lacks `X-Request-ID`.
+
+    This happens even if the test never asserts on that response. If a
+    new error path makes a test fail with that message, fix the handler,
+    not the test: raise a domain exception so the global handlers render
+    it. A test that builds its own `AsyncClient` does not get the hook.
 
 ### Pre-built Auth Clients
 

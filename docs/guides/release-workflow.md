@@ -161,21 +161,26 @@ View tags at:
 Pushing a `v*` tag also triggers the **Copier Update Check** workflow
 (`.github/workflows/copier-update.yml`). It generates a project from the
 previous release tag, runs `copier update` to the tag just pushed, and
-fails the job if the update leaves `.rej` conflict files or the
-generated project's `.copier-answers.yml` doesn't end up pointing at the
-new tag. On the very first release (no earlier tag exists) the job is a
-no-op.
+then runs the updated project's own `just check` against a Postgres
+service. The job fails if any of these happen:
 
-This only checks that the *update mechanism* itself still works — it
-does not run `just check` against the generated project. Whether a
-freshly generated (or updated) scaffold passes `just check` out of the
-box is tracked separately as template completeness work (see
-`ROADMAP.md`).
+- The update leaves `.rej` conflict files.
+- The project's `.copier-answers.yml` doesn't end up pointing at the new
+  tag.
+- The updated project's own gate fails.
+
+On the very first release (no earlier tag exists) the job is a no-op.
+Release candidates sort below their final release when the job picks the
+previous tag; see [Pre-releases](#pre-releases).
+
+This covers the *update* path. A *freshly generated* project is gated
+separately, on every pull request, by the **Scaffold Smoke Test**. See
+[Quality Checks](quality-checks.md#ci-integration).
 
 You can run the same check locally before tagging:
 
 ```bash
-just verify-template-update v0.8.0 v0.9.0
+just verify-template-update v0.8.0 v0.9.0 --check
 ```
 
 ---
