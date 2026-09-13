@@ -155,7 +155,9 @@ just pr  # Run pre-commit hooks on all files
 ## CI Integration
 
 All quality checks run automatically on every push via GitHub Actions,
-across a Python 3.12 / 3.13 / 3.14 matrix:
+on the Python version pinned in `.python-version` (3.14). The project
+still supports 3.12+ (`requires-python`, ruff's `target-version`); CI
+just doesn't spend a run on each version:
 
 ```yaml
 # .github/workflows/ci.yml
@@ -174,6 +176,20 @@ generates a project from the branch under review and runs *its* `just
 check`, then fails if that gate modified the generated tree. `ci.yml`
 proves this repo is healthy; only the smoke job proves the project an
 adopter receives is.
+
+The smoke job generates a single project: `--defaults` for every answer
+except a long `project_name` ("Northwind Traders Platform API"). The
+default name is short enough to fit every line it is substituted into,
+so on its own it would hide lines that overflow once an adopter picks a
+longer one. The long name derives a 30-character settings prefix, which
+is what the lint headroom is sized for. Because that prefix also
+differs from this repo's `QUOIN`, a missed substitution leaves the
+generated project ignoring the CI database settings and the gate fails.
+
+With default author answers the maintainer's identity is expected in
+the generated tree, so the job only fails if the `Quoin` brand leaks.
+The maintainer-identity scan, with long non-default author answers,
+runs in `tests/test_template_substitution.py` as part of `just check`.
 
 Dependency CVE scanning is **not** part of this pipeline or of
 `just check` — it needs network access and its result depends on the

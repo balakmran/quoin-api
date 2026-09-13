@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **CI**: `ci.yml` runs on Python 3.14 only; `requires-python` stays
+  `>=3.12`.
+- **CI**: the Scaffold Smoke Test runs once, with defaults and a long
+  `project_name`.
+
 ## [0.13.0] - 2026-09-12
 
 Hardening: the fixes the 2026-09-08 analysis surfaced, and the

@@ -106,7 +106,7 @@ only; no application behaviour changes.
 | 📋 | **Update check from the previous two tags** — matrix the Copier Update Check over `N-1 → N` and `N-2 → N` | "After 1.0" promises this for every minor; wire it while `0.x` is cheap to get wrong |
 | 📋 | **Supply-chain pins** — pin `uv` in the four workflows to the version the Dockerfile already pins by digest; digest-pin the Python base image (Dependabot bumps digests); record `uv audit`'s preview status in the audit workflow | CI installs `uv` `latest` while the image is reproducible; a `uv` release can rename the preview audit command and turn a Monday red for a reason that is not a CVE |
 | 📋 | **Contract hook validates the body** — parse every 4xx/5xx body as `ProblemDetail` and assert `instance` is the request path | The hook checks the content type and `X-Request-ID`; a malformed body would pass it today |
-| 📋 | **Python 3.15 in the CI matrix** — when it ships (October 2026) | Annual cadence; the matrix has covered three versions since `0.8` |
+| 📋 | **Python 3.15 in CI** — move the `.python-version` pin CI runs on when it ships (October 2026) | Annual cadence; CI runs the pinned version only, while `requires-python` keeps the 3.12 floor |
 
 ---
 
@@ -285,7 +285,7 @@ Intent, not commitments — this section exists so that work deferred
 
 - **Boring is the brand.** Strict semver, quarterly minors, security
   patches immediately. The cadence work is already dated: Python 3.15
-  into the matrix when it ships (October 2026), Python 3.12 dropped at
+  into CI when it ships (October 2026), Python 3.12 dropped at
   its end of life (October 2028), Postgres 19 in Compose and CI once it
   is generally available, and OpenTelemetry semantic-convention
   renames followed as they stabilise rather than pinned forever.
