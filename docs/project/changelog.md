@@ -13,6 +13,10 @@
 - **Dependencies**: `httpx` replaced by `httpx2>=2.12.0` (runtime and
   `test` group); `opentelemetry-instrumentation-httpx` now `>=0.65b0`.
   Adopters: change `httpx` imports in custom code to `httpx2`.
+- **Dependencies**: lock refreshed (alembic 1.20.0, PyJWT 2.14.0);
+  `PyJWT` floor raised to `>=2.14.0` for its security fixes.
+- **CI**: `astral-sh/setup-uv` pinned to v10.1.0 and
+  `actions/upload-artifact` to v7.0.1.
 
 ## [0.13.0] - 2026-09-12
 
