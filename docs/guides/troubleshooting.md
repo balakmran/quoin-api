@@ -364,19 +364,25 @@ engine = create_async_engine(
 
 ### 500 Errors with No Logs
 
-**Cause**: Exception not caught by app error handler.
+**Cause**: An exception type the global handlers don't map.
+`HTTPException` and `QuoinError` subclasses are already rendered as
+Problem Details.
 
-**Solution**: Check exception type and add handler:
+**Solution**: Raise a domain exception (a `QuoinError` subclass from
+`app/core/exceptions.py`) instead. If a third-party exception needs its
+own mapping, register a handler in `add_exception_handlers()` in
+`app/core/exception_handlers.py`, typing `exc` as `Any`:
 
 ```python
-from fastapi import HTTPException
+async def vendor_exception_handler(request: Request, exc: Any) -> Response:
+    logger.error("vendor_error", detail=str(exc))
+    ...
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    logger.error("http_error", status=exc.status_code, detail=exc.detail)
-    return JSONResponse(...)
+app.add_exception_handler(VendorError, vendor_exception_handler)
 ```
+
+See [Error Handling](error-handling.md).
 
 ### OTEL Slowing Down Requests
 

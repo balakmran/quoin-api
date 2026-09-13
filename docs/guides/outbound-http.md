@@ -56,8 +56,8 @@ class WeatherService:
 ```
 
 `request`, `get`, `post`, `put`, `patch`, and `delete` all accept the
-same keyword arguments as `httpx.AsyncClient` (`params`, `json`,
-`headers`, `timeout`, …) and return the raw `httpx.Response`.
+same keyword arguments as `httpx2.AsyncClient` (`params`, `json`,
+`headers`, `timeout`, …) and return the raw `httpx2.Response`.
 
 The client is shared across every integration, so pass **absolute URLs**
 rather than relying on a single base URL.

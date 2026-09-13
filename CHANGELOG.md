@@ -6,6 +6,9 @@
 
 - **Docs**: README refreshed — table of contents removed, feature list
   linked to guides, auth quick-start added, Copier prompts corrected.
+- **Docs**: guides corrected for `httpx2` references, the paginated list
+  test, mocking and exception-handler examples, and the template script
+  path.
 - **CI**: `ci.yml` runs on Python 3.14 only; `requires-python` stays
   `>=3.12`.
 - **CI**: the Scaffold Smoke Test runs once, with defaults and a long
