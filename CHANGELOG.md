@@ -2,19 +2,31 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-13
+
+Day-two proof: CI now rehearses what an adopter does after generating —
+scaffold a module, migrate, and gate again — and verifies `copier
+update` from two earlier releases. The rehearsal found three template
+bugs, fixed here.
+
+`copier update` from `0.13.0` is expected to apply cleanly. One change
+needs **manual reconciliation**: `httpx` imports in your own code must
+become `httpx2` (see **Changed**).
+
+### Added
+
+- **CI**: the Scaffold Smoke Test also runs `just new widget`, adds a
+  table, runs `just migrate-up` and `just migrate-gen`, and re-runs
+  `just check` in the generated project.
+- **CI**: the Copier Update Check verifies from two baselines in
+  parallel — the preceding tag and the newest final release before it.
+- **Tests**: the `client` fixture's problem-details hook also validates
+  the body as `ProblemDetail`, with `status` and `instance` matching.
+- **Tests**: `tests/test_tool_pins.py` keeps the workflows' uv version
+  equal to the Dockerfile's and requires digest-pinned base images.
+
 ### Changed
 
-- **Docs**: README refreshed — table of contents removed, feature list
-  linked to guides, auth quick-start added, Copier prompts corrected.
-- **Docs**: guides corrected for `httpx2` references, the paginated list
-  test, mocking and exception-handler examples, and the template script
-  path.
-- **CI**: `ci.yml` runs on Python 3.14 only; `requires-python` stays
-  `>=3.12`.
-- **CI**: the Scaffold Smoke Test runs once, with defaults and a long
-  `project_name`.
-- **Tests**: `test_template_substitution.py` also scans shipped `docs/`
-  for template identity leaks.
 - **Dependencies**: `httpx` replaced by `httpx2>=2.12.0` (runtime and
   `test` group); `opentelemetry-instrumentation-httpx` now `>=0.65b0`.
   Adopters: change `httpx` imports in custom code to `httpx2`.
@@ -23,18 +35,22 @@
 - **Dependencies**: `>=` floors raised to the locked versions for
   alembic, OpenTelemetry (API/SDK 1.44.0, instrumentations 0.65b0),
   pydantic-settings, and mkdocstrings-python.
+- **CI**: every workflow installs uv 0.11.26, the Dockerfile's pin,
+  instead of `latest`.
 - **CI**: `astral-sh/setup-uv` pinned to v10.1.0 and
   `actions/upload-artifact` to v7.0.1.
-- **CI**: every workflow installs uv 0.11.26, the Dockerfile's pin, instead
-  of `latest`; `tests/test_tool_pins.py` keeps the two equal.
+- **CI**: `ci.yml` runs on Python 3.14 only; `requires-python` stays
+  `>=3.12`.
+- **CI**: the Scaffold Smoke Test runs once, with defaults and a long
+  `project_name`.
 - **Docker**: the Python base image is pinned by digest as well as tag.
-- **Tests**: the `client` fixture's problem-details hook also validates
-  the body as `ProblemDetail`, with `status` and `instance` matching.
-- **CI**: the Scaffold Smoke Test also runs `just new widget`, adds a
-  table, runs `just migrate-gen`, and re-runs `just check` in the
-  generated project.
-- **CI**: the Copier Update Check verifies from two baselines in
-  parallel — the preceding tag and the newest final release before it.
+- **Tests**: `test_template_substitution.py` also scans shipped `docs/`
+  for template identity leaks.
+- **Docs**: README refreshed — table of contents removed, feature list
+  linked to guides, auth quick-start added, Copier prompts corrected.
+- **Docs**: guides corrected for `httpx2` references, the paginated list
+  test, mocking and exception-handler examples, and the template script
+  path.
 
 ### Fixed
 
