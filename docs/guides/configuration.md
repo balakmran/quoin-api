@@ -142,7 +142,7 @@ than as the config error it is.
 
 Finer backoff and circuit-breaker tuning are module constants in
 [`app/http/client.py`](../../app/http/client.py) rather than settings; the
-connection pool uses httpx defaults. See the
+connection pool uses httpx2 defaults. See the
 [Outbound HTTP Client guide](outbound-http.md).
 
 ## Core Settings Module

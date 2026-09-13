@@ -50,7 +50,7 @@ Three of those deserve a note.
 
 `--trust` is required because the template runs a post-generation
 script. It is the same flag you used to generate, and you should read
-what it runs — `scripts/copier_setup.py` in the template repository —
+what it runs — `scripts/copier_setup.py.jinja` in the template repository —
 before granting it.
 
 `--conflict rej` is worth preferring over Copier's default. The

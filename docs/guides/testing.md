@@ -393,26 +393,27 @@ async def test_list_users(admin_client: AsyncClient):
         await admin_client.post("/api/v1/users/", json=create_user_data())
 
     response = await admin_client.get("/api/v1/users/")
-    assert len(response.json()) == 5
+    assert response.json()["total"] == 5
 ```
 
 ---
 
 ## Mocking External Dependencies
 
-For external APIs, use `pytest-mock` or `unittest.mock`:
+For external APIs, patch the call with `unittest.mock`. The
+`app.services.email` target below is a stand-in for your own integration:
 
 ```python
 from unittest.mock import AsyncMock, patch
 
 
-async def test_send_email_notification(mocker):
-    # Mock the email service
-    mock_send = mocker.patch(
+async def test_send_email_notification(
+    user_service: UserService, user_create: UserCreate
+):
+    with patch(
         "app.services.email.send_email", new=AsyncMock(return_value=True)
-    )
-
-    await user_service.create_user_with_welcome_email(user_create)
+    ) as mock_send:
+        await user_service.create_user_with_welcome_email(user_create)
 
     # Verify email was sent
     mock_send.assert_called_once()
