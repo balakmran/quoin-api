@@ -48,21 +48,21 @@ root source, not the synced copy.
    with `quoin-deps-upgrade`'s sweep — reuse it.)
 
 5. **Shields badges (`README.md` only).** The badge block lives in
-   `README.md` and nowhere else — keep it that way. Hardcoded badge versions
-   drift silently, so check: FastAPI / SQLModel badge versions must match the
-   `pyproject.toml` pins; the Python badge must match `requires-python` (the
-   floor, which is lower than the container's Python — not a mismatch); the
-   `PostgreSQL-<major>` badge must match `docker-compose.yml` (`postgres:18`).
+   `README.md` and nowhere else — keep it that way. The FastAPI and SQLModel
+   badges deliberately carry no version; flag any that regain one. The Python
+   badge must match `requires-python` (the floor, which is lower than the
+   container's Python — not a mismatch); the `PostgreSQL-<major>` badge must
+   match `docker-compose.yml` (`postgres:18`).
 
    Prefer self-updating endpoint badges (CI/Docs status, Release, Ruff, uv,
    prek) over hardcoded version strings, which are the drift-prone kind.
 
 6. **Referenced files/paths & README structure.** Backtick paths like
    `app/core/...`, `scripts/...`, `.claude/...` in docs should still resolve.
-   The `README.md` **Project Structure** tree must match the real `app/`
-   layout — it goes stale as modules/files are added (it has been missing
-   `app/http/`, `app/modules/system/`, and several `app/core/` files) — and the
-   **Contents** ToC must list every `##` section, in document order.
+   The `README.md` **Project Structure** tree lists one line per directory
+   (not per file) and must match the real top-level `app/` layout. Every
+   guide link in **Key Highlights** must resolve. The README has no table of
+   contents by design — don't flag its absence.
 
 7. **Code samples that claim to run.** Spot-check that example snippets use
    current APIs (e.g. SQLModel/SQLAlchemy 2.x async, Pydantic v2). Use the
