@@ -1,9 +1,9 @@
 # Stage 1: Builder
-FROM python:3.14-slim-bookworm AS builder
+# Images are pinned by tag AND digest for reproducible builds. The tag is
+# kept so Dependabot's docker ecosystem still bumps both together.
+FROM python:3.14-slim-bookworm@sha256:9ab8d9c8514b44f90cf0029dd42fdd7e9e211e639c8b995304cc04568dee900f AS builder
 
-# Pin the uv build tool to a released version AND its manifest digest
-# for byte-for-byte reproducible builds. The tag is kept alongside the
-# digest so Dependabot's docker ecosystem still bumps both together.
+# The workflows install this same uv version (see test_tool_pins.py).
 COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 /uv /bin/uv
 
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
 
 # Stage 2: Final
-FROM python:3.14-slim-bookworm
+FROM python:3.14-slim-bookworm@sha256:9ab8d9c8514b44f90cf0029dd42fdd7e9e211e639c8b995304cc04568dee900f
 
 WORKDIR /app
 

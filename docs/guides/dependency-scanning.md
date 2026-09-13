@@ -33,7 +33,10 @@ dependency set that does not match what you declared.
 
     `uv audit` is a preview feature; the recipes pass
     `--preview-features audit-command` to opt in and silence the
-    warning. Its output format may change in a future uv release.
+    warning. Its name and output format may change in a future uv
+    release. CI installs the same uv version the `Dockerfile` pins, so
+    that change arrives only with a deliberate uv bump — rerun
+    `just audit` locally when you make one.
 
 ### Where it runs
 
@@ -135,8 +138,8 @@ will be installed — rather than the declared ranges.
 
 `uv audit` scans Python packages only. The **OS packages in the
 container base image** (`python:3.14-slim-bookworm`) are outside its
-scope, and Dependabot's `docker` ecosystem bumps the pinned tag without
-scanning the resulting image. Nothing in this repo closes that gap by
+scope, and Dependabot's `docker` ecosystem bumps the pinned tag and
+digest without scanning the resulting image. Nothing in this repo closes that gap by
 design — the template does not build or publish an image, so image
 scanning belongs in whatever pipeline does. If you publish a container,
 add an image scanner (Trivy, Grype, or your registry's built-in
