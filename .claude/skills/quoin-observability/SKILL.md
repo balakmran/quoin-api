@@ -32,7 +32,7 @@ Before adding anything, check whether it's already covered:
 - **Access log**: `AccessLogMiddleware` emits one `http_request` line per
   request (method, path, status, duration_ms) automatically.
 - **HTTP/DB spans**: FastAPI routes, SQLAlchemy/asyncpg queries, and outbound
-  `httpx` calls are auto-instrumented by `setup_opentelemetry()`. You do not
+  `httpx2` calls are auto-instrumented by `setup_opentelemetry()`. You do not
   need to wrap a repository query or an `HTTPClientDep` call in a manual
   span — it already produces one.
 - **Log/trace correlation**: every log line emitted during a traced request

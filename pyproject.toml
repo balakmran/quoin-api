@@ -15,12 +15,12 @@ dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard]==0.141.1",
     "greenlet==3.5.5",
-    "httpx>=0.28.1",
+    "httpx2>=2.12.0",
     "jinja2>=3.1.6",
     "opentelemetry-api>=1.42.1",
     "opentelemetry-exporter-otlp>=1.42.1",
     "opentelemetry-instrumentation-fastapi>=0.63b1",
-    "opentelemetry-instrumentation-httpx>=0.63b1",
+    "opentelemetry-instrumentation-httpx>=0.65b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.63b1",
     "opentelemetry-sdk>=1.42.1",
     "psycopg[binary]==3.3.5",
@@ -47,7 +47,7 @@ docs = [
     "zensical==0.0.61",
 ]
 test = [
-    "httpx2>=2.7.0",
+    "httpx2>=2.12.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",

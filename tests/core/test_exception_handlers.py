@@ -3,7 +3,7 @@ import json
 import pydantic
 import pytest
 from fastapi import HTTPException, status
-from httpx import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient
 from pydantic import field_validator
 
 from app.core.exception_handlers import _sanitize_validation_errors

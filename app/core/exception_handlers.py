@@ -186,7 +186,7 @@ async def http_exception_handler(request: Request, exc: Any) -> Response:
 async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
     """Handle any exception not caught by a more specific handler.
 
-    Guarantees that even bare ``KeyError``s or non-transport ``httpx``
+    Guarantees that even bare ``KeyError``s or non-transport ``httpx2``
     errors surface as RFC 9457 ``application/problem+json`` responses
     rather than Starlette's default ``text/plain`` 500. The internal
     exception message and traceback are logged but never leaked to the

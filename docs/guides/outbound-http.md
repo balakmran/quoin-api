@@ -2,27 +2,18 @@
 
 QuoinAPI ships a single, shared, resilient HTTP client for calling
 upstream services. It is the sanctioned way to make outbound requests —
-prefer it over instantiating ad-hoc `httpx.AsyncClient()` objects, which
+prefer it over instantiating ad-hoc `httpx2.AsyncClient()` objects, which
 leak connection pools and skip the retry, circuit-breaking, and tracing
 behaviour described below.
 
-!!! note "Runtime code uses `httpx`, not `httpx2`"
+!!! note "Use `httpx2`, not `httpx`"
 
-    Both packages are installed. `starlette.testclient` prefers
-    **`httpx2`** (it is a `test`-group dependency purely to satisfy
-    that), while all runtime code — `app/http/client.py` and
-    `app/core/telemetry.py` — is still on **`httpx`**.
-
-    This split is historical, not a constraint:
-    `opentelemetry-instrumentation-httpx` **0.65b0 ships a working
-    `HTTPX2ClientInstrumentor`** (added upstream in [PR #4730][pr4730],
-    merged 2026-07-15), so porting the shared client to `httpx2` would
-    keep outbound tracing intact — it is a one-line instrumentor swap in
-    `instrument_http_client`. Note that `httpx` itself cannot be dropped
-    from the tree either way: `fastapi[standard]` pulls it in via
-    `fastapi-cli` and `fastapi-cloud-cli`.
-
-[pr4730]: https://github.com/open-telemetry/opentelemetry-python-contrib/pull/4730
+    The client is built on **`httpx2`**, and tracing uses
+    `HTTPX2ClientInstrumentor` from `opentelemetry-instrumentation-httpx`
+    (0.65b0 or later). Import `httpx2` in new code. The legacy `httpx`
+    package stays installed as a transitive dependency of
+    `fastapi[standard]` (via `fastapi-cli` and `fastapi-cloud-cli`), but
+    nothing in the app uses it.
 
 ## Why a shared client
 
@@ -142,16 +133,16 @@ Two settings are env-tunable: `QUOIN_HTTP_TIMEOUT_SECONDS` and
 [Configuration guide](configuration.md#key-settings)). Finer backoff and
 circuit-breaker tuning live as module constants in `app/http/client.py` —
 change them there if a deployment genuinely needs to. The connection pool
-uses httpx's defaults (100 max connections, 20 keep-alive).
+uses httpx2's defaults (100 max connections, 20 keep-alive).
 
 ## Testing outbound calls
 
-Inject an `httpx.MockTransport` via `create_http_client(transport=...)`
+Inject an `httpx2.MockTransport` via `create_http_client(transport=...)`
 to exercise client behaviour without real network I/O, and use
 `stamina.set_testing(True)` to remove backoff sleeps:
 
 ```python
-import httpx
+import httpx2
 import stamina
 from app.http.client import create_http_client
 
@@ -160,14 +151,14 @@ async def test_retries_then_succeeds() -> None:
     stamina.set_testing(True, attempts=3)
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
         if calls < 3:
-            raise httpx.ConnectError("boom", request=request)
-        return httpx.Response(200)
+            raise httpx2.ConnectError("boom", request=request)
+        return httpx2.Response(200)
 
-    client = create_http_client(transport=httpx.MockTransport(handler))
+    client = create_http_client(transport=httpx2.MockTransport(handler))
     response = await client.get("http://upstream.test/x")
     assert response.status_code == 200
     await client.aclose()

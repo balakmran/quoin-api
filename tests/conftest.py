@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
-from httpx import ASGITransport, AsyncClient, Response
+from httpx2 import ASGITransport, AsyncClient, Response
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel import SQLModel
@@ -23,7 +23,7 @@ _PROBLEM_MEDIA_TYPE = "application/problem+json"
 async def _assert_problem_details_contract(response: Response) -> None:
     """Enforce the problem-details contract on every response the suite sees.
 
-    An httpx event hook on the ``client`` fixture, so it runs against
+    An httpx2 event hook on the ``client`` fixture, so it runs against
     every response any test makes through it — not only tests that
     assert on it directly. Every client/server error (4xx/5xx) must be
     ``application/problem+json`` and carry ``X-Request-ID``; this single

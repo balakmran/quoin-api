@@ -348,8 +348,8 @@ below and comes back as a 500, not a misleading 422.
 ### Catch-all for uncaught exceptions
 
 **Any** error not caught by a more specific handler — a bare `KeyError`,
-or a non-transport `httpx` error such as `httpx.InvalidURL` /
-`httpx.TooManyRedirects` that escapes the outbound HTTP client — still
+or a non-transport `httpx2` error such as `httpx2.InvalidURL` /
+`httpx2.TooManyRedirects` that escapes the outbound HTTP client — still
 returns an RFC 9457 `application/problem+json` 500 instead of
 Starlette's default `text/plain` `Internal Server Error`:
 

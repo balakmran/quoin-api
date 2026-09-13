@@ -10,6 +10,9 @@
   `project_name`.
 - **Tests**: `test_template_substitution.py` also scans shipped `docs/`
   for template identity leaks.
+- **Dependencies**: `httpx` replaced by `httpx2>=2.12.0` (runtime and
+  `test` group); `opentelemetry-instrumentation-httpx` now `>=0.65b0`.
+  Adopters: change `httpx` imports in custom code to `httpx2`.
 
 ## [0.13.0] - 2026-09-12
 

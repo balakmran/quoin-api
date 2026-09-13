@@ -3,7 +3,7 @@
 from datetime import date
 
 from fastapi import Depends, FastAPI, status
-from httpx import ASGITransport, AsyncClient, Response
+from httpx2 import ASGITransport, AsyncClient, Response
 
 from app.core.versioning import deprecated
 

@@ -3,7 +3,7 @@ import asyncio
 import anyio
 import pytest
 from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient
 from starlette.types import Message, Receive, Scope, Send
 
 from app.core.lifecycle import Lifecycle
