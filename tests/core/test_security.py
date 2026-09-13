@@ -6,11 +6,11 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
+import httpx2
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
-from httpx import Response
+from httpx2 import Response
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
 from structlog.contextvars import get_contextvars, unbind_contextvars
 from structlog.testing import capture_logs
@@ -258,7 +258,7 @@ async def test_jwks_cache_refresh_propagates_transport_failure() -> None:
 async def test_jwks_cache_refresh_raises_on_http_error() -> None:
     """A JWKS HTTP error *response* (e.g. 404) maps to UnauthorizedError."""
     mock_response = MagicMock(spec=Response)
-    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+    mock_response.raise_for_status.side_effect = httpx2.HTTPStatusError(
         "404 Not Found", request=MagicMock(), response=MagicMock()
     )
     cache = JWKSCache("http://example.com/jwks")

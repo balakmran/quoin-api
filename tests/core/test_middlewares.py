@@ -11,7 +11,7 @@ import structlog
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from httpx import ASGITransport, AsyncClient, Response
+from httpx2 import ASGITransport, AsyncClient, Response
 from starlette.types import Message, Receive, Scope, Send
 from structlog.testing import capture_logs
 

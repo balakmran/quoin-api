@@ -123,7 +123,7 @@ Run the full quality gate (format, lint, typecheck, test) any time with
 │   │   ├── session.py            # Database session
 │   │   └── base.py               # Base models
 │   ├── http/                     # Outbound HTTP client
-│   │   └── client.py             # Shared async httpx client
+│   │   └── client.py             # Shared async httpx2 client
 │   ├── modules/
 │   │   ├── system/               # Health, readiness & home-page routes
 │   │   └── user/                 # Example domain module

@@ -21,7 +21,7 @@ These come from `tests/conftest.py`. Use them — don't roll your own.
 | Fixture | What it gives you | Use when |
 |---|---|---|
 | `db_session` | An `AsyncSession` wrapped in a SAVEPOINT that rolls back after the test | Direct DB setup or assertions outside HTTP |
-| `client` | `httpx.AsyncClient` with `get_session` overridden to use `db_session`; **no auth** | Testing 401 behavior or public routes |
+| `client` | `httpx2.AsyncClient` with `get_session` overridden to use `db_session`; **no auth** | Testing 401 behavior or public routes |
 | `read_client` | Same as `client` but with `caller_read` injected via `dependency_overrides` | Routes requiring `users.read` |
 | `admin_client` | Same but with `caller_admin` (`users.read` + `users.write`) | Routes requiring `users.write` |
 | `caller_read` / `caller_admin` | The bare `ServicePrincipal` for those roles | Calling service-layer code directly |
@@ -32,7 +32,7 @@ The SAVEPOINT pattern means **state from one test never leaks into another** —
 
 ```python
 import pytest
-from httpx import AsyncClient
+from httpx2 import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.modules.product.models import Product

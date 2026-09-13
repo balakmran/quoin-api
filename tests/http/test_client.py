@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Callable, Generator
 from types import SimpleNamespace
 
-import httpx
+import httpx2
 import pytest
 import stamina
 from fastapi import status
@@ -34,17 +34,17 @@ def _fast_retries() -> Generator[None]:
 
 
 def _client(
-    handler: Callable[[httpx.Request], httpx.Response],
+    handler: Callable[[httpx2.Request], httpx2.Response],
 ) -> ResilientHTTPClient:
     """Build a resilient client whose transport runs ``handler``."""
-    return create_http_client(transport=httpx.MockTransport(handler))
+    return create_http_client(transport=httpx2.MockTransport(handler))
 
 
 async def test_request_returns_response() -> None:
     """A successful call returns the upstream response unchanged."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"ok": True})
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, json={"ok": True})
 
     client = _client(handler)
     response = await client.get("http://upstream.test/widgets")
@@ -57,8 +57,8 @@ async def test_request_returns_response() -> None:
 async def test_non_2xx_status_returned_not_raised() -> None:
     """A 404 is a valid domain outcome and must not raise."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(404)
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(404)
 
     client = _client(handler)
     response = await client.get("http://upstream.test/missing")
@@ -71,12 +71,12 @@ async def test_retry_then_success() -> None:
     """Transient transport failures are retried until one succeeds."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
         if calls < settings.HTTP_RETRY_ATTEMPTS:
-            raise httpx.ConnectError("boom", request=request)
-        return httpx.Response(200)
+            raise httpx2.ConnectError("boom", request=request)
+        return httpx2.Response(200)
 
     client = _client(handler)
     response = await client.get("http://upstream.test/flaky")
@@ -90,10 +90,10 @@ async def test_transport_error_exhausted_raises_bad_gateway() -> None:
     """Persistent transport errors surface as 502 after retries."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
-        raise httpx.ConnectError("down", request=request)
+        raise httpx2.ConnectError("down", request=request)
 
     client = _client(handler)
     with pytest.raises(BadGatewayError):
@@ -106,8 +106,8 @@ async def test_transport_error_exhausted_raises_bad_gateway() -> None:
 async def test_timeout_exhausted_raises_gateway_timeout() -> None:
     """Persistent timeouts surface as 504 after retries."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectTimeout("slow", request=request)
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        raise httpx2.ConnectTimeout("slow", request=request)
 
     client = _client(handler)
     with pytest.raises(GatewayTimeoutError):
@@ -120,10 +120,10 @@ async def test_retry_on_status_returns_last_response() -> None:
     """With retry_on_status, an exhausted 503 returns the last response."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(503)
+        return httpx2.Response(503)
 
     client = _client(handler)
     response = await client.get(
@@ -139,10 +139,10 @@ async def test_status_not_retried_by_default() -> None:
     """Without retry_on_status, a 503 is returned after a single call."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(503)
+        return httpx2.Response(503)
 
     client = _client(handler)
     response = await client.get("http://upstream.test/unstable")
@@ -156,10 +156,10 @@ async def test_circuit_opens_and_fails_fast() -> None:
     """After repeated failures the breaker opens and short-circuits."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
-        raise httpx.ConnectError("down", request=request)
+        raise httpx2.ConnectError("down", request=request)
 
     client = _client(handler)
 
@@ -185,10 +185,10 @@ async def test_circuit_opens_and_fails_fast() -> None:
 async def test_breaker_is_per_host() -> None:
     """An open circuit for one host does not affect another host."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         if request.url.host == "bad.test":
-            raise httpx.ConnectError("down", request=request)
-        return httpx.Response(200)
+            raise httpx2.ConnectError("down", request=request)
+        return httpx2.Response(200)
 
     client = _client(handler)
 
@@ -210,12 +210,12 @@ async def test_retry_on_status_recovers_within_budget() -> None:
     """A retryable status that recovers mid-budget returns the success."""
     calls = 0
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         nonlocal calls
         calls += 1
         if calls < settings.HTTP_RETRY_ATTEMPTS:
-            return httpx.Response(503)
-        return httpx.Response(200)
+            return httpx2.Response(503)
+        return httpx2.Response(200)
 
     client = _client(handler)
     response = await client.get("http://upstream.test/x", retry_on_status=True)
@@ -228,8 +228,8 @@ async def test_retry_on_status_recovers_within_budget() -> None:
 async def test_retry_on_status_failures_open_circuit() -> None:
     """Exhausted retryable statuses count toward the breaker and open it."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(503)
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(503)
 
     client = _client(handler)
 
@@ -251,10 +251,10 @@ async def test_circuit_recovers_after_ttl(
     monkeypatch.setattr("app.http.client._BREAKER_TTL", 0.1)
     failing = True
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         if failing:
-            raise httpx.ConnectError("down", request=request)
-        return httpx.Response(200)
+            raise httpx2.ConnectError("down", request=request)
+        return httpx2.Response(200)
 
     client = _client(handler)
 
@@ -279,8 +279,8 @@ async def test_circuit_recovers_after_ttl(
 async def test_hostless_url_raises() -> None:
     """A relative/host-less URL is rejected instead of sharing a breaker."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200)
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200)
 
     client = _client(handler)
     with pytest.raises(InternalServerError):
@@ -308,9 +308,9 @@ async def test_verb_helpers_dispatch(verb: str) -> None:
     """Each verb helper sends its corresponding HTTP method."""
     seen: list[str] = []
 
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx2.Request) -> httpx2.Response:
         seen.append(request.method)
-        return httpx.Response(200)
+        return httpx2.Response(200)
 
     client = _client(handler)
     response = await getattr(client, verb)("http://upstream.test/x")
@@ -321,10 +321,10 @@ async def test_verb_helpers_dispatch(verb: str) -> None:
 
 
 async def test_aclose_closes_underlying_client() -> None:
-    """Aclose releases the underlying httpx client."""
+    """Aclose releases the underlying httpx2 client."""
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200)
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200)
 
     client = _client(handler)
     await client.aclose()

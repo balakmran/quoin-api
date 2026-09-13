@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 
-import httpx
+import httpx2
 import stamina
 import structlog
 from fastapi import Depends, Request
@@ -42,14 +42,14 @@ class _TransientStatusError(Exception):
     can still be returned to the caller instead of being swallowed.
     """
 
-    def __init__(self, response: httpx.Response) -> None:
+    def __init__(self, response: httpx2.Response) -> None:
         """Store the response that triggered the retry."""
         super().__init__(f"retryable status {response.status_code}")
         self.response = response
 
 
 class ResilientHTTPClient:
-    """A resilient wrapper around a shared ``httpx.AsyncClient``.
+    """A resilient wrapper around a shared ``httpx2.AsyncClient``.
 
     Every call is guarded, from the outside in, by a per-host circuit
     breaker and then a retry loop with exponential backoff:
@@ -69,7 +69,7 @@ class ResilientHTTPClient:
 
     def __init__(
         self,
-        client: httpx.AsyncClient,
+        client: httpx2.AsyncClient,
         breakers: AsyncCircuitBreakerFactory,
     ) -> None:
         """Initialize the wrapper.
@@ -94,7 +94,7 @@ class ResilientHTTPClient:
         """
         instrument_http_client(self._client)
 
-    def _breaker_key(self, url: httpx.URL | str) -> str:
+    def _breaker_key(self, url: httpx2.URL | str) -> str:
         """Derive the circuit-breaker key (the target host) for a URL.
 
         Args:
@@ -109,7 +109,7 @@ class ResilientHTTPClient:
                 shared key would collapse unrelated upstreams onto one
                 circuit breaker, so a host-less URL is rejected instead.
         """
-        host = httpx.URL(url).host
+        host = httpx2.URL(url).host
         if not host:
             raise InternalServerError(
                 f"Outbound HTTP requires an absolute URL with a host: {url!r}"
@@ -119,11 +119,11 @@ class ResilientHTTPClient:
     async def request(
         self,
         method: str,
-        url: httpx.URL | str,
+        url: httpx2.URL | str,
         *,
         retry_on_status: bool = False,
         **kwargs: Any,
-    ) -> httpx.Response:
+    ) -> httpx2.Response:
         """Send a request with retries and circuit breaking.
 
         Args:
@@ -132,11 +132,11 @@ class ResilientHTTPClient:
             retry_on_status: When True, also retry responses whose status
                 is transient (429/5xx). Off by default so non-idempotent
                 writes are never silently replayed.
-            **kwargs: Forwarded to ``httpx.AsyncClient.request`` (e.g.
+            **kwargs: Forwarded to ``httpx2.AsyncClient.request`` (e.g.
                 ``params``, ``json``, ``headers``, ``timeout``).
 
         Returns:
-            The ``httpx.Response`` (any status code) when the call
+            The ``httpx2.Response`` (any status code) when the call
             completes within the retry budget.
 
         Raises:
@@ -146,11 +146,11 @@ class ResilientHTTPClient:
             InternalServerError: The URL has no host (see ``_breaker_key``).
 
         Note:
-            Non-transport httpx errors (e.g. ``InvalidURL``,
+            Non-transport httpx2 errors (e.g. ``InvalidURL``,
             ``TooManyRedirects``) are not translated here and propagate to
             the caller / global handler.
         """
-        retry_on: tuple[type[Exception], ...] = (httpx.TransportError,)
+        retry_on: tuple[type[Exception], ...] = (httpx2.TransportError,)
         if retry_on_status:
             retry_on += (_TransientStatusError,)
 
@@ -194,12 +194,12 @@ class ResilientHTTPClient:
             raise ServiceUnavailableError(
                 "Upstream service is unavailable"
             ) from exc
-        except httpx.TimeoutException as exc:
+        except httpx2.TimeoutException as exc:
             logger.warning(
                 "http_upstream_timeout", method=method, error=repr(exc)
             )
             raise GatewayTimeoutError("Upstream request timed out") from exc
-        except httpx.TransportError as exc:
+        except httpx2.TransportError as exc:
             logger.warning(
                 "http_upstream_error", method=method, error=repr(exc)
             )
@@ -209,27 +209,33 @@ class ResilientHTTPClient:
             "HTTP request did not complete"
         )
 
-    async def get(self, url: httpx.URL | str, **kwargs: Any) -> httpx.Response:
+    async def get(
+        self, url: httpx2.URL | str, **kwargs: Any
+    ) -> httpx2.Response:
         """Send a GET request. See :meth:`request`."""
         return await self.request("GET", url, **kwargs)
 
-    async def post(self, url: httpx.URL | str, **kwargs: Any) -> httpx.Response:
+    async def post(
+        self, url: httpx2.URL | str, **kwargs: Any
+    ) -> httpx2.Response:
         """Send a POST request. See :meth:`request`."""
         return await self.request("POST", url, **kwargs)
 
-    async def put(self, url: httpx.URL | str, **kwargs: Any) -> httpx.Response:
+    async def put(
+        self, url: httpx2.URL | str, **kwargs: Any
+    ) -> httpx2.Response:
         """Send a PUT request. See :meth:`request`."""
         return await self.request("PUT", url, **kwargs)
 
     async def patch(
-        self, url: httpx.URL | str, **kwargs: Any
-    ) -> httpx.Response:
+        self, url: httpx2.URL | str, **kwargs: Any
+    ) -> httpx2.Response:
         """Send a PATCH request. See :meth:`request`."""
         return await self.request("PATCH", url, **kwargs)
 
     async def delete(
-        self, url: httpx.URL | str, **kwargs: Any
-    ) -> httpx.Response:
+        self, url: httpx2.URL | str, **kwargs: Any
+    ) -> httpx2.Response:
         """Send a DELETE request. See :meth:`request`."""
         return await self.request("DELETE", url, **kwargs)
 
@@ -239,19 +245,19 @@ class ResilientHTTPClient:
 
 
 def create_http_client(
-    transport: httpx.AsyncBaseTransport | None = None,
+    transport: httpx2.AsyncBaseTransport | None = None,
 ) -> ResilientHTTPClient:
     """Create a configured resilient HTTP client from settings.
 
     Args:
         transport: Optional transport override. Tests inject an
-            ``httpx.MockTransport`` here to avoid real network I/O.
+            ``httpx2.MockTransport`` here to avoid real network I/O.
 
     Returns:
         A ready-to-use :class:`ResilientHTTPClient`.
     """
-    client = httpx.AsyncClient(
-        timeout=httpx.Timeout(settings.HTTP_TIMEOUT_SECONDS),
+    client = httpx2.AsyncClient(
+        timeout=httpx2.Timeout(settings.HTTP_TIMEOUT_SECONDS),
         headers={"User-Agent": f"{metadata.APP_NAME}/{metadata.VERSION}"},
         transport=transport,
     )

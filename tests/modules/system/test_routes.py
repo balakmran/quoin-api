@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI, status
-from httpx import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_session

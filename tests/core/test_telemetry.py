@@ -2,7 +2,7 @@ import os
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import httpx
+import httpx2
 import structlog
 from opentelemetry.sdk.resources import SERVICE_NAME
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
@@ -191,7 +191,7 @@ class TestInstrumentHttpClient:
         """When OTEL is disabled the client is not instrumented."""
         mock_client = MagicMock()
         with patch(
-            "app.core.telemetry.HTTPXClientInstrumentor"
+            "app.core.telemetry.HTTPX2ClientInstrumentor"
         ) as mock_instrumentor:
             instrument_http_client(mock_client)
             mock_instrumentor.instrument_client.assert_not_called()
@@ -201,7 +201,7 @@ class TestInstrumentHttpClient:
         """When OTEL is enabled the specific client is instrumented."""
         mock_client = MagicMock()
         with patch(
-            "app.core.telemetry.HTTPXClientInstrumentor"
+            "app.core.telemetry.HTTPX2ClientInstrumentor"
         ) as mock_instrumentor:
             instrument_http_client(mock_client)
             mock_instrumentor.instrument_client.assert_called_once_with(
@@ -210,8 +210,8 @@ class TestInstrumentHttpClient:
 
     @mock.patch.object(settings, "OTEL_ENABLED", True)
     async def test_enabled_accepts_real_client(self):
-        """A real httpx.AsyncClient is accepted by the instrumentor."""
-        client = httpx.AsyncClient()
+        """A real httpx2.AsyncClient is accepted by the instrumentor."""
+        client = httpx2.AsyncClient()
         try:
             # Must not raise against the real instrumentor API.
             instrument_http_client(client)
@@ -223,7 +223,7 @@ class TestInstrumentHttpClient:
         """Instrumentation errors are logged, not raised (best-effort)."""
         mock_client = MagicMock()
         with patch(
-            "app.core.telemetry.HTTPXClientInstrumentor"
+            "app.core.telemetry.HTTPX2ClientInstrumentor"
         ) as mock_instrumentor:
             mock_instrumentor.instrument_client.side_effect = RuntimeError(
                 "version skew"
