@@ -21,9 +21,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SETUP_TEMPLATE = ROOT / "scripts" / "copier_setup.py.jinja"
+COPIER_CONFIG = ROOT / "copier.yml"
 
 # Everything `ruff check .` reads in a generated project.
 LINTED_PATHS = ("alembic", "app", "scripts", "tests", "pyproject.toml")
+
+# Not linted, but shipped: scanned for identity leaks.
+PROSE_PATHS = ("docs",)
 
 # Tool caches written into the tree while the tests run; not source.
 CACHE_DIRS = {".ruff_cache", "__pycache__"}
@@ -101,6 +105,23 @@ def _ruff(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _copier_excludes() -> list[str]:
+    """Return the ``_exclude`` patterns from the Copier config.
+
+    Parsed by hand: PyYAML is not a declared dependency.
+    """
+    lines = COPIER_CONFIG.read_text(encoding="utf-8").splitlines()
+    start = lines.index("_exclude:") + 1
+    patterns: list[str] = []
+    for line in lines[start:]:
+        if line and not line.startswith(" "):
+            break
+        match = re.fullmatch(r'\s+-\s+"([^"]+)"', line)
+        if match:
+            patterns.append(match.group(1))
+    return patterns
+
+
 def _text_lines(path: Path) -> list[str]:
     """Return a file's lines, or none for a binary file.
 
@@ -117,7 +138,7 @@ def _text_lines(path: Path) -> list[str]:
 def generated_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A copy of the source tree with worst-case answers substituted."""
     root = tmp_path_factory.mktemp("generated")
-    for name in LINTED_PATHS:
+    for name in LINTED_PATHS + PROSE_PATHS:
         source = ROOT / name
         if source.is_dir():
             shutil.copytree(
@@ -128,9 +149,19 @@ def generated_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
         else:
             shutil.copy2(source, root / name)
 
+    # Copier never ships these, so they may keep the template's name.
+    for pattern in _copier_excludes():
+        for path in root.glob(pattern):
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+
     setup = _load_setup_script(WORST_CASE_ANSWERS, root)
     with redirect_stdout(StringIO()):
         setup["run_replacements"]()
+        setup["clean_index"]()
+        setup["strip_removed_links"]()
 
     # Guard against a vacuous pass if the substitution stops matching.
     prefix = WORST_CASE_ANSWERS["env_prefix"].lower()
