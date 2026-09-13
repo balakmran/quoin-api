@@ -1884,21 +1884,21 @@ tooling = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", specifier = ">=1.18.4" },
+    { name = "alembic", specifier = ">=1.20.0" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", extras = ["standard"], specifier = "==0.141.1" },
     { name = "greenlet", specifier = "==3.5.5" },
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "opentelemetry-api", specifier = ">=1.42.1" },
-    { name = "opentelemetry-exporter-otlp", specifier = ">=1.42.1" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.63b1" },
+    { name = "opentelemetry-api", specifier = ">=1.44.0" },
+    { name = "opentelemetry-exporter-otlp", specifier = ">=1.44.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.65b0" },
     { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.65b0" },
-    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.63b1" },
-    { name = "opentelemetry-sdk", specifier = ">=1.42.1" },
+    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.65b0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.44.0" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.5" },
     { name = "purgatory", specifier = ">=3.0.1" },
-    { name = "pydantic-settings", specifier = ">=2.14.2" },
+    { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.14.0" },
     { name = "sqlmodel", specifier = "==0.0.42" },
     { name = "stamina", specifier = ">=26.1.0" },
@@ -1908,7 +1908,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx2", specifier = ">=2.12.0" },
-    { name = "mkdocstrings-python", specifier = ">=2.0.5" },
+    { name = "mkdocstrings-python", specifier = ">=2.0.8" },
     { name = "prek", specifier = "==0.5.2" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
@@ -1918,7 +1918,7 @@ dev = [
     { name = "zensical", specifier = "==0.0.61" },
 ]
 docs = [
-    { name = "mkdocstrings-python", specifier = ">=2.0.5" },
+    { name = "mkdocstrings-python", specifier = ">=2.0.8" },
     { name = "zensical", specifier = "==0.0.61" },
 ]
 test = [

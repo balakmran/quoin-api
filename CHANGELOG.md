@@ -15,6 +15,9 @@
   Adopters: change `httpx` imports in custom code to `httpx2`.
 - **Dependencies**: lock refreshed (alembic 1.20.0, PyJWT 2.14.0);
   `PyJWT` floor raised to `>=2.14.0` for its security fixes.
+- **Dependencies**: `>=` floors raised to the locked versions for
+  alembic, OpenTelemetry (API/SDK 1.44.0, instrumentations 0.65b0),
+  pydantic-settings, and mkdocstrings-python.
 - **CI**: `astral-sh/setup-uv` pinned to v10.1.0 and
   `actions/upload-artifact` to v7.0.1.
 
