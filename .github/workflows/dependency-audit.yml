@@ -10,7 +10,9 @@ name: Dependency Audit
 #
 # Note: GitHub runs scheduled workflows only on the default branch, and
 # disables them after 60 days without repository activity. A red run
-# here means triage the advisory, not that the pipeline broke.
+# here means triage the advisory, not that the pipeline broke -- unless
+# the log shows `uv audit` itself erroring: it is a uv preview command,
+# so a uv bump can rename or change it.
 
 on:
   schedule:
@@ -34,7 +36,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
-          version: "latest"
+          # Same uv as the Dockerfile; test_tool_pins.py keeps them equal.
+          version: "0.11.26"
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

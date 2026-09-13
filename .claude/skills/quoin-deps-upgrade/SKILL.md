@@ -47,12 +47,16 @@ especially for major bumps.
 
 ## GitHub Actions
 
-Pinned in `.github/workflows/ci.yml` and `.github/workflows/docs.yml`.
+Pinned by commit SHA in every file under `.github/workflows/`.
 
 1. For each action, check its release notes for **pinning guidance** — some
    drop floating tags. Example: `astral-sh/setup-uv` stopped publishing minor
    tags, so `@v8` / `@v8.0` no longer resolve; pin to a full `vX.Y.Z`.
-2. Update the version in **both** workflow files (they often share actions).
+2. Update the version in **every** workflow file (they share actions).
+3. **Bumping uv itself**: change the `ghcr.io/astral-sh/uv` tag and digest
+   in the `Dockerfile` *and* the `setup-uv` `version:` in every workflow —
+   Dependabot bumps only the Dockerfile. `tests/test_tool_pins.py` fails
+   until they match. Rerun `just audit`: it is a uv preview command.
 3. Mind the runner/toolchain matrix (e.g. Node 24 support) when a bump requires
    a newer runtime.
 

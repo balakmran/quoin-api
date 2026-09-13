@@ -25,6 +25,9 @@
   pydantic-settings, and mkdocstrings-python.
 - **CI**: `astral-sh/setup-uv` pinned to v10.1.0 and
   `actions/upload-artifact` to v7.0.1.
+- **CI**: every workflow installs uv 0.11.26, the Dockerfile's pin, instead
+  of `latest`; `tests/test_tool_pins.py` keeps the two equal.
+- **Docker**: the Python base image is pinned by digest as well as tag.
 
 ## [0.13.0] - 2026-09-12
 
