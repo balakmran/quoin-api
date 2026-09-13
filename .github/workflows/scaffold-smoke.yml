@@ -170,3 +170,39 @@ jobs:
             git --no-pager diff
             exit 1
           fi
+
+      - name: Scaffold, migrate, and re-gate a module (day two)
+        working-directory: ${{ runner.temp }}/smoke-project
+        # tests/test_scaffold_module.py proves the scaffold here; this proves
+        # it where the prefix, base exception, and problem URN are renamed.
+        env:
+          CI: "true"
+        run: |
+          just new widget
+          cat > app/modules/widget/models.py <<'EOF'
+          """Database models for the widget module."""
+
+          import uuid
+
+          from sqlmodel import Field, SQLModel
+
+
+          class Widget(SQLModel, table=True):
+              """Widget model."""
+
+              id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+              name: str = Field(max_length=255)
+          EOF
+          echo "from app.modules.widget.models import Widget  # noqa" \
+            >> app/db/base.py
+          # The gate's tests leave the database at base; autogenerate
+          # refuses to diff against anything but head.
+          just migrate-up
+          just migrate-gen "add widget"
+          revision=$(git ls-files --others --exclude-standard alembic/versions)
+          if [ -z "$revision" ] \
+              || ! grep -qE "create_table\(['\"]widget" $revision; then
+            echo "::error::just migrate-gen did not create the widget table"
+            exit 1
+          fi
+          just check

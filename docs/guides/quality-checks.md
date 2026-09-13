@@ -192,6 +192,13 @@ leaks.
 The maintainer-identity scan, with long non-default author answers,
 runs in `tests/test_template_substitution.py` as part of `just check`.
 
+Then it rehearses day two inside the generated project: `just new
+widget`, a one-table `Widget` model, `just migrate-up` (the gate's
+tests leave the database at base), `just migrate-gen "add widget"`
+(which must emit a `create_table`), and `just check` again. That proves
+the scaffold and autogenerate where the settings prefix, base exception,
+and problem URN are the adopter's, not this repo's.
+
 Dependency CVE scanning is **not** part of this pipeline or of
 `just check` — it needs network access and its result depends on the
 OSV database rather than on your code, so an advisory filed overnight

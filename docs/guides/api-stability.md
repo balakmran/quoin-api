@@ -91,7 +91,8 @@ rule below takes full effect starting at `1.0.0`.
 - Two CI jobs stand behind this, and neither is run by hand:
   **Scaffold Smoke Test** generates a project on every pull request and
   runs its own `just check`, failing if that gate has to modify what it
-  was given; **Copier Update Check** fires on release tags, generating
+  was given, then scaffolds and migrates a module there and gates it
+  again; **Copier Update Check** fires on release tags, generating
   from the previous tag, updating to the new one, and running the
   updated project's `just check` — so a release is blocked both by a
   scaffold that doesn't build and by an update that lands you somewhere

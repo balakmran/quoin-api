@@ -114,6 +114,32 @@ def _test_routes_stub(module: str, collection: str) -> str:
     )
 
 
+def _test_service_stub(module: str) -> str:
+    """Return the ``test_service.py`` skeleton for a module.
+
+    Imports every stub layer, so the scaffold holds 100% coverage.
+    """
+    cls = class_name(module)
+    return (
+        f'"""Tests for the {module} service layer."""\n\n'
+        "from sqlmodel.ext.asyncio.session import AsyncSession\n\n"
+        f"from app.modules.{module}.exceptions import {cls}NotFoundError\n"
+        f"from app.modules.{module}.repository import {cls}Repository\n"
+        f"from app.modules.{module}.schemas import {cls}Base\n"
+        f"from app.modules.{module}.service import {cls}Service\n\n\n"
+        f"async def test_{module}_layers_wire_together(\n"
+        "    db_session: AsyncSession,\n"
+        ") -> None:\n"
+        '    """The scaffolded layers construct; replace with real tests."""\n'
+        f"    service = {cls}Service({cls}Repository(db_session))\n\n"
+        "    assert service.repository.session is db_session\n"
+        f"    assert {cls}Base().model_dump() == {{}}\n"
+        f'    assert {cls}NotFoundError("42").message == (\n'
+        f"        \"{cls} with ID '42' not found\"\n"
+        "    )\n"
+    )
+
+
 def validate_module_name(module: str) -> str:
     """Validate and return a feature module name.
 
@@ -180,6 +206,7 @@ def scaffold_module(root: Path, module: str) -> None:
     (test_dir / "test_routes.py").write_text(
         _test_routes_stub(module, collection)
     )
+    (test_dir / "test_service.py").write_text(_test_service_stub(module))
 
     register_router(root / "app" / "api.py", module)
 
@@ -269,7 +296,7 @@ def main() -> None:
     )
     print(f"Router registered in app/api.py as {args.module}_router")
     print(
-        "Stubs (repository, service, schemas, exceptions, skeleton test) "
+        "Stubs (repository, service, schemas, exceptions, skeleton tests) "
         "are minimal and pass 'just check' as-is."
     )
     print(
