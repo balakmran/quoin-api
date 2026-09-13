@@ -6,8 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-teal.svg)](https://fastapi.tiangolo.com/)
-[![SQLModel](https://img.shields.io/badge/SQLModel-0.0.42-blue.svg)](https://sqlmodel.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-teal.svg)](https://fastapi.tiangolo.com/)
+[![SQLModel](https://img.shields.io/badge/SQLModel-blue.svg)](https://sqlmodel.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -17,68 +17,66 @@
 **The Foundation for your Python backend API.**
 
 QuoinAPI (pronounced "koyn") is a production-ready Python backend
-foundation built with FastAPI, SQLModel, and the Astral stack
-(uv, ruff, ty). It gives you a battle-tested starting point with
-type safety, observability, and clean architecture out of the box.
+foundation built with FastAPI, SQLModel, PostgreSQL, and the Astral
+stack (uv, ruff, ty). It's a working API and a
+[Copier](https://copier.readthedocs.io/) template in one.
 
-## Contents
-
-- [Key Highlights](#key-highlights)
-- [Tech Stack](#tech-stack)
-- [Use as a Template](#use-as-a-template)
-- [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
-- [Documentation](#documentation)
-- [AI-Assisted Development](#ai-assisted-development)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [Changelog](#changelog)
-- [License](#license)
+It's for teams starting a new async Python API who want auth,
+observability, migrations, and CI already wired, rather than a minimal
+hello-world they have to grow themselves.
 
 ## Key Highlights
 
-- **Async-first** — FastAPI with async PostgreSQL via `asyncpg` and connection pooling
+- **Async-first** — FastAPI with async PostgreSQL via `asyncpg` and
+  connection pooling
 - **Type-safe** — 100% annotated, checked by `ty` and linted by `ruff`
-- **Clean architecture** — domain-driven modules with rich, module-level exceptions
-- **Versioned API** — `/api/v1/` prefix for future-proof evolution
-- **Observable** — OpenTelemetry tracing, Structlog structured logs, health/readiness probes
-- **Batteries included** — `.env` config, `just` automation, and a Copier template to skip the boilerplate
-- **AI-ready** — project-specific Claude Code skills, quality-enforcement hooks, and subagents, pre-wired
+- **Clean architecture** — domain-driven modules:
+  route → service → repository → Postgres
+- **Auth built in** — OAuth 2.0 / OIDC JWT validation and role-based
+  access with `require_roles`
+  ([guide](docs/guides/authentication.md))
+- **Consistent errors** — domain exceptions rendered as RFC 9457
+  Problem Details ([guide](docs/guides/error-handling.md))
+- **List endpoints done right** — pagination and sorting
+  ([guide](docs/guides/pagination.md))
+- **Data-safety patterns** — soft delete
+  ([guide](docs/guides/soft-delete.md)) and optimistic concurrency
+  ([guide](docs/guides/optimistic-concurrency.md))
+- **API evolution** — `/api/v1/` prefix and endpoint deprecation
+  signalling ([guide](docs/guides/deprecating-endpoints.md))
+- **Observable** — OpenTelemetry tracing, Structlog structured logs,
+  health/readiness probes ([guide](docs/guides/observability.md))
+- **Production-minded** — graceful shutdown, non-root Docker image,
+  and a shared outbound HTTP client
+  ([guide](docs/guides/outbound-http.md))
+- **Quality gates everywhere** — `just check`, prek commit/push hooks,
+  and CI
+- **AI-ready** — project-specific Claude Code skills,
+  quality-enforcement hooks, and subagents, pre-wired
 
-## Tech Stack
+## Start a New Project
 
-- **Framework:** FastAPI
-- **Database:** PostgreSQL (using `asyncpg` driver)
-- **ORM:** SQLModel
-- **Migrations:** Alembic
-- **Package Manager:** uv
-- **Task Runner:** just
-- **Linting/Formatting:** Ruff
-- **Type Checking:** ty
-- **Testing:** Pytest, pytest-cov
-- **Observability:** OpenTelemetry, Structlog
-- **Documentation:** Zensical
-
-## Use as a Template
-
-QuoinAPI is a project generator via [Copier](https://copier.readthedocs.io/).
-Generate a new API in one command — [`uvx`](https://docs.astral.sh/uv/) runs
-Copier without installing it:
+Generate a new API from the template —
+[`uvx`](https://docs.astral.sh/uv/) runs Copier without installing it:
 
 ```bash
-uvx copier copy https://github.com/balakmran/quoin-api.git my-awesome-api --trust
+uvx copier copy --trust gh:balakmran/quoin-api my-api
 ```
 
-Copier prompts for your project name, database prefixes, and other configuration.
+Copier prompts for your project name, env-var prefix, description, and
+author details, then rewrites the project to match. The generated
+project gets its own starter README, and QuoinAPI-specific pages such
+as the roadmap and changelog are left out.
 
-## Quick Start
+## Work on QuoinAPI Itself
 
 ### Prerequisites
 
 - [Python 3.12+](https://www.python.org/downloads/)
 - [`uv`](https://docs.astral.sh/uv/) — package & environment manager
 - [`just`](https://github.com/casey/just) — task runner
-- [Docker](https://www.docker.com/) — for the local PostgreSQL and mock OAuth services
+- [Docker](https://www.docker.com/) — for the local PostgreSQL and mock
+  OAuth services
 
 ### Setup
 
@@ -88,67 +86,61 @@ git clone https://github.com/balakmran/quoin-api.git
 cd quoin-api
 cp .env.example .env
 
-# 2. Setup project (install dependencies & pre-commit hooks)
+# 2. Install dependencies and prek commit + pre-push hooks
 just setup
 
-# 3. Start DB, apply migrations, and run the server
+# 3. Start Postgres + mock OAuth, apply migrations, and run the server
 just dev
 ```
 
-Visit the API documentation at
+Visit the interactive API docs at
 [http://localhost:8000/docs](http://localhost:8000/docs).
 
-Run the full quality gate (format, lint, typecheck, test) any time with
-`just check`.
+| Service          | Port |
+| ---------------- | ---- |
+| API              | 8000 |
+| PostgreSQL       | 5432 |
+| Mock OAuth2/OIDC | 8080 |
+
+### Make an authenticated request
+
+With `just dev` running, mint a token from the mock OAuth server in a
+second terminal and call a protected endpoint:
+
+```bash
+TOKEN=$(just token --roles="users.read,users.write")
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/
+```
+
+### Quality checks
+
+Run the full gate (format, lint, typecheck, migration check, tests) any
+time with `just check`. The pre-push hook runs the test suite, so
+Postgres must be running (`just db`) when you push.
 
 ## Project Structure
 
 ```plaintext
 ├── app/
-│   ├── core/
-│   │   ├── config.py             # Pydantic settings
-│   │   ├── exceptions.py         # Custom exceptions
-│   │   ├── exception_handlers.py # Global exception handlers
-│   │   ├── lifecycle.py          # Graceful-shutdown request tracking
-│   │   ├── logging.py            # Structlog configuration
-│   │   ├── metadata.py           # Application metadata
-│   │   ├── middlewares.py        # Middleware configuration
-│   │   ├── openapi.py            # OpenAPI metadata & config
-│   │   ├── pagination.py         # Pagination & sorting for lists
-│   │   ├── schemas.py            # Shared response schemas (Problem Details)
-│   │   ├── security.py           # OAuth2/OIDC auth & require_roles (RBAC)
-│   │   ├── telemetry.py          # OpenTelemetry instrumentation
-│   │   └── versioning.py         # Endpoint deprecation signalling
-│   ├── db/                       # Database connection & base models
-│   │   ├── session.py            # Database session
-│   │   └── base.py               # Base models
-│   ├── http/                     # Outbound HTTP client
-│   │   └── client.py             # Shared async httpx2 client
+│   ├── core/          # Config, security, errors, logging, telemetry, middleware
+│   ├── db/            # Async engine and session dependency
+│   ├── http/          # Shared outbound HTTP client
 │   ├── modules/
-│   │   ├── system/               # Health, readiness & home-page routes
-│   │   └── user/                 # Example domain module
-│   │       ├── exceptions.py     # Domain-specific exceptions
-│   │       ├── models.py         # SQLModel database tables
-│   │       ├── schemas.py        # Pydantic request/response models
-│   │       ├── repository.py     # Database access (CRUD)
-│   │       ├── service.py        # Business logic
-│   │       └── routes.py         # FastAPI router endpoints
-│   ├── static/                   # Static assets (css, img, js)
-│   ├── templates/                # Jinja2 templates
-│   │   └── index.html            # Home page
-│   ├── api.py                    # API Route structure
-│   └── main.py                   # App entry point
-├── tests/                        # Pytest suite
-├── alembic/                      # Database migrations
-├── docs/                         # Documentation
-├── .env.example                  # Environment variables template
-├── docker-compose.yml            # Local dev environment
-├── Dockerfile                    # Production Docker image
-├── CLAUDE.md                     # AI agent instructions
-├── justfile                      # Command runner
-├── pyproject.toml                # Dependencies & config
-└── zensical.toml                 # Documentation config
+│   │   ├── system/    # Health, readiness & home-page routes
+│   │   └── user/      # Example domain module to mirror
+│   ├── api.py         # Router registration under /api/v1/
+│   └── main.py        # App factory
+├── alembic/           # Database migrations
+├── docs/              # Documentation site (Zensical)
+├── scripts/           # Tooling and Copier post-generation setup
+├── tests/             # Integration tests against a real database
+├── copier.yml         # Template configuration
+├── docker-compose.yml # Local Postgres, mock OAuth, and API
+└── justfile           # Task runner recipes
 ```
+
+See the [architecture overview](docs/architecture/overview.md) for how
+the pieces fit together.
 
 ## Documentation
 
@@ -156,34 +148,25 @@ Full documentation is published at
 **[balakmran.github.io/quoin-api](https://balakmran.github.io/quoin-api/)**.
 Start here:
 
-- [Getting Started](docs/guides/getting-started.md) — install, run, and explore the API
-- [Configuration](docs/guides/configuration.md) — every `QUOIN_` setting and its default
-- [Authentication](docs/guides/authentication.md) — OAuth 2.0 / OIDC and role-based access
-- [Creating a Module](docs/guides/creating-a-module.md) — add a new domain to the API
+- [Getting Started](docs/guides/getting-started.md) — install, run,
+  and explore the API
+- [Configuration](docs/guides/configuration.md) — every `QUOIN_`
+  setting and its default
+- [Authentication](docs/guides/authentication.md) — OAuth 2.0 / OIDC
+  and role-based access
+- [Creating a Module](docs/guides/creating-a-module.md) — add a new
+  domain to the API
+- [Deployment](docs/guides/deployment.md) — run it in production
+- [AI-Assisted Development](docs/guides/ai-setup.md) — Claude Code
+  skills, hooks, and subagents
 
 Browse the full set under [`docs/guides/`](docs/guides/), or serve them
 locally with `just docs-serve`.
 
-## AI-Assisted Development
+## Project
 
-This project has a Claude Code setup with project-specific skills,
-quality-enforcement hooks, and live SDK documentation via MCP.
-See the [AI-Assisted Development guide](docs/guides/ai-setup.md) for
-the full reference.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this
-project.
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features and upcoming milestones.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
-
-## License
-
-This project is licensed under the terms of the [MIT license](LICENSE).
+- [Contributing](CONTRIBUTING.md) — how to contribute
+- [Security Policy](SECURITY.md) — how to report a vulnerability
+- [Roadmap](ROADMAP.md) — planned features and milestones
+- [Changelog](CHANGELOG.md) — version history
+- [License](LICENSE) — MIT
