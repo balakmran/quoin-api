@@ -49,6 +49,9 @@ hello-world they have to grow themselves.
 - **Production-minded** — graceful shutdown, non-root Docker image,
   and a shared outbound HTTP client
   ([guide](docs/guides/outbound-http.md))
+- **Docs site included** — [Zensical](https://zensical.org/) guides
+  plus an API reference generated from docstrings, deployed to GitHub
+  Pages by CI
 - **Quality gates everywhere** — `just check`, prek commit/push hooks,
   and CI
 - **AI-ready** — project-specific Claude Code skills,
