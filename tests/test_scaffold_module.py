@@ -79,6 +79,11 @@ def test_scaffold_module_creates_files_and_registers_router(
     test_text = (test_dir / "test_routes.py").read_text()
     assert "def test_order_items_router_has_prefix() -> None:" in test_text
     assert 'assert router.prefix == "/order_items"' in test_text
+    # Exercises every stub layer, so the new module keeps 100% coverage.
+    service_test = (test_dir / "test_service.py").read_text()
+    assert "async def test_order_item_layers_wire_together(" in service_test
+    for layer in ("exceptions", "repository", "schemas", "service"):
+        assert f"from app.modules.order_item.{layer} import" in service_test
 
     api_text = (tmp_path / "app" / "api.py").read_text()
     assert (

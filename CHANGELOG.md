@@ -30,6 +30,21 @@
 - **Docker**: the Python base image is pinned by digest as well as tag.
 - **Tests**: the `client` fixture's problem-details hook also validates
   the body as `ProblemDetail`, with `status` and `instance` matching.
+- **CI**: the Scaffold Smoke Test also runs `just new widget`, adds a
+  table, runs `just migrate-gen`, and re-runs `just check` in the
+  generated project.
+
+### Fixed
+
+- **Migrations**: `just migrate-gen` revisions pass `just lint` for a
+  message without a trailing period (D415); `alembic/script.py.mako`
+  now adds one. Update-safe.
+- **Tests**: the session reset drops tables through `app.db.base`, so a
+  table whose model only `app/db/base.py` imports no longer breaks the
+  next test run with "relation already exists". Update-safe.
+- **Scaffold**: `just new` also writes
+  `tests/modules/<module>/test_service.py`, so a fresh module keeps
+  100% coverage; before, its stubs failed `fail_under`. Update-safe.
 
 ## [0.13.0] - 2026-09-12
 

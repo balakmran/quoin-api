@@ -6,13 +6,16 @@ from alembic.config import Config
 from httpx2 import ASGITransport, AsyncClient, Response
 from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from alembic import command
 from app.core.config import settings
 from app.core.schemas import ProblemDetail
 from app.core.security import ServicePrincipal, get_current_caller
+
+# Alembic's model registry, so _reset_schema drops every migrated table,
+# including those of modules nothing else imports yet.
+from app.db.base import SQLModel
 from app.db.session import create_db_engine, create_session_factory, get_session
 from app.main import app as fastapi_app
 

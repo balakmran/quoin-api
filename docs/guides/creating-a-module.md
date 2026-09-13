@@ -13,8 +13,9 @@ following the same patterns used by the existing `user` module.
     as a minimally-working stub that passes `just check` immediately: a
     router with the pluralized prefix, `ProductRepository` /
     `ProductService` classes, a `ProductBase(SQLModel)` schema, a
-    `ProductNotFoundError` example, and a skeleton test asserting the
-    router prefix. Only `models.py` is left empty (a real table needs a
+    `ProductNotFoundError` example, and two skeleton tests: one asserts
+    the router prefix, one wires the stub layers together so coverage
+    stays at 100%. Only `models.py` is left empty (a real table needs a
     migration — see step below). Fill in each layer by replacing the
     placeholder shapes.
 
