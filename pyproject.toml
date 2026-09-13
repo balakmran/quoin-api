@@ -44,7 +44,7 @@ dev = [
 ]
 docs = [
     "mkdocstrings-python>=2.0.5",
-    "zensical==0.0.58",
+    "zensical==0.0.61",
 ]
 test = [
     "httpx2>=2.7.0",
@@ -54,8 +54,8 @@ test = [
 ]
 tooling = [
     "prek==0.5.2",
-    "ruff==0.16.6",
-    "ty==0.0.78",
+    "ruff==0.16.7",
+    "ty==0.0.80",
 ]
 
 [tool.coverage.run]
