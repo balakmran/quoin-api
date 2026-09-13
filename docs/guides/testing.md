@@ -189,8 +189,12 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     through `client`, including `read_client` and `admin_client`, which
     yield the same client. The test fails if any 4xx or 5xx response:
 
-    - is not `application/problem+json`, or
-    - lacks `X-Request-ID`.
+    - is not `application/problem+json`,
+    - lacks `X-Request-ID`, or
+    - has a body that does not parse as `ProblemDetail`, or whose
+      `status` differs from the response status or whose `instance`
+      differs from the request path. (`HEAD` responses have no body,
+      so only their headers are checked.)
 
     This happens even if the test never asserts on that response. If a
     new error path makes a test fail with that message, fix the handler,

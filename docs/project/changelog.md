@@ -28,6 +28,8 @@
 - **CI**: every workflow installs uv 0.11.26, the Dockerfile's pin, instead
   of `latest`; `tests/test_tool_pins.py` keeps the two equal.
 - **Docker**: the Python base image is pinned by digest as well as tag.
+- **Tests**: the `client` fixture's problem-details hook also validates
+  the body as `ProblemDetail`, with `status` and `instance` matching.
 
 ## [0.13.0] - 2026-09-12
 
