@@ -8,6 +8,8 @@
   `>=3.12`.
 - **CI**: the Scaffold Smoke Test runs once, with defaults and a long
   `project_name`.
+- **Tests**: `test_template_substitution.py` also scans shipped `docs/`
+  for template identity leaks.
 
 ## [0.13.0] - 2026-09-12
 
