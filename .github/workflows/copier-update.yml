@@ -1,7 +1,7 @@
 name: Copier Update Check
 
 # Verifies the template's `copier update` path still works across a real
-# release: generate from the previous tag, update to this one, and run
+# release: generate from an earlier tag, update to this one, and run
 # the updated project's own `just check`. Tags only — `scaffold-smoke.yml`
 # covers fresh generation on every pull request; this one costs a second
 # generation plus a full gate, and has nothing to compare against until a
@@ -13,9 +13,41 @@ on:
       - "v*"
 
 jobs:
-  verify-update:
-    name: Verify copier update path
+  select-tags:
+    name: Select tags to update from
     runs-on: ubuntu-latest
+    outputs:
+      previous: ${{ steps.tags.outputs.previous }}
+
+    steps:
+      - name: Checkout with full tag history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Determine previous release tags
+        id: tags
+        env:
+          CURRENT_TAG: ${{ github.ref_name }}
+        # A JSON list: the preceding tag, then the newest final release
+        # before it (adopters sit on finals, not candidates).
+        # versionsort.suffix sorts v1.0.0-rc.N below v1.0.0.
+        run: |
+          PREV_TAGS=$(git -c versionsort.suffix=-rc tag --sort=-v:refname | awk -v cur="$CURRENT_TAG" 'found==1{t[n++]=$0; found=2; next} found==2 && !/-rc\./{t[n++]=$0; exit} $0==cur{found=1} END{printf "["; for(i=0;i<n;i++) printf "%s\"%s\"", (i?",":""), t[i]; print "]"}')
+          echo "previous=$PREV_TAGS" >> "$GITHUB_OUTPUT"
+          if [ "$PREV_TAGS" = "[]" ]; then
+            echo "No earlier release tag found — this is the first release, nothing to verify an update from."
+          fi
+
+  verify-update:
+    name: Verify copier update from ${{ matrix.previous }}
+    needs: select-tags
+    if: needs.select-tags.outputs.previous != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        previous: ${{ fromJSON(needs.select-tags.outputs.previous) }}
 
     services:
       postgres:
@@ -48,45 +80,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine previous release tag
-        id: tags
-        run: |
-          CURRENT_TAG="${GITHUB_REF_NAME}"
-          # versionsort.suffix sorts v1.0.0-rc.N below v1.0.0; without it
-          # the first patch after 1.0.0 would verify from an rc tag.
-          PREV_TAG=$(git -c versionsort.suffix=-rc tag --sort=-v:refname | awk -v cur="$CURRENT_TAG" 'found{print; exit} $0==cur{found=1}')
-          echo "current=$CURRENT_TAG" >> "$GITHUB_OUTPUT"
-          echo "previous=$PREV_TAG" >> "$GITHUB_OUTPUT"
-          if [ -z "$PREV_TAG" ]; then
-            echo "No earlier release tag found — this is the first release, nothing to verify an update from."
-          fi
-
       - name: Install uv
-        if: steps.tags.outputs.previous != ''
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           # Same uv as the Dockerfile; test_tool_pins.py keeps them equal.
           version: "0.11.26"
 
       - name: Set up Python
-        if: steps.tags.outputs.previous != ''
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: ".python-version"
 
       - name: Install just
-        if: steps.tags.outputs.previous != ''
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Install dependencies
-        if: steps.tags.outputs.previous != ''
         run: just install
 
-      - name: Verify copier update from the previous release
-        if: steps.tags.outputs.previous != ''
+      - name: Verify copier update from the earlier release
         env:
-          PREVIOUS_TAG: ${{ steps.tags.outputs.previous }}
-          CURRENT_TAG: ${{ steps.tags.outputs.current }}
+          PREVIOUS_TAG: ${{ matrix.previous }}
+          CURRENT_TAG: ${{ github.ref_name }}
         # `--check` runs the updated project's own gate. Without it this
         # proves only that the update applied, not that what the adopter
         # is left holding still works.

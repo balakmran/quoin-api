@@ -33,6 +33,8 @@
 - **CI**: the Scaffold Smoke Test also runs `just new widget`, adds a
   table, runs `just migrate-gen`, and re-runs `just check` in the
   generated project.
+- **CI**: the Copier Update Check verifies from two baselines in
+  parallel — the preceding tag and the newest final release before it.
 
 ### Fixed
 

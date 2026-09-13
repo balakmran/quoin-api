@@ -1,10 +1,11 @@
-"""Run the Copier Update Check's previous-tag selection against real tags.
+"""Run the Copier Update Check's baseline-tag selection against real tags.
 
-The workflow picks the tag to verify an update *from* with a one-line
+The workflow picks the tags to verify an update *from* with a one-line
 shell pipeline. It is exercised only when a tag is pushed, so a wrong
 sort order would surface after a release rather than before one.
 """
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -16,6 +17,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "copier-update.yml"
 
 TAGS = (
     "v0.12.0",
+    "v0.13.0",
     "v0.14.0",
     "v1.0.0-rc.1",
     "v1.0.0-rc.2",
@@ -53,35 +55,36 @@ def tagged_repo(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return repo
 
 
-def _previous_tag_command() -> str:
-    """Extract the workflow's `PREV_TAG=...` line verbatim."""
+def _previous_tags_command() -> str:
+    """Extract the workflow's `PREV_TAGS=...` line verbatim."""
     match = re.search(
-        r"^\s*(PREV_TAG=\$\(.*\))\s*$",
+        r"^\s*(PREV_TAGS=\$\(.*\))\s*$",
         WORKFLOW.read_text(encoding="utf-8"),
         re.MULTILINE,
     )
-    assert match is not None, "PREV_TAG assignment not found in workflow"
+    assert match is not None, "PREV_TAGS assignment not found in workflow"
     return match.group(1)
 
 
 @pytest.mark.parametrize(
     ("current", "expected"),
     [
-        ("v1.0.1", "v1.0.0"),
-        ("v1.0.0", "v1.0.0-rc.2"),
-        ("v1.0.0-rc.2", "v1.0.0-rc.1"),
-        ("v1.0.0-rc.1", "v0.14.0"),
-        ("v0.12.0", ""),
+        ("v1.0.1", ["v1.0.0", "v0.14.0"]),
+        ("v1.0.0", ["v1.0.0-rc.2", "v0.14.0"]),
+        ("v1.0.0-rc.2", ["v1.0.0-rc.1", "v0.14.0"]),
+        ("v1.0.0-rc.1", ["v0.14.0", "v0.13.0"]),
+        ("v0.13.0", ["v0.12.0"]),
+        ("v0.12.0", []),
     ],
 )
-def test_update_check_verifies_from_the_preceding_tag(
-    tagged_repo: Path, current: str, expected: str
+def test_update_check_verifies_from_two_baselines(
+    tagged_repo: Path, current: str, expected: list[str]
 ) -> None:
-    """Candidates sort below their final release, not above it."""
+    """The preceding tag, then the newest final release before it."""
     script = (
         f'CURRENT_TAG="{current}"\n'
-        f"{_previous_tag_command()}\n"
-        'printf %s "$PREV_TAG"'
+        f"{_previous_tags_command()}\n"
+        'printf %s "$PREV_TAGS"'
     )
     result = subprocess.run(
         ["bash", "-c", script],
@@ -91,4 +94,4 @@ def test_update_check_verifies_from_the_preceding_tag(
         check=True,
     )
 
-    assert result.stdout == expected
+    assert json.loads(result.stdout) == expected

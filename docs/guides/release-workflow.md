@@ -159,19 +159,22 @@ View tags at:
 ### 6. Copier Update Verification (automatic)
 
 Pushing a `v*` tag also triggers the **Copier Update Check** workflow
-(`.github/workflows/copier-update.yml`). It generates a project from the
-previous release tag, runs `copier update` to the tag just pushed, and
+(`.github/workflows/copier-update.yml`). It runs once per baseline, in
+parallel: the tag just before the new one, and the newest final release
+before that (`N-1 → N` and `N-2 → N`). Each run generates a project
+from its baseline tag, runs `copier update` to the tag just pushed, and
 then runs the updated project's own `just check` against a Postgres
-service. The job fails if any of these happen:
+service. A run fails if any of these happen:
 
 - The update leaves `.rej` conflict files.
 - The project's `.copier-answers.yml` doesn't end up pointing at the new
   tag.
 - The updated project's own gate fails.
 
-On the very first release (no earlier tag exists) the job is a no-op.
-Release candidates sort below their final release when the job picks the
-previous tag; see [Pre-releases](#pre-releases).
+On the very first release (no earlier tag exists) there is nothing to
+verify, and the second release has only one baseline. Release candidates
+sort below their final release when the job picks baselines, and are
+never the second baseline; see [Pre-releases](#pre-releases).
 
 This covers the *update* path. A *freshly generated* project is gated
 separately, on every pull request, by the **Scaffold Smoke Test**. See
@@ -277,10 +280,17 @@ Each candidate gets its own changelog section (`## [1.0.0-rc.1] -
 YYYY-MM-DD`). `just tag` then tags `v1.0.0-rc.1` and publishes it as a
 GitHub **pre-release**, which GitHub never marks as the latest release.
 
-The Copier Update Check sorts candidates below their final release. So
-`v1.0.0-rc.1` verifies its update from the previous final tag,
-`v1.0.0` verifies from the last candidate, and `v1.0.1` verifies from
-`v1.0.0`.
+The Copier Update Check sorts candidates below their final release. Its
+first baseline is the preceding tag, candidate or not; its second is the
+newest *final* release before that, because adopters update from
+finals:
+
+| Tag pushed | Verifies from |
+| :--- | :--- |
+| `v1.0.0-rc.1` | `v0.14.0`, `v0.13.0` |
+| `v1.0.0-rc.2` | `v1.0.0-rc.1`, `v0.14.0` |
+| `v1.0.0` | `v1.0.0-rc.2`, `v0.14.0` |
+| `v1.0.1` | `v1.0.0`, `v0.14.0` |
 
 ---
 
