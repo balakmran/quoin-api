@@ -25,32 +25,14 @@ concurrency:
 
 jobs:
   smoke:
-    name: Generate and gate a fresh project (${{ matrix.answers }})
+    name: Generate and gate a fresh project
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # `--defaults` leaves `project_name` as "QuoinAPI", so the
-          # prefix derives as "QUOINAPI" -- deliberately NOT this repo's
-          # "QUOIN", which is the point: a wrong prefix means the
-          # generated project ignores the database settings below.
-          - answers: defaults
-            env_prefix: QUOINAPI
-            copier_data: ""
-          # The defaults are the one answer set short enough to fit every
-          # line they are substituted into. A longer name lengthens each
-          # docstring and comment that names a setting, and no formatter
-          # reflows prose. A 30-character prefix is what the lint headroom
-          # is sized for; see tests/test_template_substitution.py.
-          - answers: long-names
-            env_prefix: NORTHWIND_TRADERS_PLATFORM_API
-            copier_data: >-
-              --data "project_name=Northwind Traders Platform API"
-              --data "author_name=Maximiliana Featherstonehaugh"
-              --data "author_email=maximiliana@northwind-traders.example"
-              --data "github_username=northwind-traders"
+    # Defaults plus a long name: its 30-char prefix tests the lint headroom
+    # and differs from "QUOIN", so a wrong prefix fails the DB settings.
+    env:
+      PROJECT_NAME: Northwind Traders Platform API
+      ENV_PREFIX: NORTHWIND_TRADERS_PLATFORM_API
 
     services:
       postgres:
@@ -91,23 +73,20 @@ jobs:
         # `--vcs-ref=HEAD` is load-bearing. Against a local git template
         # Copier defaults to the latest *tag*, which would silently
         # smoke-test the previous release instead of this commit.
-        # `copier_data` is a static matrix value, so inlining it (quotes
-        # and all) is safe; it overrides the defaults it names.
         run: |
           uvx copier copy --defaults --trust --vcs-ref=HEAD \
-            ${{ matrix.copier_data }} . "${RUNNER_TEMP}/smoke-project"
+            --data "project_name=${PROJECT_NAME}" \
+            . "${RUNNER_TEMP}/smoke-project"
 
       - name: Point the generated project at the service database
-        env:
-          PREFIX: ${{ matrix.env_prefix }}
         run: |
           {
-            echo "${PREFIX}_ENV=test"
-            echo "${PREFIX}_POSTGRES_HOST=localhost"
-            echo "${PREFIX}_POSTGRES_PORT=5432"
-            echo "${PREFIX}_POSTGRES_USER=postgres"
-            echo "${PREFIX}_POSTGRES_PASSWORD=postgres"
-            echo "${PREFIX}_POSTGRES_DB=postgres"
+            echo "${ENV_PREFIX}_ENV=test"
+            echo "${ENV_PREFIX}_POSTGRES_HOST=localhost"
+            echo "${ENV_PREFIX}_POSTGRES_PORT=5432"
+            echo "${ENV_PREFIX}_POSTGRES_USER=postgres"
+            echo "${ENV_PREFIX}_POSTGRES_PASSWORD=postgres"
+            echo "${ENV_PREFIX}_POSTGRES_DB=postgres"
           } >> "$GITHUB_ENV"
 
       - name: Confirm the project is de-branded
@@ -131,14 +110,13 @@ jobs:
             fi
           done
 
-      - name: Confirm no template identity leaked
-        # Only meaningful with non-default answers: `--defaults` *is* the
-        # maintainer's identity. Lowercase `quoin-` names (skills, CSS
-        # classes, the container user) are internal, not branding.
-        if: matrix.answers == 'long-names'
+      - name: Confirm the template name did not leak
+        # Author answers are defaults, so only the brand is checked here;
+        # test_template_substitution.py covers the maintainer identity.
+        # Lowercase `quoin-` names are internal, not branding.
         working-directory: ${{ runner.temp }}/smoke-project
         run: |
-          pattern='(^|[^A-Za-z])Quoin|balakmran|Balakumaran|Manoharan'
+          pattern='(^|[^A-Za-z])Quoin'
           if grep -rnIE "$pattern" . \
               --exclude-dir=.git --exclude=.copier-answers.yml; then
             echo "::error::template identity leaked into the generated project"

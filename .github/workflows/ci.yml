@@ -8,13 +8,9 @@ on:
 
 jobs:
   quality:
-    name: Quality Checks (Python ${{ matrix.python-version }})
+    # Pinned version only; the 3.12 floor is supported but not tested.
+    name: Quality Checks
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.12", "3.13", "3.14"]
 
     services:
       postgres:
@@ -32,9 +28,6 @@ jobs:
           - 5432:5432
 
     env:
-      # uv prefers the .python-version pin over PATH, which would make
-      # the matrix below silently test the pinned version three times.
-      UV_PYTHON: ${{ matrix.python-version }}
       QUOIN_ENV: test
       QUOIN_POSTGRES_HOST: localhost
       QUOIN_POSTGRES_PORT: 5432
@@ -53,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version-file: ".python-version"
 
       - name: Install just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4

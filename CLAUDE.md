@@ -44,7 +44,13 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **Async-first** — every DB call, repository method, and service method is `async def`.
 - **Google-style docstrings** on public functions and classes.
 - **Keep code comments concise.** Explain the non-obvious *why* in a
-  line or two; don't restate what the code already says.
+  line or two; don't restate what the code already says. This applies
+  to every file with comments — Python, workflow YAML, `justfile`,
+  shell, TOML — not just Python. No history ("was a matrix", "used
+  to"), no essays; put longer rationale in `docs/guides/`.
+- **Keep changelog entries concise.** One or two lines per change:
+  what changed and anything an adopter must do. No rationale or
+  background — that belongs in `docs/guides/`, which can be long.
 - **Docs coverage on every feature change.** When adding or changing any
   user-visible behaviour (new settings, new middleware, new endpoints,
   changed defaults), update the relevant guide in `docs/guides/` — or
