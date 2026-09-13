@@ -187,7 +187,8 @@ differs from this repo's `QUOIN`, a missed substitution leaves the
 generated project ignoring the CI database settings and the gate fails.
 
 With default author answers the maintainer's identity is expected in
-the generated tree, so the job only fails if the `Quoin` brand leaks.
+the generated tree, so the job only fails if the template's brand name
+leaks.
 The maintainer-identity scan, with long non-default author answers,
 runs in `tests/test_template_substitution.py` as part of `just check`.
 
