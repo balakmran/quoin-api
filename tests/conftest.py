@@ -11,6 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from alembic import command
 from app.core.config import settings
+from app.core.schemas import ProblemDetail
 from app.core.security import ServicePrincipal, get_current_caller
 from app.db.session import create_db_engine, create_session_factory, get_session
 from app.main import app as fastapi_app
@@ -26,25 +27,35 @@ async def _assert_problem_details_contract(response: Response) -> None:
     An httpx2 event hook on the ``client`` fixture, so it runs against
     every response any test makes through it — not only tests that
     assert on it directly. Every client/server error (4xx/5xx) must be
-    ``application/problem+json`` and carry ``X-Request-ID``; this single
-    hook would have caught B3 (the 500 path escaping the middleware
-    stack) the day it was introduced, and did in fact catch the
-    Starlette-default-404 gap alongside it (Improvement 7).
+    ``application/problem+json``, carry ``X-Request-ID``, and have a
+    body that parses as ``ProblemDetail`` whose ``status`` and
+    ``instance`` match the response and the request path.
 
     3xx isn't checked: a redirect has no problem-details body to hold to
     this contract, and QuoinAPI's routes don't issue any today.
     """
     if response.status_code < 400:  # noqa: PLR2004
         return
+    request = response.request
+    where = f"{request.method} {request.url} returned {response.status_code}"
     assert response.headers.get("content-type") == _PROBLEM_MEDIA_TYPE, (
-        f"{response.request.method} {response.request.url} returned "
-        f"{response.status_code} with content-type "
+        f"{where} with content-type "
         f"{response.headers.get('content-type')!r}, not "
         f"{_PROBLEM_MEDIA_TYPE!r}"
     )
     assert "x-request-id" in response.headers, (
-        f"{response.request.method} {response.request.url} returned "
-        f"{response.status_code} with no X-Request-ID header"
+        f"{where} with no X-Request-ID header"
+    )
+    if request.method == "HEAD":
+        return
+    # Hooks run before the body is read.
+    await response.aread()
+    problem = ProblemDetail.model_validate_json(response.content)
+    assert problem.status == response.status_code, (
+        f"{where} with body status {problem.status}"
+    )
+    assert problem.instance == request.url.path, (
+        f"{where} with instance {problem.instance!r}, not {request.url.path!r}"
     )
 
 
