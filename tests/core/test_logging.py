@@ -71,16 +71,17 @@ def test_setup_logging_not_dev() -> None:
         mock_root_logger.setLevel.assert_called_with("WARNING")
 
 
-def test_setup_logging_dev_leaves_stdlib_logging_alone() -> None:
-    """Development skips the stdlib handler wiring entirely.
+@pytest.mark.parametrize("env", [Environment.development, Environment.test])
+def test_setup_logging_console_leaves_stdlib_logging_alone(
+    env: Environment,
+) -> None:
+    """Console profiles skip the stdlib handler wiring entirely.
 
-    The mirror of ``test_setup_logging_not_dev``. Without it the
-    false branch is only covered when the runner happens to have
-    ``QUOIN_ENV=development`` in a local ``.env`` -- which is why it
-    passed locally and failed in CI, where no ``.env`` exists.
+    The mirror of ``test_setup_logging_not_dev``. Patched explicitly so
+    the branch is covered whatever ``QUOIN_ENV`` the runner has.
     """
     with (
-        patch("app.core.logging.settings.ENV", Environment.development),
+        patch("app.core.logging.settings.ENV", env),
         patch("logging.getLogger") as mock_get_logger,
     ):
         mock_root_logger = MagicMock()
@@ -92,6 +93,23 @@ def test_setup_logging_dev_leaves_stdlib_logging_alone() -> None:
         # left untouched.
         mock_root_logger.handlers.clear.assert_not_called()
         mock_root_logger.addHandler.assert_not_called()
+
+
+def test_test_profile_emits_one_plain_line(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The ``test`` profile prints console lines, not JSON-wrapped ones."""
+    try:
+        with patch("app.core.logging.settings.ENV", Environment.test):
+            setup_logging()
+            structlog.get_logger().warning("plain_line_check", k="v")
+    finally:
+        setup_logging()
+
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if ln]
+    assert len(lines) == 1
+    assert "plain_line_check" in lines[0]
+    assert not lines[0].lstrip().startswith("{")
 
 
 def test_log_level_filters_below_threshold() -> None:
