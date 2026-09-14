@@ -76,7 +76,7 @@ parameters. The `user` module demonstrates two common shapes:
 | Parameter   | Filter                                                    |
 | :---------- | :-------------------------------------------------------- |
 | `is_active` | Exact match on the boolean flag.                          |
-| `q`         | Case-insensitive substring on `email` or `full_name`.     |
+| `q`         | Case-insensitive substring on `email` or `full_name`; at most 255 characters. |
 
 Keeping filters explicit means the OpenAPI schema documents exactly what
 a resource supports, and each filter can be typed and validated.

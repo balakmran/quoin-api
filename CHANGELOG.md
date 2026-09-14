@@ -13,6 +13,8 @@
 
 - **CI**: `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` run
   with a read-only `contents: read` token. Update-safe.
+- **Users**: `q` on `GET /api/v1/users/` is limited to 255 characters;
+  a longer term is a `422`. Update-safe.
 
 ### Fixed
 
