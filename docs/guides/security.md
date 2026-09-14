@@ -272,10 +272,17 @@ caps unknown-`kid` refetches to at most one per
 timer is set before the fetch so a *failed* fetch backs off too. Tokens
 inside the window are rejected from cache with no outbound call.
 
+A token whose `kid` is already cached never waits on a fetch. When the
+cached set is past its one-hour TTL, the cached key is served and the
+set is refreshed in the background (stale-while-revalidate); only an
+unknown `kid` waits, and only for the one fetch in flight. A slow IdP
+therefore delays new keys, not every authenticated request.
+
 The refresh itself goes through the shared
-[resilient HTTP client](outbound-http.md) — retries with backoff, a
-per-host circuit breaker, and the shared `QUOIN_HTTP_TIMEOUT_SECONDS` —
-rather than a bare per-refresh client. A hard-down authorization server
+[resilient HTTP client](outbound-http.md) — retries with backoff and a
+per-host circuit breaker, with a 3-second per-attempt timeout rather
+than `QUOIN_HTTP_TIMEOUT_SECONDS` — rather than a bare per-refresh
+client. A hard-down authorization server
 therefore trips the breaker and fails fast instead of serialising every
 auth attempt behind a doomed fetch. A transport-level JWKS failure (a
 down IdP, a timeout, or an open circuit) surfaces as a `502`/`503`/`504`

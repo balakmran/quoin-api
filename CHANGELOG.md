@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Auth**: a cached JWKS key is served without waiting on a refresh; a
+  stale set refreshes in the background, and JWKS fetches time out
+  after 3 s. Update-safe.
+
 ### Fixed
 
 - **Auth**: a JWT whose header PyJWT rejects (a non-string `kid`, an
