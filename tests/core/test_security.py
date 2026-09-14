@@ -554,7 +554,9 @@ async def test_get_jwks_cache_no_uri_raises(
     )
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
 
-    with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_JWKS_URI"):
+    with pytest.raises(
+        UnauthorizedError, match=r"^Authentication is not configured$"
+    ):
         await get_jwks_cache(request)  # type: ignore
 
 
@@ -712,12 +714,26 @@ async def test_validate_token_no_uri(
 ) -> None:
     """validate_token raises UnauthorizedError if no JWKS URI is set."""
     mock_settings.OAUTH_JWKS_URI = ""
-    with pytest.raises(UnauthorizedError, match="not configured"):
-        await validate_token(
-            "header.payload.signature",
-            _fake_http_client(),
-            MagicMock(spec=JWKSCache),
-        )
+    await _assert_not_configured("QUOIN_OAUTH_JWKS_URI")
+
+
+async def _assert_not_configured(setting: str) -> None:
+    """Assert the 401 body is generic and only the log names ``setting``."""
+    with capture_logs() as cap_logs:
+        with pytest.raises(UnauthorizedError) as exc_info:
+            await validate_token(
+                "header.payload.signature",
+                _fake_http_client(),
+                MagicMock(spec=JWKSCache),
+            )
+    assert exc_info.value.message == "Authentication is not configured"
+    assert cap_logs == [
+        {
+            "event": "oauth_not_configured",
+            "setting": setting,
+            "log_level": "error",
+        }
+    ]
 
 
 async def test_validate_token_no_audience(
@@ -725,12 +741,7 @@ async def test_validate_token_no_audience(
 ) -> None:
     """validate_token raises UnauthorizedError if audience is not set."""
     mock_settings.OAUTH_AUDIENCE = ""
-    with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_AUDIENCE"):
-        await validate_token(
-            "header.payload.signature",
-            _fake_http_client(),
-            MagicMock(spec=JWKSCache),
-        )
+    await _assert_not_configured("QUOIN_OAUTH_AUDIENCE")
 
 
 async def test_validate_token_no_issuer(
@@ -741,12 +752,7 @@ async def test_validate_token_no_issuer(
     Guards the PyJWT hole where ``issuer=None`` skips ``iss`` checks.
     """
     mock_settings.OAUTH_ISSUER = ""
-    with pytest.raises(UnauthorizedError, match="QUOIN_OAUTH_ISSUER"):
-        await validate_token(
-            "header.payload.signature",
-            _fake_http_client(),
-            MagicMock(spec=JWKSCache),
-        )
+    await _assert_not_configured("QUOIN_OAUTH_ISSUER")
 
 
 async def test_validate_token_malformed(

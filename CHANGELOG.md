@@ -26,6 +26,9 @@
   `home.js`), and the Swagger link is hidden when docs are disabled.
   Swagger's unused `/docs/oauth2-redirect` route is no longer
   registered. Update-safe.
+- **Errors**: the "OAuth not configured" `401`s and the host-less
+  outbound URL `500` no longer name settings or URLs in the body; the
+  specifics are logged. Update-safe.
 - **Auth**: a JWT whose header PyJWT rejects (a non-string `kid`, an
   unsupported `crit`) is a `401`, not a `500`. Update-safe.
 - **Health**: `/ready` is a `503` when the database is unreachable,
