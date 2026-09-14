@@ -49,7 +49,10 @@ class UserListQuery:
         ] = None,
         q: Annotated[
             str | None,
-            Query(description="Case-insensitive search on email/full name."),
+            Query(
+                max_length=255,
+                description="Case-insensitive search on email/full name.",
+            ),
         ] = None,
     ) -> None:
         """Capture the validated sort and filter inputs.

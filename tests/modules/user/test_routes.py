@@ -373,6 +373,14 @@ async def test_list_users_filter_search_escapes_like_wildcards(
     assert names == ["100%"]
 
 
+async def test_list_users_search_term_too_long_returns_422(
+    read_client: AsyncClient,
+) -> None:
+    """`q` is capped at the searched columns' 255-char length."""
+    response = await read_client.get(f"/api/v1/users/?q={'a' * 256}")
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
 async def test_repository_create_race_returns_duplicate_email_error(
     db_session: AsyncSession,
 ) -> None:
