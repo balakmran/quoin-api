@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-13
+
+Hostile-input hardening: the fixes from the 2026-09-13 audit for
+inputs the suite never sent — a malformed JWT header, an unreachable
+database, a slow IdP, a forged `Host`.
+
+`copier update` from `0.14.0` is expected to apply cleanly. Three
+changes need **manual reconciliation** (see **Changed**): the narrower
+default CSP, the dropped `www.` host redirect, and the startup check
+on a wildcard CORS origin.
+
 ### Changed
 
 - **Auth**: a cached JWKS key is served without waiting on a refresh; a
