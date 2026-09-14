@@ -26,6 +26,8 @@
   `home.js`), and the Swagger link is hidden when docs are disabled.
   Swagger's unused `/docs/oauth2-redirect` route is no longer
   registered. Update-safe.
+- **Middleware**: a `504` from `TimeoutMiddleware` sends
+  `Connection: close`, like the `413` and `500`. Update-safe.
 - **Errors**: the "OAuth not configured" `401`s and the host-less
   outbound URL `500` no longer name settings or URLs in the body; the
   specifics are logged. Update-safe.

@@ -91,6 +91,7 @@ async def test_timeout_middleware_slow_request_returns_504(
 
     assert response.status_code == status.HTTP_504_GATEWAY_TIMEOUT
     assert response.headers["content-type"] == "application/problem+json"
+    assert response.headers["connection"] == "close"
     body = response.json()
     assert body["type"] == "urn:quoin:error:gateway_timeout_error"
     assert body["status"] == status.HTTP_504_GATEWAY_TIMEOUT
@@ -1000,6 +1001,26 @@ async def test_trusted_host_passes_lifespan_scope() -> None:
     await middleware({"type": "lifespan"}, None, None)  # type: ignore
 
     assert seen == ["lifespan"]
+
+
+async def test_send_problem_keeps_connection_open_by_default() -> None:
+    """Only callers that pass ``close=True`` add ``Connection: close``."""
+    sent: list[Message] = []
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    problem = middlewares.ProblemDetail(
+        type="urn:quoin:error:bad_request_error",
+        title="Bad Request",
+        status=400,
+        detail="x",
+        instance="/",
+    )
+    await middlewares._send_problem(send, problem, 400)
+
+    header_names = {name for name, _ in sent[0]["headers"]}
+    assert b"connection" not in header_names
 
 
 @pytest.mark.asyncio
