@@ -51,9 +51,9 @@ setup_logging()
 > **TIP**: `QUOIN_ENV` controls log **format** (human vs JSON). `QUOIN_LOG_LEVEL`
 > controls **verbosity**. They are independent knobs.
 
-#### Development (`QUOIN_ENV=development`)
+#### Development and test (`QUOIN_ENV=development` / `test`)
 
-Human-readable console output:
+Human-readable console output, one line per event:
 
 ```
 2026-02-15T15:30:00.123456 [info     ] user_created email=test@example.com user_id=abc123

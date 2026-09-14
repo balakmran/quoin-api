@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Logging**: the `test` profile prints plain console lines instead of
+  console lines wrapped in JSON. Update-safe.
+
 ## [0.15.0] - 2026-09-13
 
 Hostile-input hardening: the fixes from the 2026-09-13 audit for

@@ -30,6 +30,10 @@ _processors: list[Processor] = []
 
 def setup_logging() -> None:
     """Configure structured logging."""
+    # One predicate picks both the renderer and the logger factory: a
+    # console renderer routed through stdlib gets its line JSON-wrapped.
+    json_logs = settings.ENV == Environment.production
+
     # Processors compatible with both PrintLogger and stdlib logger
     shared_processors = [
         structlog.contextvars.merge_contextvars,
@@ -41,12 +45,10 @@ def setup_logging() -> None:
         # UTC in production so aggregated JSON logs are timezone-stable
         # across hosts; local time in dev/test keeps console logs
         # readable against the wall clock.
-        structlog.processors.TimeStamper(
-            fmt="iso", utc=settings.ENV == Environment.production
-        ),
+        structlog.processors.TimeStamper(fmt="iso", utc=json_logs),
     ]
 
-    if settings.ENV == Environment.production:
+    if json_logs:
         processors = [
             # Only for prod (needs stdlib logger)
             structlog.stdlib.add_logger_name,
@@ -75,9 +77,9 @@ def setup_logging() -> None:
 
     structlog.configure(
         processors=_processors,
-        logger_factory=structlog.PrintLoggerFactory()
-        if settings.ENV == Environment.development
-        else structlog.stdlib.LoggerFactory(),
+        logger_factory=structlog.stdlib.LoggerFactory()
+        if json_logs
+        else structlog.PrintLoggerFactory(),
         # The filtering wrapper is what enforces QUOIN_LOG_LEVEL;
         # structlog.stdlib.BoundLogger has no level filter of its own.
         wrapper_class=structlog.make_filtering_bound_logger(settings.LOG_LEVEL),
@@ -85,8 +87,7 @@ def setup_logging() -> None:
     )
 
     # Configure standard library logging for third-party libraries
-    if settings.ENV != Environment.development:
-        # Only needed in production when we use LoggerFactory
+    if json_logs:
         formatter = structlog.stdlib.ProcessorFormatter(
             foreign_pre_chain=shared_processors,
             processors=[
