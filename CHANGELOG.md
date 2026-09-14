@@ -7,6 +7,10 @@
 - **Auth**: a cached JWKS key is served without waiting on a refresh; a
   stale set refreshes in the background, and JWKS fetches time out
   after 3 s. Update-safe.
+- **Middleware**: the Host check is QuoinAPI's own `TrustedHostMiddleware`
+  and rejects with an RFC 9457 `400`. Starlette's `www.` redirect is
+  gone; adopters relying on it add the `www.` host to
+  `QUOIN_ALLOWED_HOSTS`.
 
 ### Fixed
 

@@ -6,7 +6,6 @@ import anyio
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -532,8 +531,79 @@ def configure_cors(app: FastAPI) -> None:
     )
 
 
+class TrustedHostMiddleware:
+    """Reject a request whose ``Host`` is not in the allowlist.
+
+    Replaces Starlette's class of the same name so the rejection is an
+    RFC 9457 ``400`` like every other manufactured error, not
+    ``text/plain``. Patterns are exact hosts, ``*.example.com``
+    subdomain wildcards, or a bare ``*``. Starlette's ``www.`` redirect
+    is not reproduced. Pure ASGI.
+    """
+
+    def __init__(self, app: ASGIApp, allowed_hosts: list[str]) -> None:
+        """Wrap the downstream ASGI app.
+
+        Args:
+            app: The downstream ASGI app.
+            allowed_hosts: Host patterns to accept.
+
+        Raises:
+            ValueError: If a wildcard is anywhere but a leading ``*.``.
+        """
+        for pattern in allowed_hosts:
+            if (
+                pattern != "*"
+                and "*" in pattern
+                and (not pattern.startswith("*.") or "*" in pattern[1:])
+            ):
+                raise ValueError(
+                    f"Invalid allowed host {pattern!r}: wildcards must be "
+                    "like '*.example.com'."
+                )
+        self.app = app
+        self.allowed_hosts = list(allowed_hosts)
+        self.allow_any = "*" in allowed_hosts
+
+    def _is_allowed(self, host: str) -> bool:
+        """Return True if ``host`` matches an allowed pattern."""
+        return any(
+            host == pattern
+            or (pattern.startswith("*.") and host.endswith(pattern[1:]))
+            for pattern in self.allowed_hosts
+        )
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Pass an allowed Host through; answer anything else with a 400."""
+        if self.allow_any or scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        host = (_header_value(scope, b"host") or "").split(":")[0]
+        if self._is_allowed(host):
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        logger.info("invalid_host_header", host=host, path=path)
+        if scope["type"] == "websocket":
+            await send({"type": "websocket.close", "code": 1008})
+            return
+        problem = ProblemDetail(
+            type="urn:quoin:error:bad_request_error",
+            title=_problem_title(400),
+            status=400,
+            detail="Invalid host header",
+            instance=path,
+        )
+        # close: the request body is never read.
+        await _send_problem(send, problem, 400, close=True)
+
+
 def configure_trusted_hosts(app: FastAPI) -> None:
-    """Configure TrustedHost middleware."""
+    """Configure the Host-header allowlist from ``QUOIN_ALLOWED_HOSTS``."""
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=settings.ALLOWED_HOSTS,
@@ -590,6 +660,7 @@ __all__ = [
     "RequestSizeLimitMiddleware",
     "SecurityHeadersMiddleware",
     "TimeoutMiddleware",
+    "TrustedHostMiddleware",
     "UnhandledErrorMiddleware",
     "configure_cors",
     "configure_middlewares",

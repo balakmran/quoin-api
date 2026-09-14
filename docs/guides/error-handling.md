@@ -27,7 +27,8 @@ All inherit from `QuoinError`. Import from `app.core.exceptions`.
 
 All errors return `Content-Type: application/problem+json` with a
 [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details
-body:
+body. The one exception is a CORS preflight that `CORSMiddleware`
+rejects, a `text/plain` `400` only the browser reads:
 
 ```json
 {
