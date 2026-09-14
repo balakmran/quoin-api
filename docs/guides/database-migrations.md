@@ -372,6 +372,7 @@ block are caught too — and flags:
 | `add_column(..., nullable=False)` without a real `server_default` | Fails on a populated table |
 | `create_index` / `drop_index` without `postgresql_concurrently=True` | Takes a blocking lock |
 | `op.execute(...)` with a `DELETE FROM`, `TRUNCATE`, or `DROP <object>` statement | Destructive raw SQL |
+| `op.execute(...)` with an `UPDATE ... SET` and no `WHERE` | Rewrites every row, even rows already correct; bounds nothing on a large table |
 
 Operation rows match calls on `op` and on the variable bound by a
 `batch_alter_table` block (conventionally `batch_op`).

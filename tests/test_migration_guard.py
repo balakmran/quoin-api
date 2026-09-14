@@ -151,16 +151,27 @@ def test_destructive_raw_sql_flagged():
 
 
 def test_non_destructive_raw_sql_not_flagged():
-    """A plain UPDATE is not treated as destructive."""
-    src = 'def upgrade():\n    op.execute("UPDATE users SET x = 1")\n'
+    """A bounded UPDATE is not treated as destructive."""
+    src = 'def upgrade():\n    op.execute("UPDATE users SET x = 1 WHERE x <> 1")\n'
     assert scan(src) == []
+
+
+def test_update_without_where_flagged():
+    """An UPDATE with no WHERE rewrites every row and is flagged."""
+    for stmt in (
+        "UPDATE users SET email = lower(email)",
+        "update users set x = 1",
+    ):
+        src = f'def upgrade():\n    op.execute("{stmt}")\n'
+        assert any("has no WHERE" in r for r in _reasons(src)), stmt
 
 
 def test_destructive_keyword_in_string_data_not_flagged():
     """DROP/DELETE appearing only as data words must not false-positive."""
     src = (
         "def upgrade():\n"
-        "    op.execute(\"UPDATE settings SET label = 'Drop-off point'\")\n"
+        "    op.execute(\"UPDATE settings SET label = 'Drop-off point' "
+        'WHERE id = 1")\n'
     )
     assert scan(src) == []
 
