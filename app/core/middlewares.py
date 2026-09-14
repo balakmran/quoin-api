@@ -156,7 +156,8 @@ class TimeoutMiddleware:
                 detail=f"Request exceeded {timeout}s timeout",
                 instance=scope.get("path", ""),
             )
-            await _send_problem(send, problem, 504)
+            # close: the handler may have timed out before reading the body.
+            await _send_problem(send, problem, 504, close=True)
 
 
 class RequestIDMiddleware:
