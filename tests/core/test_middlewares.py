@@ -409,6 +409,19 @@ def test_configure_cors_rejects_wildcard_with_credentials_in_prod() -> None:
             configure_cors(app)
 
 
+def test_configure_cors_rejects_wildcard_origin_with_credentials() -> None:
+    """A ``*`` origin with credentials would reflect any Origin: rejected."""
+    app = FastAPI()
+    with (
+        patch.object(settings, "ENV", Environment.production),
+        patch.object(settings, "BACKEND_CORS_ORIGINS", ["*"]),
+        patch.object(settings, "BACKEND_CORS_ALLOW_CREDENTIALS", True),
+    ):
+        with pytest.raises(RuntimeError, match="QUOIN_BACKEND_CORS_ORIGINS"):
+            configure_cors(app)
+    assert not any(m.cls == CORSMiddleware for m in app.user_middleware)
+
+
 def test_configure_cors_allows_wildcard_in_development() -> None:
     """Development should still accept wildcard methods for convenience."""
     app = FastAPI()

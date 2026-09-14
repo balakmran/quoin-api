@@ -11,6 +11,9 @@
   and rejects with an RFC 9457 `400`. Starlette's `www.` redirect is
   gone; adopters relying on it add the `www.` host to
   `QUOIN_ALLOWED_HOSTS`.
+- **CORS**: outside development, `*` in `QUOIN_BACKEND_CORS_ORIGINS`
+  with credentials allowed fails at startup. Adopters: list the
+  origins explicitly.
 
 ### Fixed
 

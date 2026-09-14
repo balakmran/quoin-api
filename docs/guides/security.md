@@ -42,14 +42,17 @@ to `QUOIN_BACKEND_CORS_EXPOSE_HEADERS`.
 Browsers silently refuse credentialed CORS responses when the server
 responds with `Access-Control-Allow-Methods: *` or
 `Access-Control-Allow-Headers: *`. They also ignore
-`Access-Control-Expose-Headers: *` for credentialed requests. QuoinAPI
-detects these at startup and **raises a `RuntimeError`** if you combine
-wildcards with `allow_credentials=True` outside `development`:
+`Access-Control-Expose-Headers: *` for credentialed requests. A `*` in
+`QUOIN_BACKEND_CORS_ORIGINS` is worse: Starlette answers it with
+credentials by reflecting whatever `Origin` the caller sent, so every
+site becomes a trusted origin. QuoinAPI detects all four at startup and
+**raises a `RuntimeError`** if you combine a wildcard with
+`allow_credentials=True` outside `development`:
 
 ```
 RuntimeError: CORS misconfiguration: allow_credentials=True with a wildcard
-in allow_methods, allow_headers, or expose_headers is rejected outside
-development.
+in origins, allow_methods, allow_headers, or expose_headers is rejected
+outside development.
 ```
 
 This is intentional — a silent browser refusal is harder to debug than
