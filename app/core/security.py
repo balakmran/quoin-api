@@ -309,9 +309,11 @@ async def validate_token(
             "OAuth not configured — QUOIN_OAUTH_ISSUER is not set"
         )
 
+    # InvalidTokenError, not DecodeError: PyJWT 2.10+ also validates the
+    # header here (a non-string ``kid``, an unsupported ``crit``).
     try:
         header = jwt.get_unverified_header(token)
-    except jwt.DecodeError as exc:
+    except jwt.InvalidTokenError as exc:
         raise UnauthorizedError("Invalid token format") from exc
 
     kid = header.get("kid", "")

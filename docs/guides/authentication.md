@@ -308,7 +308,7 @@ All error responses use `Content-Type: application/problem+json`
 
 | Status | When |
 | :--- | :--- |
-| `401 Unauthorized` | No token, expired token, invalid signature |
+| `401 Unauthorized` | No token, malformed token or header, expired token, invalid signature |
 | `403 Forbidden` | Valid token, but missing required role |
 
 Example 401:
