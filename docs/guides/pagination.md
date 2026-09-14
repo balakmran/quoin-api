@@ -137,6 +137,13 @@ route signature stays flat, then thread them through the service into the
 repository's query — applying the same predicates to both the row query
 and the count.
 
+The rows and the count are two statements. At Postgres's default READ
+COMMITTED isolation each sees its own snapshot, so a concurrent insert or
+delete between them can leave `total` off by a row or two from `items`.
+Clients should treat `total` as an estimate for page math, not an exact
+invariant. If a module needs them to agree, fold the count into the page
+query with `func.count().over()`, or run the listing at REPEATABLE READ.
+
 ## What's intentionally not here
 
 - **Cursor / keyset pagination** — offset pagination is sufficient
