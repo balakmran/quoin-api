@@ -7,6 +7,11 @@
 - **CI**: a `Tests (Python 3.12)` job runs the suite on the
   `requires-python` floor. Update-safe.
 
+### Changed
+
+- **CI**: `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` run
+  with a read-only `contents: read` token. Update-safe.
+
 ### Fixed
 
 - **Logging**: the `test` profile prints plain console lines instead of

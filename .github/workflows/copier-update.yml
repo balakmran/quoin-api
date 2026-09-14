@@ -12,6 +12,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   select-tags:
     name: Select tags to update from

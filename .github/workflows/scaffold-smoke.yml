@@ -19,6 +19,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: "scaffold-smoke-${{ github.ref }}"
   cancel-in-progress: true
