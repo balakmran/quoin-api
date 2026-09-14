@@ -1,5 +1,6 @@
 """Unit tests for app/core/security.py."""
 
+import base64
 import json
 import time
 from types import SimpleNamespace
@@ -628,6 +629,37 @@ async def test_validate_token_malformed(
         await validate_token(
             "not.a.jwt", _fake_http_client(), MagicMock(spec=JWKSCache)
         )
+
+
+def _unsigned_token(header: dict[str, Any]) -> str:
+    """Build a token with an arbitrary header and no valid signature."""
+
+    def b64(data: dict[str, Any]) -> str:
+        raw = json.dumps(data).encode()
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+    return f"{b64(header)}.{b64({'sub': 'x'})}.c2ln"
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        {"alg": "RS256", "kid": 123},
+        {"alg": "RS256", "kid": {"a": 1}},
+        {"alg": "RS256", "kid": "k", "crit": ["foo"]},
+    ],
+)
+async def test_validate_token_invalid_header(
+    header: dict[str, Any],
+    mock_settings: MagicMock,
+) -> None:
+    """A header PyJWT rejects is a 401, not an unhandled 500."""
+    cache = MagicMock(spec=JWKSCache)
+    with pytest.raises(UnauthorizedError, match="Invalid token format"):
+        await validate_token(
+            _unsigned_token(header), _fake_http_client(), cache
+        )
+    cache.get_signing_key.assert_not_called()
 
 
 async def test_validate_token_generic_pyjwt_error(
