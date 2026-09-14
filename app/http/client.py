@@ -111,9 +111,9 @@ class ResilientHTTPClient:
         """
         host = httpx2.URL(url).host
         if not host:
-            raise InternalServerError(
-                f"Outbound HTTP requires an absolute URL with a host: {url!r}"
-            )
+            # The URL stays in the log; the response body is generic.
+            logger.error("http_url_without_host", url=str(url))
+            raise InternalServerError("Outbound HTTP request is misconfigured")
         return host
 
     async def request(

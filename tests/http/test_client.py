@@ -283,9 +283,11 @@ async def test_hostless_url_raises() -> None:
         return httpx2.Response(200)
 
     client = _client(handler)
-    with pytest.raises(InternalServerError):
+    with pytest.raises(InternalServerError) as exc_info:
         await client.get("/relative/path")
     await client.aclose()
+    # The URL is logged, not returned in the response body.
+    assert exc_info.value.message == "Outbound HTTP request is misconfigured"
 
 
 def test_get_http_client_missing_state_raises() -> None:

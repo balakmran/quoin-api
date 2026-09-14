@@ -40,6 +40,20 @@ _CLOCK_SKEW_LEEWAY_SECONDS = 10
 #: outbound timeout so a slow IdP cannot outlast the request timeout.
 _JWKS_FETCH_TIMEOUT_SECONDS = 3.0
 
+
+def _not_configured(setting: str) -> UnauthorizedError:
+    """Log which OAuth setting is missing; return a generic 401.
+
+    Args:
+        setting: The unset ``QUOIN_*`` variable, for the log line only.
+
+    Returns:
+        An error whose body does not name the setting.
+    """
+    logger.error("oauth_not_configured", setting=setting)
+    return UnauthorizedError("Authentication is not configured")
+
+
 # ---------------------------------------------------------------------------
 # JWKS Cache
 # ---------------------------------------------------------------------------
@@ -242,9 +256,7 @@ async def get_jwks_cache(request: Request) -> JWKSCache:
     cache = getattr(request.app.state, "jwks_cache", None)
     if cache is None:
         if not settings.OAUTH_JWKS_URI:
-            raise UnauthorizedError(
-                "OAuth not configured — QUOIN_OAUTH_JWKS_URI is not set"
-            )
+            raise _not_configured("QUOIN_OAUTH_JWKS_URI")
         cache = JWKSCache(
             settings.OAUTH_JWKS_URI,
             min_refresh_seconds=settings.OAUTH_JWKS_MIN_REFRESH_SECONDS,
@@ -326,20 +338,14 @@ async def validate_token(
         UnauthorizedError: On any validation failure.
     """
     if not settings.OAUTH_JWKS_URI:
-        raise UnauthorizedError(
-            "OAuth not configured — QUOIN_OAUTH_JWKS_URI is not set"
-        )
+        raise _not_configured("QUOIN_OAUTH_JWKS_URI")
     if not settings.OAUTH_AUDIENCE:
-        raise UnauthorizedError(
-            "OAuth not configured — QUOIN_OAUTH_AUDIENCE is not set"
-        )
+        raise _not_configured("QUOIN_OAUTH_AUDIENCE")
     # PyJWT silently skips issuer verification when ``issuer`` is None,
     # so an unset issuer would let any token signed by a JWKS key pass
     # regardless of ``iss``. Require it explicitly.
     if not settings.OAUTH_ISSUER:
-        raise UnauthorizedError(
-            "OAuth not configured — QUOIN_OAUTH_ISSUER is not set"
-        )
+        raise _not_configured("QUOIN_OAUTH_ISSUER")
 
     # InvalidTokenError, not DecodeError: PyJWT 2.10+ also validates the
     # header here (a non-string ``kid``, an unsupported ``crit``).
