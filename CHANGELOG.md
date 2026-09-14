@@ -8,6 +8,8 @@
   `requires-python` floor. Update-safe.
 - **Auth**: `QUOIN_OAUTH_JWKS_TTL_SECONDS` (default `3600`) sets how long
   a fetched JWKS stays fresh. Update-safe.
+- **Migrations**: the migration guard flags an `op.execute` `UPDATE` with
+  no `WHERE`. Update-safe.
 
 ### Changed
 

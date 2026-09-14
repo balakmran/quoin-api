@@ -49,6 +49,10 @@ _DESTRUCTIVE_SQL = re.compile(
     re.IGNORECASE,
 )
 
+# An UPDATE with no WHERE rewrites every row, even rows already correct.
+_UPDATE = re.compile(r"\bUPDATE\s+\S+\s+SET\b", re.IGNORECASE)
+_WHERE = re.compile(r"\bWHERE\b", re.IGNORECASE)
+
 # An explicit ``server_default=None`` provides no real default, so it must
 # not satisfy the add-column NOT NULL escape hatch.
 _SERVER_DEFAULT_NONE = re.compile(r"server_default\s*=\s*None")
@@ -190,6 +194,15 @@ _RULES: list[_Rule] = [
         "raw SQL performs a destructive operation (DROP/DELETE/TRUNCATE)",
         "Treat as a contract-phase change; review against the playbook "
         "before applying to production data.",
+    ),
+    _Rule(
+        lambda m, s: (
+            m == "execute" and bool(_UPDATE.search(s)) and not _WHERE.search(s)
+        ),
+        "raw SQL UPDATE has no WHERE - rewrites every row, bloating the "
+        "table and locking it for the length of the statement",
+        "Add a WHERE that skips rows already correct (e.g. "
+        "WHERE email <> lower(email)), or backfill in batches.",
     ),
     _Rule(
         lambda m, s: m == "alter_column" and "type_=" in s,
