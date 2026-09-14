@@ -627,7 +627,7 @@
   <header class="quoin-header">
     <span class="quoin-header__brand">QuoinAPI</span>
     <nav class="quoin-header__nav">
-      <a href="/docs" target="_blank" rel="noopener">Swagger</a>
+      {% if docs_url %}<a href="{{ docs_url }}" target="_blank" rel="noopener">Swagger</a>{% endif %}
       <a href="https://balakmran.github.io/quoin-api/" target="_blank" rel="noopener">Docs</a>
       <a href="https://balakmran.github.io/quoin-api/project/changelog/" target="_blank" rel="noopener">Changelog</a>
       <a href="{{ repository_url }}" target="_blank" rel="noopener">GitHub</a>
@@ -651,7 +651,7 @@
       <div class="quoin-hero__cta">
         <div class="quoin-cli">
           <span class="quoin-cli__cmd">git clone https://github.com/balakmran/quoin-api.git</span>
-          <button type="button" class="quoin-cli__copy" onclick="copyCloneCmd()" aria-label="Copy command">
+          <button type="button" id="copy-btn" class="quoin-cli__copy" aria-label="Copy command">
             <svg id="copy-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
             </svg>

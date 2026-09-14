@@ -111,7 +111,10 @@ exact path rather than widening the default for every route:
   (`fonts.googleapis.com` / `fonts.gstatic.com`), tech-logo icons
   (`cdn.simpleicons.org`), and one inline `<style>` block. Its
   behaviour lives in `app/static/js/home.js`, not in an inline
-  `<script>`.
+  `<script>` or an `onclick`-style attribute; `script-src` without
+  `'unsafe-inline'` blocks both. The Swagger link is omitted when docs
+  are disabled, and Swagger's `/docs/oauth2-redirect` page is not
+  registered.
 - **Swagger UI** (`/docs`) and **ReDoc** (`/redoc`) — FastAPI loads
   their UI assets and favicon from `cdn.jsdelivr.net` and
   `fastapi.tiangolo.com`, and each needs a directive no other page

@@ -22,6 +22,10 @@
 
 ### Fixed
 
+- **Landing page**: the copy button works under the CSP (bound in
+  `home.js`), and the Swagger link is hidden when docs are disabled.
+  Swagger's unused `/docs/oauth2-redirect` route is no longer
+  registered. Update-safe.
 - **Auth**: a JWT whose header PyJWT rejects (a non-string `kid`, an
   unsupported `crit`) is a `401`, not a `500`. Update-safe.
 - **Health**: `/ready` is a `503` when the database is unreachable,

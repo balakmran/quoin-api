@@ -116,6 +116,7 @@ class OpenAPIParameters(TypedDict):
     openapi_tags: list[dict[str, Any]]
     servers: list[dict[str, Any]] | None
     swagger_ui_parameters: dict[str, Any]
+    swagger_ui_oauth2_redirect_url: str | None
 
 
 #: Swagger UI path. Named so `SecurityHeadersMiddleware` can scope the
@@ -141,6 +142,9 @@ OPENAPI_PARAMETERS: OpenAPIParameters = {
     "openapi_tags": APITag.metadata(),  # type: ignore
     "servers": None,
     "swagger_ui_parameters": {"defaultModelsExpandDepth": -1},
+    # Its page is an inline script the /docs-only CSP does not cover,
+    # and nothing under HTTPBearer uses the OAuth2 redirect flow.
+    "swagger_ui_oauth2_redirect_url": None,
 }
 
 
