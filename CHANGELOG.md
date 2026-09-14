@@ -10,6 +10,8 @@
   a fetched JWKS stays fresh. Update-safe.
 - **Migrations**: the migration guard flags an `op.execute` `UPDATE` with
   no `WHERE`. Update-safe.
+- **Docker**: a `.dockerignore` keeps `.venv`, `.git`, caches, and build
+  output out of the build context. Update-safe.
 
 ### Changed
 
