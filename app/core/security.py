@@ -36,6 +36,10 @@ _REQUIRED_CLAIMS = ["exp", "iat", "sub", "aud", "iss"]
 #: that fail on arrival.
 _CLOCK_SKEW_LEEWAY_SECONDS = 10
 
+#: Per-attempt timeout for a JWKS fetch, shorter than the general
+#: outbound timeout so a slow IdP cannot outlast the request timeout.
+_JWKS_FETCH_TIMEOUT_SECONDS = 3.0
+
 # ---------------------------------------------------------------------------
 # JWKS Cache
 # ---------------------------------------------------------------------------
@@ -75,6 +79,7 @@ class JWKSCache:
         self._fetched_at: float = float("-inf")
         self._last_attempt: float = float("-inf")
         self._lock = asyncio.Lock()
+        self._refresh_task: asyncio.Task[None] | None = None
 
     def _is_stale(self) -> bool:
         """Return True if the cache has expired."""
@@ -107,7 +112,11 @@ class JWKSCache:
         # Record the attempt up-front so a *failed* fetch also backs
         # off, not just a successful one.
         self._last_attempt = time.monotonic()
-        response = await client.get(self._uri, retry_on_status=True)
+        response = await client.get(
+            self._uri,
+            retry_on_status=True,
+            timeout=_JWKS_FETCH_TIMEOUT_SECONDS,
+        )
         try:
             response.raise_for_status()
             jwks = response.json()
@@ -157,12 +166,23 @@ class JWKSCache:
         self._keys = keys
         self._fetched_at = time.monotonic()
 
+    async def _background_refresh(self, client: ResilientHTTPClient) -> None:
+        """Refresh a stale key set without failing any request."""
+        try:
+            async with self._lock:
+                if self._is_stale() and self._may_refetch():
+                    await self._refresh(client)
+        except Exception as exc:
+            logger.warning("jwks_background_refresh_failed", error=repr(exc))
+
     async def get_signing_key(
         self, kid: str, client: ResilientHTTPClient
     ) -> Any:
         """Return the public key for the given kid.
 
-        Fetches from JWKS URI if the cache is stale or the kid is unknown.
+        A known kid is served from the cache without waiting on the
+        lock; if the set is stale, it is refreshed in the background
+        (stale-while-revalidate). Only an unknown kid waits for a fetch.
 
         Args:
             kid: The key ID from the JWT header.
@@ -174,13 +194,25 @@ class JWKSCache:
         Raises:
             UnauthorizedError: If the kid is not found after a fresh fetch.
         """
+        key = self._keys.get(kid)
+        if key is not None:
+            if (
+                self._is_stale()
+                and self._may_refetch()
+                and (self._refresh_task is None or self._refresh_task.done())
+            ):
+                self._refresh_task = asyncio.create_task(
+                    self._background_refresh(client)
+                )
+            return key
+
         async with self._lock:
-            unknown_kid = kid not in self._keys
-            if (self._is_stale() or unknown_kid) and self._may_refetch():
+            # A request queued behind this lock may find the kid fetched.
+            if kid not in self._keys and self._may_refetch():
                 await self._refresh(client)
-            if kid not in self._keys:
-                raise UnauthorizedError("Token signing key not found")
-            return self._keys[kid]
+        if kid not in self._keys:
+            raise UnauthorizedError("Token signing key not found")
+        return self._keys[kid]
 
 
 async def get_jwks_cache(request: Request) -> JWKSCache:

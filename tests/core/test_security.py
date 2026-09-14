@@ -1,5 +1,6 @@
 """Unit tests for app/core/security.py."""
 
+import asyncio
 import base64
 import json
 import time
@@ -31,7 +32,7 @@ from app.core.security import (
     require_roles,
     validate_token,
 )
-from app.http.client import ResilientHTTPClient
+from app.http.client import ResilientHTTPClient, create_http_client
 
 
 def _fake_http_client(
@@ -406,6 +407,133 @@ async def test_jwks_cache_failed_fetch_backs_off() -> None:
         await cache.get_signing_key("any-kid", client)
 
     assert get_mock.await_count == 1
+
+
+def _jwks_response(public_key: rsa.RSAPublicKey, kid: str) -> Any:
+    """Build a mock JWKS response carrying one RSA key."""
+    jwk_dict = json.loads(RSAAlgorithm.to_jwk(public_key))
+    jwk_dict["kid"] = kid
+    response = MagicMock(spec=Response)
+    response.json.return_value = {"keys": [jwk_dict]}
+    response.raise_for_status.return_value = None
+    return response
+
+
+async def test_jwks_cache_stale_key_served_while_refresh_is_slow(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A slow IdP does not delay requests whose kid is cached."""
+    release = asyncio.Event()
+
+    async def handler(request: httpx2.Request) -> httpx2.Response:
+        await release.wait()
+        return httpx2.Response(200, json={"keys": []})
+
+    client = create_http_client(transport=httpx2.MockTransport(handler))
+    cache = JWKSCache("http://example.com/jwks", ttl_seconds=60)
+    cache._keys = {"kid": rsa_public_key}
+    cache._fetched_at = time.monotonic() - 120
+
+    try:
+        for _ in range(2):
+            key = await asyncio.wait_for(
+                cache.get_signing_key("kid", client), timeout=0.5
+            )
+            assert key is rsa_public_key
+        assert cache._refresh_task is not None
+        assert not cache._refresh_task.done()
+    finally:
+        release.set()
+        if cache._refresh_task is not None:
+            await cache._refresh_task
+        await client.aclose()
+
+
+async def test_jwks_cache_hit_does_not_wait_on_unknown_kid_fetch(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A fetch for an unknown kid holds the lock; cache hits skip it."""
+    release = asyncio.Event()
+
+    async def slow_get(*args: Any, **kwargs: Any) -> Any:
+        await release.wait()
+        raise BadGatewayError("boom")
+
+    cache = JWKSCache("http://example.com/jwks")
+    cache._keys = {"known": rsa_public_key}
+    cache._fetched_at = time.monotonic()
+    client = _client_with_get(AsyncMock(side_effect=slow_get))
+
+    pending = asyncio.create_task(cache.get_signing_key("unknown", client))
+    await asyncio.sleep(0)
+    assert cache._lock.locked()
+    key = await asyncio.wait_for(
+        cache.get_signing_key("known", client), timeout=0.5
+    )
+    assert key is rsa_public_key
+
+    release.set()
+    with pytest.raises(BadGatewayError):
+        await pending
+
+
+async def test_jwks_cache_queued_unknown_kid_reuses_fetch(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """Concurrent requests for a new kid share one short-timeout fetch."""
+    get_mock = AsyncMock(return_value=_jwks_response(rsa_public_key, "new"))
+    cache = JWKSCache("http://example.com/jwks", min_refresh_seconds=0)
+    client = _client_with_get(get_mock)
+
+    keys = await asyncio.gather(
+        cache.get_signing_key("new", client),
+        cache.get_signing_key("new", client),
+    )
+
+    assert len(keys) == 2  # noqa: PLR2004
+    get_mock.assert_awaited_once_with(
+        "http://example.com/jwks",
+        retry_on_status=True,
+        timeout=security_module._JWKS_FETCH_TIMEOUT_SECONDS,
+    )
+
+
+async def test_jwks_cache_background_refresh_failure_is_logged(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A failed background refresh is logged and the cached key served."""
+    cache = JWKSCache("http://example.com/jwks", ttl_seconds=60)
+    cache._keys = {"kid": rsa_public_key}
+    cache._fetched_at = time.monotonic() - 120
+    client = _fake_http_client(side_effect=BadGatewayError("boom"))
+
+    with capture_logs() as cap_logs:
+        key = await cache.get_signing_key("kid", client)
+        assert cache._refresh_task is not None
+        await cache._refresh_task
+
+    assert key is rsa_public_key
+    assert [log["event"] for log in cap_logs] == [
+        "jwks_background_refresh_failed"
+    ]
+
+
+async def test_jwks_cache_background_refresh_skips_fresh_set(
+    rsa_public_key: rsa.RSAPublicKey,
+) -> None:
+    """A background refresh that finds the set already fresh does nothing."""
+    cache = JWKSCache("http://example.com/jwks", ttl_seconds=60)
+    cache._keys = {"kid": rsa_public_key}
+    cache._fetched_at = time.monotonic() - 120
+    client = _fake_http_client(response=MagicMock())
+
+    await cache.get_signing_key("kid", client)
+    # Another refresh lands before the scheduled task runs.
+    cache._fetched_at = time.monotonic()
+    assert cache._refresh_task is not None
+    await cache._refresh_task
+
+    client.get.assert_not_awaited()
 
 
 def test_jwks_cache_init_records_min_refresh() -> None:
