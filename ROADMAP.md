@@ -77,15 +77,15 @@ action beyond a `copier update`.
 
 | Status | Item | Why now |
 | :----- | :--- | :------ |
-| 📋 | **One predicate for the log pipeline** — renderer and logger factory are chosen by the same `ENV` test, or the structlog chain ends in `wrap_for_formatter` when the stdlib factory is in use; a test asserts the `test` profile emits one plain line | `test` is the one profile that gets the console renderer *and* the stdlib route, so every line in `just test` and the `Quality Checks` job is an ANSI string wrapped in JSON |
-| 📋 | **Python 3.12 in CI** — a second matrix entry in `ci.yml` on the floor `requires-python` declares | The suite passes on 3.12.14 today, but no gate checks it; a floor nothing tests is a promise, not a guarantee |
-| 📋 | **Read-only workflow tokens** — `permissions: contents: read` on `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` | Only the audit and docs workflows declare permissions; the other three inherit the repository default |
-| 📋 | **JWKS TTL is a setting** — `QUOIN_OAUTH_JWKS_TTL_SECONDS` beside the refresh backoff, documented in the configuration guide and `.env.example` | The one-hour TTL is a constructor default with no knob, unlike the backoff next to it |
-| 📋 | **Bound the search term** — `UserListQuery.q` gets `max_length=255` to match the columns it searches | An unbounded term feeds two `ILIKE` predicates over a sequential scan |
-| 📋 | **Migration guard flags unbounded data updates** — `op.execute` with an `UPDATE` and no `WHERE` is an advisory flag | `f76b93d38f43` rewrote every row to lowercase emails that were already lowercase; applied migrations are frozen, so the lesson goes into the guard |
-| 📋 | **`.dockerignore`** — `.venv`, `.git`, `htmlcov`, `site`, and the caches | Nothing leaks into the image (`COPY` is scoped), but every build uploads hundreds of megabytes it never reads |
-| 📋 | **Drop `future=True`** from `create_async_engine` | A 1.4-era flag SQLAlchemy 2.0 accepts and ignores |
-| 📋 | **Pagination guide notes the two-statement page** — `total` and `items` are separate statements at READ COMMITTED and can disagree under concurrent writes | Acceptable for a template, surprising if undocumented |
+| ✅ | **One predicate for the log pipeline** — renderer and logger factory are chosen by the same `ENV` test, or the structlog chain ends in `wrap_for_formatter` when the stdlib factory is in use; a test asserts the `test` profile emits one plain line | `test` is the one profile that gets the console renderer *and* the stdlib route, so every line in `just test` and the `Quality Checks` job is an ANSI string wrapped in JSON |
+| ✅ | **Python 3.12 in CI** — a separate `Tests (Python 3.12)` job in `ci.yml` on the floor `requires-python` declares (a matrix would rename the required `Quality Checks` check) | The suite passes on 3.12.14 today, but no gate checks it; a floor nothing tests is a promise, not a guarantee |
+| ✅ | **Read-only workflow tokens** — `permissions: contents: read` on `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` | Only the audit and docs workflows declare permissions; the other three inherit the repository default |
+| ✅ | **JWKS TTL is a setting** — `QUOIN_OAUTH_JWKS_TTL_SECONDS` beside the refresh backoff, documented in the configuration guide and `.env.example` | The one-hour TTL is a constructor default with no knob, unlike the backoff next to it |
+| ✅ | **Bound the search term** — `UserListQuery.q` gets `max_length=255` to match the columns it searches | An unbounded term feeds two `ILIKE` predicates over a sequential scan |
+| ✅ | **Migration guard flags unbounded data updates** — `op.execute` with an `UPDATE` and no `WHERE` is an advisory flag | `f76b93d38f43` rewrote every row to lowercase emails that were already lowercase; applied migrations are frozen, so the lesson goes into the guard |
+| ✅ | **`.dockerignore`** — `.venv`, `.git`, `htmlcov`, `site`, and the caches | Nothing leaks into the image (`COPY` is scoped), but every build uploads hundreds of megabytes it never reads |
+| ✅ | **Drop `future=True`** from `create_async_engine` | A 1.4-era flag SQLAlchemy 2.0 accepts and ignores |
+| ✅ | **Pagination guide notes the two-statement page** — `total` and `items` are separate statements at READ COMMITTED and can disagree under concurrent writes | Acceptable for a template, surprising if undocumented |
 
 ---
 
@@ -245,7 +245,6 @@ instead). Empty is the steady state, not a gap in review.
 
 | Status | Issue | Found |
 | :----- | :---- | :---- |
-| 📋 `0.16` | In the `test` profile every log line is a console-rendered ANSI string wrapped in JSON | 2026-09-13 audit (B4) |
 
 ---
 

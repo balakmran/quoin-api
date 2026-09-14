@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+### Added
+
+- **CI**: a `Tests (Python 3.12)` job runs the suite on the
+  `requires-python` floor. Update-safe.
+- **Auth**: `QUOIN_OAUTH_JWKS_TTL_SECONDS` (default `3600`) sets how long
+  a fetched JWKS stays fresh. Update-safe.
+- **Migrations**: the migration guard flags an `op.execute` `UPDATE` with
+  no `WHERE`. Update-safe.
+- **Docker**: a `.dockerignore` keeps `.venv`, `.git`, caches, and build
+  output out of the build context. Update-safe.
+
+### Changed
+
+- **CI**: `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` run
+  with a read-only `contents: read` token. Update-safe.
+- **Users**: `q` on `GET /api/v1/users/` is limited to 255 characters;
+  a longer term is a `422`. Update-safe.
+
+### Fixed
+
+- **Logging**: the `test` profile prints plain console lines instead of
+  console lines wrapped in JSON. Update-safe.
+
 ## [0.15.0] - 2026-09-13
 
 Hostile-input hardening: the fixes from the 2026-09-13 audit for
