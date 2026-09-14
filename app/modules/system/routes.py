@@ -27,6 +27,8 @@ async def root(request: Request) -> HTMLResponse:
             "app_version": metadata.VERSION,
             "app_description": metadata.APP_DESCRIPTION,
             "repository_url": metadata.REPOSITORY_URL,
+            # None in production, where the Swagger link would be a 404.
+            "docs_url": request.app.docs_url,
             "copyright_owner": metadata.COPYRIGHT_OWNER,
             "copyright_year": datetime.now(UTC).year,
         },

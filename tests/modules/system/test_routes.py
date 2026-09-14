@@ -1,3 +1,4 @@
+import re
 from unittest.mock import AsyncMock
 
 import pytest
@@ -32,6 +33,40 @@ async def test_root(app: FastAPI):
     assert response.status_code == status.HTTP_200_OK
     assert "text/html" in response.headers["content-type"]
     assert "INITIALIZING" in response.text
+
+
+async def _landing_page(app: FastAPI) -> str:
+    """Render the landing page and return its HTML."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/")
+    assert response.status_code == status.HTTP_200_OK
+    return response.text
+
+
+@pytest.mark.asyncio
+async def test_root_has_no_inline_script(app: FastAPI):
+    """The CSP blocks inline handlers and scripts; the page must use none."""
+    html = await _landing_page(app)
+
+    assert re.findall(r"<[^>]*\son[a-z]+\s*=", html) == []
+    assert re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", html) == []
+
+
+@pytest.mark.asyncio
+async def test_root_links_docs_only_when_enabled(app: FastAPI):
+    """The Swagger link is omitted when the docs route is not registered."""
+    assert 'href="/docs"' in await _landing_page(app)
+
+    app.docs_url = None
+    assert 'href="/docs"' not in await _landing_page(app)
+
+
+def test_no_oauth2_redirect_route(app: FastAPI):
+    """Swagger's OAuth2 redirect page, an inline script, is not served."""
+    paths = {getattr(route, "path", None) for route in app.routes}
+    assert "/docs/oauth2-redirect" not in paths
 
 
 @pytest.mark.asyncio

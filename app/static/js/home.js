@@ -101,15 +101,16 @@
   draw();
 })();
 
-// Copy CLI command
-const copyCloneCmd = () => {
+// Copy CLI command. Bound here, not with an onclick attribute: the CSP
+// blocks inline event handlers.
+document.getElementById('copy-btn')?.addEventListener('click', () => {
   navigator.clipboard.writeText('git clone https://github.com/balakmran/quoin-api.git');
   const copyIcon = document.getElementById('copy-icon');
   const checkIcon = document.getElementById('check-icon');
   copyIcon.hidden = true;
   checkIcon.hidden = false;
   setTimeout(() => { copyIcon.hidden = false; checkIcon.hidden = true; }, 1800);
-};
+});
 
 // Status LEDs
 let healthOK = true, readyOK = true;
