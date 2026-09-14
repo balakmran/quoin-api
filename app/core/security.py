@@ -259,6 +259,7 @@ async def get_jwks_cache(request: Request) -> JWKSCache:
             raise _not_configured("QUOIN_OAUTH_JWKS_URI")
         cache = JWKSCache(
             settings.OAUTH_JWKS_URI,
+            ttl_seconds=settings.OAUTH_JWKS_TTL_SECONDS,
             min_refresh_seconds=settings.OAUTH_JWKS_MIN_REFRESH_SECONDS,
         )
         request.app.state.jwks_cache = cache

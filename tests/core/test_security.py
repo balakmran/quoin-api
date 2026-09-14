@@ -570,6 +570,7 @@ async def test_get_jwks_cache_creates_and_stores_instance(
         MagicMock(
             OAUTH_JWKS_URI="http://example.com/jwks",
             OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0,
+            OAUTH_JWKS_TTL_SECONDS=_TEST_TTL_SECONDS,
         ),
     )
     state = SimpleNamespace()
@@ -579,6 +580,7 @@ async def test_get_jwks_cache_creates_and_stores_instance(
 
     assert isinstance(cache, JWKSCache)
     assert cache._uri == "http://example.com/jwks"
+    assert cache._ttl == _TEST_TTL_SECONDS
     # Stored on app.state so the next call reuses the same instance
     # rather than dropping and refetching the keys (S2/Improvement 6).
     assert state.jwks_cache is cache

@@ -223,6 +223,8 @@ class Settings(BaseSettings):
     # kid — bounds outbound calls when tokens with garbage kids are
     # sprayed (negative cache / backoff).
     OAUTH_JWKS_MIN_REFRESH_SECONDS: float = 30.0
+    # How long a fetched key set is fresh before a background refresh.
+    OAUTH_JWKS_TTL_SECONDS: int = 3600
 
     # Outbound HTTP client (finer backoff/breaker/pool tuning lives as
     # constants in app/http/client.py)
