@@ -1,0 +1,12 @@
+# The Dockerfile COPYs only what it needs; this keeps the build context
+# small. Never exclude pyproject.toml, uv.lock, README.md, app/, alembic/.
+.git
+.venv
+htmlcov
+site
+.coverage*
+.pytest_cache
+.ruff_cache
+**/__pycache__
+.env
+.env.*
