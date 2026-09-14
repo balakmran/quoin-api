@@ -6,6 +6,8 @@
 
 - **Auth**: a JWT whose header PyJWT rejects (a non-string `kid`, an
   unsupported `crit`) is a `401`, not a `500`. Update-safe.
+- **Health**: `/ready` is a `503` when the database is unreachable,
+  not a `500`. Update-safe.
 
 ## [0.14.0] - 2026-09-13
 
