@@ -27,35 +27,29 @@ hello-world they have to grow themselves.
 
 ## Key Highlights
 
-- **Async-first** — FastAPI with async PostgreSQL via `asyncpg` and
-  connection pooling
-- **Type-safe** — 100% annotated, checked by `ty` and linted by `ruff`
 - **Clean architecture** — domain-driven modules:
   route → service → repository → Postgres
+- **Async-first** — FastAPI with async PostgreSQL via `asyncpg` and
+  connection pooling
 - **Auth built in** — OAuth 2.0 / OIDC JWT validation and role-based
   access with `require_roles`
-  ([guide](docs/guides/authentication.md))
-- **Consistent errors** — domain exceptions rendered as RFC 9457
-  Problem Details ([guide](docs/guides/error-handling.md))
-- **List endpoints done right** — pagination and sorting
-  ([guide](docs/guides/pagination.md))
-- **Data-safety patterns** — soft delete
-  ([guide](docs/guides/soft-delete.md)) and optimistic concurrency
-  ([guide](docs/guides/optimistic-concurrency.md))
-- **API evolution** — `/api/v1/` prefix and endpoint deprecation
-  signalling ([guide](docs/guides/deprecating-endpoints.md))
-- **Observable** — OpenTelemetry tracing, Structlog structured logs,
-  health/readiness probes ([guide](docs/guides/observability.md))
 - **Production-minded** — graceful shutdown, non-root Docker image,
   and a shared outbound HTTP client
-  ([guide](docs/guides/outbound-http.md))
-- **Docs site included** — [Zensical](https://zensical.org/) guides
-  plus an API reference generated from docstrings, deployed to GitHub
-  Pages by CI
+- **Observable** — OpenTelemetry tracing, Structlog structured logs,
+  health/readiness probes
+- **Consistent errors** — domain exceptions rendered as RFC 9457
+  Problem Details
+- **Type-safe** — 100% annotated, checked by `ty` and linted by `ruff`
 - **Quality gates everywhere** — `just check`, prek commit/push hooks,
   and CI
+- **List endpoints done right** — pagination and sorting
+- **Data-safety patterns** — soft delete and optimistic concurrency
+- **API evolution** — `/api/v1/` prefix and endpoint deprecation
+  signalling
 - **AI-ready** — project-specific Claude Code skills,
   quality-enforcement hooks, and subagents, pre-wired
+- **Docs site included** — guides plus an API reference generated from
+  docstrings, deployed to GitHub Pages by CI
 
 ## Start a New Project
 
