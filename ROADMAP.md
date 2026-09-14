@@ -24,15 +24,13 @@ The template contract is locked. `0.9.0` shipped pagination, soft
 delete, and deprecation; `0.10.0` the stability policy; `0.11.0` to
 `0.13.0` the correctness fixes and the CI that proves a generated
 project builds and updates; `0.14.0` the day-two proof. The 2026-09-13
-full audit that followed it found no High, but it found the edges the
-suite never reaches: a JWT header PyJWT now rejects, a database that is
-down, a forged `Host`, one log profile, one HTML attribute. `0.15` and
-`0.16` close every one of those findings so the release candidate
-starts with nothing open.
+full audit that followed found no High; `0.15.0` closed its request-path
+findings and `0.16.0` its operational ones. The Known Correctness Issues
+table is empty, so the next tag is the release candidate.
 
-**`0.10.0` was the last feature release before `1.0`.** `0.15` and
-`0.16` are fix releases: no backlog item is promoted, nobody is blocked
-on one, and after `1.0` a feature is an ordinary minor release.
+**`0.10.0` was the last feature release before `1.0`.** Everything since
+has been fixes and proof; after `1.0` a feature is an ordinary minor
+release.
 
 The backlog lists only demand-gated features. Operational concerns
 (alerting, deploy runbooks, backups) belong in your infrastructure repo.
@@ -44,66 +42,20 @@ OpenTelemetry, with no vendor-specific tooling.
 
 ---
 
-## v0.15.0 — Hostile-input hardening
-
-Theme: the request path under inputs the suite never sent. Every item
-is a confirmed bug or a hardening gap from the 2026-09-13 audit, each
-lands with the regression test that would have caught it, and each
-touches only `app/core` or the two built-in UIs. Adopters see two
-default changes, both called out in the changelog: the default CSP no
-longer allows `cdn.jsdelivr.net` scripts on every route, and the Host
-check is a QuoinAPI middleware rather than Starlette's.
-
-| Status | Item | Why now |
-| :----- | :--- | :------ |
-| ✅ | **Malformed JWT headers are a `401`** — `validate_token` catches `jwt.InvalidTokenError` (the parent of `DecodeError`) around `get_unverified_header`; tests send a non-string `kid` and an unsupported `crit` | PyJWT 2.10+ validates the header there; a caller with no credentials can log a traceback at ERROR on every request, and the authentication guide promises a `401` |
-| ✅ | **`/ready` is a `503` whenever the check fails** — the probe catches `Exception`, not `SQLAlchemyError`; a test points the engine at a closed port. The global handler still logs the `503` at ERROR, as it does every 5xx | asyncpg's connect failure is a plain `OSError` that SQLAlchemy never wraps, so a database outage is a `500` with a traceback per poll, and the deployment guide says `503` |
-| ✅ | **JWKS stale-while-revalidate** — `get_signing_key` reads the key set without the lock, takes it only around the refresh, serves a cached key while a stale set refreshes, and fetches with a short dedicated timeout; a slow `MockTransport` test pins the latency bound | The refresh holds the lock for up to ~33 s of retries, longer than the 30 s request timeout, so a slow IdP turns every request on the worker into a `504`, cache hits included |
-| ✅ | **Host rejection is problem-details** — a pure-ASGI host check sends the same RFC 9457 `400` as every other manufactured error; the CORS preflight rejection is documented as the one `text/plain` exception | A wrong `QUOIN_ALLOWED_HOSTS` is the likeliest production misconfiguration, and its symptom should look like every other error; the contract hook cannot see it because the fixture's `Host` is always allowed |
-| ✅ | **CORS guard covers the origin list** — `configure_cors` also rejects `*` in `QUOIN_BACKEND_CORS_ORIGINS` with `allow_credentials` outside development | Starlette reflects the request's `Origin` for that combination, the one footgun the guard exists to catch and the one it skipped |
-| ✅ | **Narrow the default CSP** — `script-src 'self'`; the fonts and icon hosts move to a scoped policy for `/`, and the docs policies keep `cdn.jsdelivr.net` | Only `/docs` and `/redoc` load from jsdelivr, and both already have their own policy; an XSS under the default policy could load any script it hosts |
-| ✅ | **Landing page under its own CSP** — the `onclick` attribute moves into `home.js`; the `/docs` link is hidden when docs are disabled; `swagger_ui_oauth2_redirect_url` is `None`; a test renders the page and greps for inline handlers | The copy button is blocked today, the link is a `404` in production, and the redirect page carries an inline script nothing under `HTTPBearer` uses |
-| ✅ | **Error bodies stop naming settings** — the three "OAuth not configured" `401`s and the host-less-URL `500` return generic text and log the specifics | Deployment errors belong in the log line, not in a body any caller can read |
-| ✅ | **`504` closes the connection** — `TimeoutMiddleware` passes `close=True` like the `413` and `500` paths | A request that times out before its body was read leaves a reused keep-alive connection mid-body |
-| ✅ | **Docs drift rows land with their fix** — deployment (`503`), error handling (the preflight exception), security (no inline handlers), authentication (`401` for a bad header) | The four rows in the audit each trace to a bug above, not to neglect; fixing one without the other reopens the drift |
-
----
-
-## v0.16.0 — Operational hygiene
-
-Theme: what an operator or a CI run sees, none of it on the request
-path. Configuration, logging, build, and the gate itself. No adopter
-action beyond a `copier update`.
-
-| Status | Item | Why now |
-| :----- | :--- | :------ |
-| ✅ | **One predicate for the log pipeline** — renderer and logger factory are chosen by the same `ENV` test, or the structlog chain ends in `wrap_for_formatter` when the stdlib factory is in use; a test asserts the `test` profile emits one plain line | `test` is the one profile that gets the console renderer *and* the stdlib route, so every line in `just test` and the `Quality Checks` job is an ANSI string wrapped in JSON |
-| ✅ | **Python 3.12 in CI** — a separate `Tests (Python 3.12)` job in `ci.yml` on the floor `requires-python` declares (a matrix would rename the required `Quality Checks` check) | The suite passes on 3.12.14 today, but no gate checks it; a floor nothing tests is a promise, not a guarantee |
-| ✅ | **Read-only workflow tokens** — `permissions: contents: read` on `ci.yml`, `scaffold-smoke.yml`, and `copier-update.yml` | Only the audit and docs workflows declare permissions; the other three inherit the repository default |
-| ✅ | **JWKS TTL is a setting** — `QUOIN_OAUTH_JWKS_TTL_SECONDS` beside the refresh backoff, documented in the configuration guide and `.env.example` | The one-hour TTL is a constructor default with no knob, unlike the backoff next to it |
-| ✅ | **Bound the search term** — `UserListQuery.q` gets `max_length=255` to match the columns it searches | An unbounded term feeds two `ILIKE` predicates over a sequential scan |
-| ✅ | **Migration guard flags unbounded data updates** — `op.execute` with an `UPDATE` and no `WHERE` is an advisory flag | `f76b93d38f43` rewrote every row to lowercase emails that were already lowercase; applied migrations are frozen, so the lesson goes into the guard |
-| ✅ | **`.dockerignore`** — `.venv`, `.git`, `htmlcov`, `site`, and the caches | Nothing leaks into the image (`COPY` is scoped), but every build uploads hundreds of megabytes it never reads |
-| ✅ | **Drop `future=True`** from `create_async_engine` | A 1.4-era flag SQLAlchemy 2.0 accepts and ignores |
-| ✅ | **Pagination guide notes the two-statement page** — `total` and `items` are separate statements at READ COMMITTED and can disagree under concurrent writes | Acceptable for a template, surprising if undocumented |
-
----
-
 ## v1.0.0-rc.1 — Rehearsal
 
 Cut a pre-release tag rather than a `0.17`. It costs nothing and buys
 two things: the `v*` workflows run against a candidate that can still
 be withdrawn, and the launch checklist below is executed once for real
-before it counts. Cut it with `just bump major --rc` and `just tag` once
-`0.16` ships; the Copier Update Check then verifies `v0.16.0 →
+before it counts. Cut it from `0.16.0` with `just bump major --rc` and
+`just tag`; the Copier Update Check then verifies `v0.16.0 →
 v1.0.0-rc.1` and `v0.15.0 → v1.0.0-rc.1` with the updated project's
 gate.
 
 Scope: **fixes only** — anything that fails the checklist becomes
 `rc.2`. If the checklist passes clean, `1.0.0` is the same commit with a
-version bump. The audit findings are deliberately *not* rc material:
-`0.15` and `0.16` exist so the candidate starts with the Known
-Correctness Issues table empty rather than emptying it under the rc.
+version bump. The candidate starts with nothing open: `0.15` and `0.16`
+closed the 2026-09-13 audit before the rc rather than under it.
 
 ---
 
