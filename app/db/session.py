@@ -25,7 +25,6 @@ def create_db_engine(url: str | None = None) -> AsyncEngine:
     return create_async_engine(
         url or str(settings.DATABASE_URL),
         echo=False,
-        future=True,
         pool_size=settings.DB_POOL_SIZE,
         max_overflow=settings.DB_MAX_OVERFLOW,
         pool_timeout=settings.DB_POOL_TIMEOUT,
