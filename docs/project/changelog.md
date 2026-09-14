@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-13
+
+Operational hygiene: the remaining 2026-09-13 audit findings, none on
+the request path — logging, CI, configuration, and build.
+
+`copier update` from `0.15.0` is expected to apply cleanly; nothing
+needs manual reconciliation.
+
 ### Added
 
 - **CI**: a `Tests (Python 3.12)` job runs the suite on the
