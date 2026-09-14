@@ -144,6 +144,9 @@ QUOIN_OAUTH_SUPERUSER_ENABLED=True
 
 # Backoff: min seconds between JWKS refetches for an unknown kid
 QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
+
+# Seconds a fetched key set is fresh before a background refresh
+QUOIN_OAUTH_JWKS_TTL_SECONDS=3600
 ```
 
 | Variable | Description | Default |
@@ -155,6 +158,7 @@ QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
 | `QUOIN_OAUTH_SUPERUSER_ROLE` | Role that bypasses every `require_roles()` check | `api.superuser` |
 | `QUOIN_OAUTH_SUPERUSER_ENABLED` | Whether the bypass applies at all | `true` |
 | `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS` | Min seconds between JWKS refetches triggered by an unknown `kid` | `30.0` |
+| `QUOIN_OAUTH_JWKS_TTL_SECONDS` | Seconds a fetched key set is fresh; a stale set is still served while it refreshes in the background | `3600` |
 
 !!! warning "All three trust anchors are required"
     `validate_token` rejects every request unless

@@ -6,6 +6,8 @@
 
 - **CI**: a `Tests (Python 3.12)` job runs the suite on the
   `requires-python` floor. Update-safe.
+- **Auth**: `QUOIN_OAUTH_JWKS_TTL_SECONDS` (default `3600`) sets how long
+  a fetched JWKS stays fresh. Update-safe.
 
 ### Changed
 

@@ -129,13 +129,13 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_HTTP_TIMEOUT_SECONDS` | Outbound request timeout in seconds (all phases)   | `10.0`                                              |
 | `QUOIN_HTTP_RETRY_ATTEMPTS`  | Total attempts per outbound call (`1` = no retry)  | `3`                                                 |
 
-The seven `QUOIN_OAUTH_*` settings are deliberately not repeated here —
+The eight `QUOIN_OAUTH_*` settings are deliberately not repeated here —
 they only make sense alongside the token-validation rules they drive.
 See the [Authentication guide](authentication.md#configuration) for
 `QUOIN_OAUTH_JWKS_URI`, `QUOIN_OAUTH_ISSUER`, `QUOIN_OAUTH_AUDIENCE`,
 `QUOIN_OAUTH_ROLES_CLAIM`, `QUOIN_OAUTH_SUPERUSER_ROLE`,
-`QUOIN_OAUTH_SUPERUSER_ENABLED`, and
-`QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`. All three trust anchors are
+`QUOIN_OAUTH_SUPERUSER_ENABLED`, `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS`,
+and `QUOIN_OAUTH_JWKS_TTL_SECONDS`. All three trust anchors are
 **required in production** — `create_app()` refuses to boot without
 them, and so is `QUOIN_ALLOWED_HOSTS`: the development default rejects
 every real `Host` header with a 400, which reads as an outage rather
