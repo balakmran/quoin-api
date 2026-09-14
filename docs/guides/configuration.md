@@ -120,6 +120,7 @@ QUOIN_POSTGRES_HOST=your-prod-db-host
 | `QUOIN_SECURITY_HSTS_INCLUDE_SUBDOMAINS` | Add `includeSubDomains` to HSTS         | `true`                                              |
 | `QUOIN_SECURITY_HSTS_PRELOAD` | Add `preload` to HSTS header                       | `false`                                             |
 | `QUOIN_SECURITY_CSP`         | `Content-Security-Policy` header value              | See [Security guide](security.md#content-security-policy) |
+| `QUOIN_SECURITY_CSP_HOME`    | `Content-Security-Policy` for the `/` landing page  | See [Security guide](security.md#content-security-policy) |
 | `QUOIN_SECURITY_CSP_DOCS`    | `Content-Security-Policy` for `/docs` only          | See [Security guide](security.md#content-security-policy) |
 | `QUOIN_SECURITY_CSP_REDOC`   | `Content-Security-Policy` for `/redoc` only         | See [Security guide](security.md#content-security-policy) |
 | `QUOIN_SECURITY_REFERRER_POLICY` | `Referrer-Policy` header value                  | `strict-origin-when-cross-origin`                   |

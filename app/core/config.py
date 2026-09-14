@@ -150,12 +150,19 @@ class Settings(BaseSettings):
     SECURITY_HSTS_PRELOAD: bool = False
     SECURITY_CSP: str = (
         "default-src 'self'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
-        " https://cdn.jsdelivr.net; "
+        "script-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'"
+    )
+    # The landing page at / loads Google Fonts and simpleicons logos and
+    # carries one inline <style>. Scoped to that path so no other route
+    # allows those hosts.
+    SECURITY_CSP_HOME: str = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' https://cdn.simpleicons.org"
-        " https://fastapi.tiangolo.com; "
-        "script-src 'self' https://cdn.jsdelivr.net; "
+        "img-src 'self' https://cdn.simpleicons.org; "
+        "script-src 'self'; "
         "frame-ancestors 'none'; "
         "base-uri 'self'"
     )

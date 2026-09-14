@@ -278,6 +278,17 @@ def test_default_csp_forbids_inline_scripts() -> None:
     assert "'unsafe-inline'" in settings.SECURITY_CSP_DOCS
 
 
+def test_default_csp_names_no_third_party_host() -> None:
+    """Only the scoped policies allow CDNs; the default allows none."""
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)
+    assert "https://" not in settings.SECURITY_CSP
+    assert "script-src 'self';" in settings.SECURITY_CSP_HOME
+    assert "https://cdn.simpleicons.org" in settings.SECURITY_CSP_HOME
+    assert "cdn.jsdelivr.net" not in settings.SECURITY_CSP_HOME
+    assert "cdn.jsdelivr.net" in settings.SECURITY_CSP_DOCS
+
+
 def test_development_skips_oauth_validation() -> None:
     """Development is a no-op even with no OAuth configured (S3)."""
     with patch.dict(os.environ, {}, clear=True):

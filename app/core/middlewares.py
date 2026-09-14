@@ -239,9 +239,10 @@ class SecurityHeadersMiddleware:
 def _csp_for(path: str) -> str:
     """Return the Content-Security-Policy that applies to a path.
 
-    The two built-in doc UIs each need one directive the app itself
-    does not, so they get their own policy rather than loosening the
-    default for every route. Both are unregistered in production.
+    The landing page and the two built-in doc UIs each need hosts or
+    directives no other route does, so they get their own policy
+    rather than loosening the default. The doc UIs are unregistered in
+    production.
 
     Args:
         path: The request path.
@@ -249,6 +250,8 @@ def _csp_for(path: str) -> str:
     Returns:
         The configured policy for that path, or the default.
     """
+    if path == "/":
+        return settings.SECURITY_CSP_HOME
     if path == DOCS_URL:
         return settings.SECURITY_CSP_DOCS
     if path == REDOC_URL:
