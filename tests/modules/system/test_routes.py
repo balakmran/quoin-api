@@ -5,7 +5,12 @@ from fastapi import FastAPI, status
 from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.db.session import get_session
+from app.core.config import settings
+from app.db.session import (
+    create_db_engine,
+    create_session_factory,
+    get_session,
+)
 from app.main import create_app
 
 
@@ -87,6 +92,26 @@ async def test_ready_failure(app: FastAPI):
     assert body["status"] == status.HTTP_503_SERVICE_UNAVAILABLE
     assert body["detail"] == "Database connection failed"
     assert body["instance"] == "/ready"
+
+
+@pytest.mark.asyncio
+async def test_ready_database_unreachable(app: FastAPI):
+    """A refused connection is a 503: asyncpg raises a bare OSError."""
+    url = settings.model_copy(update={"POSTGRES_PORT": 1}).DATABASE_URL
+    engine = create_db_engine(url=str(url))
+    app.state.session_factory = create_session_factory(engine)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get("/ready")
+    finally:
+        await engine.dispose()
+
+    body = response.json()
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert body["detail"] == "Database connection failed"
 
 
 @pytest.mark.asyncio

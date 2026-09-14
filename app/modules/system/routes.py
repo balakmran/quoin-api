@@ -5,7 +5,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.core import metadata
 from app.core.exceptions import InternalServerError, ServiceUnavailableError
@@ -58,8 +57,10 @@ async def ready(
         )
     if lifecycle.is_shutting_down:
         raise ServiceUnavailableError("Service is shutting down")
+    # Blanket catch: asyncpg's connect failure is a plain OSError that
+    # SQLAlchemy never wraps, and any failure here means "not ready".
     try:
         await session.exec(text("SELECT 1"))  # type: ignore
         return {"status": "ready"}
-    except SQLAlchemyError as e:
+    except Exception as e:
         raise ServiceUnavailableError("Database connection failed") from e
