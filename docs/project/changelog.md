@@ -2,6 +2,40 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Auth**: a cached JWKS key is served without waiting on a refresh; a
+  stale set refreshes in the background, and JWKS fetches time out
+  after 3 s. Update-safe.
+- **Middleware**: the Host check is QuoinAPI's own `TrustedHostMiddleware`
+  and rejects with an RFC 9457 `400`. Starlette's `www.` redirect is
+  gone; adopters relying on it add the `www.` host to
+  `QUOIN_ALLOWED_HOSTS`.
+- **CORS**: outside development, `*` in `QUOIN_BACKEND_CORS_ORIGINS`
+  with credentials allowed fails at startup. Adopters: list the
+  origins explicitly.
+- **Security headers**: the default CSP is `script-src 'self'` with no
+  third-party hosts; the landing page's hosts move to the new
+  `QUOIN_SECURITY_CSP_HOME` for `/`. Adopters who set
+  `QUOIN_SECURITY_CSP` for their own pages are unaffected; pages
+  relying on the old default's CDN hosts must add them.
+
+### Fixed
+
+- **Landing page**: the copy button works under the CSP (bound in
+  `home.js`), and the Swagger link is hidden when docs are disabled.
+  Swagger's unused `/docs/oauth2-redirect` route is no longer
+  registered. Update-safe.
+- **Middleware**: a `504` from `TimeoutMiddleware` sends
+  `Connection: close`, like the `413` and `500`. Update-safe.
+- **Errors**: the "OAuth not configured" `401`s and the host-less
+  outbound URL `500` no longer name settings or URLs in the body; the
+  specifics are logged. Update-safe.
+- **Auth**: a JWT whose header PyJWT rejects (a non-string `kid`, an
+  unsupported `crit`) is a `401`, not a `500`. Update-safe.
+- **Health**: `/ready` is a `503` when the database is unreachable,
+  not a `500`. Update-safe.
+
 ## [0.14.0] - 2026-09-13
 
 Day-two proof: CI now rehearses what an adopter does after generating —
