@@ -336,6 +336,14 @@ headers, but it does get the outer SecurityHeaders/RequestID treatment.
 `CORSMiddleware` still wraps `TimeoutMiddleware`/`RequestSizeLimitMiddleware`,
 so their 504/413 responses do carry CORS headers.
 
+`TrustedHostMiddleware` is QuoinAPI's own, not Starlette's: its `400`
+is `application/problem+json` like every other error, so a wrong
+`QUOIN_ALLOWED_HOSTS` looks like any other failure. Patterns are exact
+hosts, `*.example.com`, or `*`; Starlette's `www.` redirect is not
+kept. A CORS preflight rejected by `CORSMiddleware` (disallowed origin,
+method, or header) is still Starlette's `text/plain` `400`, the one
+exception: only the browser reads it.
+
 `UnhandledErrorMiddleware` is innermost for the same reason, inverted:
 it catches an escaping exception *before* it unwinds past the stack, so
 the 500 it builds travels back out through CORS, `SecurityHeaders`, and

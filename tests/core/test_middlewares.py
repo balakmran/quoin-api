@@ -10,7 +10,6 @@ import pytest
 import structlog
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from httpx2 import ASGITransport, AsyncClient, Response
 from starlette.types import Message, Receive, Scope, Send
 from structlog.testing import capture_logs
@@ -23,6 +22,7 @@ from app.core.middlewares import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
     TimeoutMiddleware,
+    TrustedHostMiddleware,
     UnhandledErrorMiddleware,
     _safe_request_id,
     configure_cors,
@@ -900,8 +900,92 @@ async def test_trusted_host_400_carries_security_headers() -> None:
         )
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.headers["content-type"] == "application/problem+json"
+    assert response.headers["connection"] == "close"
+    assert response.json() == {
+        "type": "urn:quoin:error:bad_request_error",
+        "title": "Bad Request",
+        "status": 400,
+        "detail": "Invalid host header",
+        "instance": "/health",
+    }
     assert "Access-Control-Allow-Origin" not in response.headers
     _assert_security_and_request_id_headers(response)
+
+
+async def _ok_app(scope: Scope, receive: Receive, send: Send) -> None:
+    """Downstream ASGI app that answers 200 to anything it receives."""
+    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.body", "body": b""})
+
+
+async def _host_status(allowed: list[str], host: str) -> int:
+    """Return the status TrustedHostMiddleware gives a request for ``host``."""
+    app = TrustedHostMiddleware(_ok_app, allowed_hosts=allowed)
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/", headers={"Host": host})
+    return response.status_code
+
+
+@pytest.mark.parametrize(
+    ("allowed", "host", "expected"),
+    [
+        (["api.example.com"], "api.example.com:8443", 200),
+        (["*.example.com"], "a.b.example.com", 200),
+        (["*.example.com"], "example.com.evil.io", 400),
+        (["*.example.com"], "badexample.com", 400),
+        (["*"], "anything.invalid", 200),
+        (["api.example.com"], "www.api.example.com", 400),
+    ],
+)
+async def test_trusted_host_matching(
+    allowed: list[str], host: str, expected: int
+) -> None:
+    """Exact hosts, subdomain wildcards, ports, and allow-any."""
+    assert await _host_status(allowed, host) == expected
+
+
+@pytest.mark.parametrize("pattern", ["api.*.com", "*example.com", "*.*.com"])
+def test_trusted_host_rejects_invalid_pattern(pattern: str) -> None:
+    """A wildcard anywhere but a leading ``*.`` is a startup error."""
+    with pytest.raises(ValueError, match="wildcards must be"):
+        TrustedHostMiddleware(_ok_app, allowed_hosts=[pattern])
+
+
+async def test_trusted_host_closes_websocket_with_bad_host() -> None:
+    """A websocket handshake with a forged Host is closed, not accepted."""
+    sent: list[Message] = []
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    async def receive() -> Message:
+        return {"type": "websocket.connect"}  # pragma: no cover
+
+    middleware = TrustedHostMiddleware(_ok_app, allowed_hosts=["test"])
+    scope: Scope = {
+        "type": "websocket",
+        "path": "/ws",
+        "headers": [(b"host", b"evil.example.com")],
+    }
+    await middleware(scope, receive, send)
+
+    assert sent == [{"type": "websocket.close", "code": 1008}]
+
+
+async def test_trusted_host_passes_lifespan_scope() -> None:
+    """Non-HTTP, non-websocket scopes are not Host-checked."""
+    seen: list[str] = []
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        seen.append(scope["type"])
+
+    middleware = TrustedHostMiddleware(downstream, allowed_hosts=["test"])
+    await middleware({"type": "lifespan"}, None, None)  # type: ignore
+
+    assert seen == ["lifespan"]
 
 
 @pytest.mark.asyncio
