@@ -94,28 +94,28 @@ Toggle via `QUOIN_SECURITY_HEADERS_ENABLED=false` if your reverse proxy
 
 ### Content-Security-Policy
 
-The default CSP accommodates the built-in homepage (Google Fonts,
-simpleicons CDN, and an inline `<style>` block):
+The default CSP (`QUOIN_SECURITY_CSP`) allows only same-origin
+resources and no third-party host:
 
 ```
 default-src 'self';
-style-src  'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
-font-src   'self' https://fonts.gstatic.com;
-img-src    'self' https://cdn.simpleicons.org https://fastapi.tiangolo.com;
-script-src 'self' https://cdn.jsdelivr.net;
+script-src 'self';
 frame-ancestors 'none';
 base-uri 'self'
 ```
 
-The default covers two built-in UIs:
+Three built-in pages need more, and each gets a policy scoped to its
+exact path rather than widening the default for every route:
 
-- **Homepage** — Google Fonts (`fonts.googleapis.com` / `fonts.gstatic.com`)
-  and tech-logo icons (`cdn.simpleicons.org`). Its behaviour lives in
-  `app/static/js/home.js`, not in an inline `<script>`.
+- **Homepage** (`/`, `QUOIN_SECURITY_CSP_HOME`) — Google Fonts
+  (`fonts.googleapis.com` / `fonts.gstatic.com`), tech-logo icons
+  (`cdn.simpleicons.org`), and one inline `<style>` block. Its
+  behaviour lives in `app/static/js/home.js`, not in an inline
+  `<script>`.
 - **Swagger UI** (`/docs`) and **ReDoc** (`/redoc`) — FastAPI loads
   their UI assets and favicon from `cdn.jsdelivr.net` and
-  `fastapi.tiangolo.com`. Both need a directive the app itself does
-  not; see below.
+  `fastapi.tiangolo.com`, and each needs a directive no other page
+  does; see below.
 
 ### The doc-UI exceptions
 

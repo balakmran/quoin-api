@@ -14,6 +14,11 @@
 - **CORS**: outside development, `*` in `QUOIN_BACKEND_CORS_ORIGINS`
   with credentials allowed fails at startup. Adopters: list the
   origins explicitly.
+- **Security headers**: the default CSP is `script-src 'self'` with no
+  third-party hosts; the landing page's hosts move to the new
+  `QUOIN_SECURITY_CSP_HOME` for `/`. Adopters who set
+  `QUOIN_SECURITY_CSP` for their own pages are unaffected; pages
+  relying on the old default's CDN hosts must add them.
 
 ### Fixed
 

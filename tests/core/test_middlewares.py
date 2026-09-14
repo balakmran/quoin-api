@@ -578,6 +578,7 @@ async def test_default_csp_on_ordinary_paths(
 @pytest.mark.parametrize(
     ("path", "setting"),
     [
+        ("/", "SECURITY_CSP_HOME"),
         (DOCS_URL, "SECURITY_CSP_DOCS"),
         (REDOC_URL, "SECURITY_CSP_REDOC"),
     ],
