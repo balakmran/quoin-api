@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- **CI**: a `Tests (Python 3.12)` job runs the suite on the
+  `requires-python` floor. Update-safe.
+
 ### Fixed
 
 - **Logging**: the `test` profile prints plain console lines instead of

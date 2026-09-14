@@ -155,15 +155,18 @@ just pr  # Run pre-commit hooks on all files
 ## CI Integration
 
 All quality checks run automatically on every push via GitHub Actions,
-on the Python version pinned in `.python-version` (3.14). The project
-still supports 3.12+ (`requires-python`, ruff's `target-version`); CI
-just doesn't spend a run on each version:
+on the Python version pinned in `.python-version` (3.14):
 
 ```yaml
 # .github/workflows/ci.yml
 - name: Run quality checks
   run: just check
 ```
+
+A second job, **Tests (Python 3.12)**, runs `just test` on the
+`requires-python` floor, so the supported range is tested at both ends.
+Format, lint, and typecheck run only on 3.14; they don't depend on the
+interpreter, and ruff and `ty` already target 3.12.
 
 That one step covers everything, coverage included — the threshold is
 enforced by `fail_under` in `[tool.coverage.report]`
