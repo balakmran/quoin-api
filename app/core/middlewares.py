@@ -493,14 +493,17 @@ def configure_cors(app: FastAPI) -> None:
     ``REQUEST_ID_HEADER`` is always allowed and exposed: a browser client
     needs to send it for correlation and read it to quote in a report.
 
-    Rejects a wildcard in ``allow_methods``, ``allow_headers``, or
-    ``expose_headers`` combined with ``allow_credentials=True`` outside
-    development; browsers do not honour ``*`` for credentialed requests,
-    so that combination silently disables credentialed CORS.
+    Rejects a wildcard in the origin list, ``allow_methods``,
+    ``allow_headers``, or ``expose_headers`` combined with
+    ``allow_credentials=True`` outside development. Starlette answers a
+    wildcard origin with credentials by reflecting the caller's
+    ``Origin``; browsers ignore ``*`` in the other lists, silently
+    disabling credentialed CORS.
     """
     if not settings.BACKEND_CORS_ORIGINS:
         return
 
+    origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
     methods = settings.BACKEND_CORS_ALLOW_METHODS
     headers = _with_request_id_header(settings.BACKEND_CORS_ALLOW_HEADERS)
     expose_headers = _with_request_id_header(
@@ -511,19 +514,21 @@ def configure_cors(app: FastAPI) -> None:
     if (
         settings.ENV != Environment.development
         and allow_credentials
-        and any(map(_has_wildcard, (methods, headers, expose_headers)))
+        and any(map(_has_wildcard, (origins, methods, headers, expose_headers)))
     ):
         raise RuntimeError(
             "CORS misconfiguration: allow_credentials=True with a wildcard "
-            "in allow_methods, allow_headers, or expose_headers is rejected "
-            "outside development. Set QUOIN_BACKEND_CORS_ALLOW_METHODS, "
+            "in origins, allow_methods, allow_headers, or expose_headers is "
+            "rejected outside development. Set "
+            "QUOIN_BACKEND_CORS_ORIGINS, "
+            "QUOIN_BACKEND_CORS_ALLOW_METHODS, "
             "QUOIN_BACKEND_CORS_ALLOW_HEADERS, and "
             "QUOIN_BACKEND_CORS_EXPOSE_HEADERS to explicit lists."
         )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_origins=origins,
         allow_credentials=allow_credentials,
         allow_methods=methods,
         allow_headers=headers,
