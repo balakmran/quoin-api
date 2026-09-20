@@ -17,6 +17,7 @@ from app.core.security import ServicePrincipal, get_current_caller
 # including those of modules nothing else imports yet.
 from app.db.base import SQLModel
 from app.db.session import create_db_engine, create_session_factory, get_session
+from app.http.client import get_http_client
 from app.main import app as fastapi_app
 
 _ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
@@ -210,6 +211,24 @@ def caller_admin() -> ServicePrincipal:
         roles=["users.read", "users.write"],
         claims={},
     )
+
+
+@pytest.fixture
+async def anonymous_client(
+    client: AsyncClient,
+) -> AsyncGenerator[AsyncClient]:
+    """HTTP client carrying no credentials, for asserting 401.
+
+    ``get_token_claims`` rejects a missing Authorization header before
+    it touches the HTTP client, but FastAPI resolves every dependency
+    in the signature first — and ``get_http_client`` raises unless the
+    lifespan ran, which it does not under ``ASGITransport``. Overriding
+    it with a placeholder lets the 401 path be reached; the request is
+    refused before anything dereferences it.
+    """
+    fastapi_app.dependency_overrides[get_http_client] = lambda: None
+    yield client
+    fastapi_app.dependency_overrides.pop(get_http_client, None)
 
 
 @pytest.fixture
