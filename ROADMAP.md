@@ -8,16 +8,6 @@ feedback and shifting priorities.
     This is a living document. Completed items are moved to
     [CHANGELOG.md](changelog.md).
 
-## Status Legend
-
-| Symbol | Meaning |
-| :----- | :------ |
-| ✅ | Completed (unreleased) |
-| 🚧 | In Progress |
-| 📋 | Planned |
-| 💡 | Under Consideration |
-| ❌ | Deferred / Won't Do |
-
 ## Where things stand
 
 The template contract is locked. `0.9.0` shipped pagination, soft
@@ -195,8 +185,8 @@ confirms a correctness bug that isn't fixed in the same change, and
 remove the row once the fix ships (credit it in `CHANGELOG.md`
 instead). Empty is the steady state, not a gap in review.
 
-| Status | Issue | Found |
-| :----- | :---- | :---- |
+| Issue | Found |
+| :---- | :---- |
 
 ---
 
@@ -206,18 +196,18 @@ Documented now so they aren't lost. Promoted into a milestone only when
 real demand surfaces — the bar is "a concrete user is blocked on this",
 not "it would be nice to have".
 
-| Status | Feature | Why deferred |
-| :----- | :------ | :----------- |
-| 💡 | **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
-| 💡 | **OTel Metrics + `/metrics` endpoint** | RED metrics can be derived from the existing OTLP trace stream in the OTel Collector. Direct Prometheus scrape is duplicate plumbing unless a deployer specifically needs it. |
-| 💡 | **Schemathesis contract testing in CI** | Pays off when external consumers lock against the schema. Adds CI minutes and flaky-test risk before that point. |
-| 💡 | **Cursor-based pagination** | Premature unless a module hits million-row tables. Offset pagination is sufficient through `1.0`. |
-| 💡 | **Background task worker** | Persistent async task queue for emails, webhooks, and long-running work; evaluate Arq (asyncio-native) vs Dramatiq (broker-agnostic). |
-| 💡 | **Redis cache layer** | Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale. |
-| 💡 | **Multi-tenancy pattern** | Tenant-scoped query pattern with an example module. |
-| 💡 | **Organizations + memberships + scopes** | Richer authorization model beyond `require_roles`. |
-| 💡 | **API keys** | Hashed at rest, scoped, rotatable; for service-to-service callers. |
-| 💡 | **Read-replica routing** | Repository-layer routing of reads to replicas. Pool sizing itself is already tunable via `QUOIN_DB_POOL_*`. |
+| Feature | Why deferred |
+| :------ | :----------- |
+| **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
+| **OTel Metrics + `/metrics` endpoint** | RED metrics can be derived from the existing OTLP trace stream in the OTel Collector. Direct Prometheus scrape is duplicate plumbing unless a deployer specifically needs it. |
+| **Schemathesis contract testing in CI** | Pays off when external consumers lock against the schema. Adds CI minutes and flaky-test risk before that point. |
+| **Cursor-based pagination** | Premature unless a module hits million-row tables. Offset pagination is sufficient through `1.0`. |
+| **Background task worker** | Persistent async task queue for emails, webhooks, and long-running work; evaluate Arq (asyncio-native) vs Dramatiq (broker-agnostic). |
+| **Redis cache layer** | Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale. |
+| **Multi-tenancy pattern** | Tenant-scoped query pattern with an example module. |
+| **Organizations + memberships + scopes** | Richer authorization model beyond `require_roles`. |
+| **API keys** | Hashed at rest, scoped, rotatable; for service-to-service callers. |
+| **Read-replica routing** | Repository-layer routing of reads to replicas. Pool sizing itself is already tunable via `QUOIN_DB_POOL_*`. |
 
 Of these, the most plausible promotions in rough order of likelihood
 are: background worker, API keys, Redis cache, multi-tenancy. Nothing
