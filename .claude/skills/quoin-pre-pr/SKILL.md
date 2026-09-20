@@ -5,7 +5,7 @@ description: Use this skill whenever the user is about to open a pull request,
   "ship this", "open a PR", "create a pull request", "I'm done with this
   feature", or any phrase that signals the work is complete and heading for
   review. Always run this checklist before creating the PR — do not skip
-  straight to `gh pr create`. Do NOT use for: mid-development commits, the
+  straight to `gh pr create`. Do NOT use for mid-development commits, the
   release tagging flow (that is `quoin-release`), or hotfix branches where
   the changelog entry was already written.
 allowed-tools: Read, Edit, Bash
