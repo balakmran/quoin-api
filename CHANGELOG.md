@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs**: `README.md` now leads with using the template; the Getting
+  Started guide reads correctly inside a generated project. Update-safe.
+
+### Fixed
+
+- **Docs**: corrected stale examples and claims in the deployment,
+  troubleshooting, migrations, testing, observability, architecture, and
+  API-reference pages. The production example now lists the required
+  settings and the migration step. Update-safe.
+
 ## [0.16.0] - 2026-09-13
 
 Operational hygiene: the remaining 2026-09-13 audit findings, none on
