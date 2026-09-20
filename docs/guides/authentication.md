@@ -343,6 +343,53 @@ Example 403:
 
 ---
 
+## Testing
+
+Route tests don't mint real tokens. `read_client` and `admin_client`
+override the `get_current_caller` dependency with a fixed
+`ServicePrincipal`, so a test exercises *your* authorization rules
+without a JWKS round trip:
+
+```python
+async def test_create_user(admin_client: AsyncClient) -> None:
+    """A caller holding users.write may create."""
+    response = await admin_client.post(
+        "/api/v1/users/", json={"email": "new@example.com"}
+    )
+    assert response.status_code == 201
+```
+
+The negative cases are the ones worth writing, and they're the ones
+people skip. An authenticated caller without the role gets `403`; the
+plain `client` fixture leaves `get_current_caller` in place, so a
+request with no `Authorization` header gets `401`:
+
+```python
+async def test_create_user_requires_write(read_client: AsyncClient) -> None:
+    """users.read alone cannot create."""
+    response = await read_client.post(
+        "/api/v1/users/", json={"email": "denied@example.com"}
+    )
+    assert response.status_code == 403
+
+
+async def test_create_user_requires_a_token(client: AsyncClient) -> None:
+    """A missing token is 401, not 403."""
+    response = await client.post(
+        "/api/v1/users/", json={"email": "anon@example.com"}
+    )
+    assert response.status_code == 401
+```
+
+Every protected route deserves all three: the allowed caller, the
+under-privileged caller, and no caller at all. Distinguishing 401 from
+403 matters — collapsing them tells an authenticated client to go and
+re-authenticate, which will not help.
+
+Token validation itself — JWKS fetching, key selection, malformed keys,
+expiry — is already covered in `tests/core/test_security.py`. Don't
+re-test it per route; test your role checks.
+
 ## See Also
 
 - [Configuration Guide](configuration.md)

@@ -248,7 +248,7 @@ byte-for-byte identity. `If-Match` requires the strong comparison
 function, so **weak tags never match** and a `W/"7"` precondition fails
 every time. Emit strong tags for anything you intend to guard.
 
-## Testing it
+## Testing
 
 The project's per-test SAVEPOINT rollback (see [Testing](testing.md))
 gives each test its own transaction, so the two-writer race needs two
@@ -297,7 +297,7 @@ tag returns 412, and a missing header returns your chosen error.
   exception set; add a 428 the same way `PreconditionFailedError` is
   added if you prefer the precise code.
 
-## See also
+## See Also
 
 - [Error Handling](error-handling.md) — domain exceptions and the
   RFC 9457 problem-details contract

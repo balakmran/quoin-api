@@ -138,7 +138,7 @@ generated project ever needs to move off SQLModel, the repository
 pattern already isolates it to `models.py` plus the repositories —
 that migration stays contained regardless of this policy.
 
-## See also
+## See Also
 
 - [Deprecating Endpoints](deprecating-endpoints.md) — the
   RFC 8594 mechanism for your own endpoint-level deprecations.

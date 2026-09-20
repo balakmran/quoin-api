@@ -186,7 +186,7 @@ CVEs still reach you.
 
 ---
 
-## See also
+## See Also
 
 - [API Stability & SemVer](api-stability.md) — what counts as breaking
 - [Release Notes](../project/changelog.md) — the per-version entries

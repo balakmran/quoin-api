@@ -135,7 +135,7 @@ circuit-breaker tuning live as module constants in `app/http/client.py` —
 change them there if a deployment genuinely needs to. The connection pool
 uses httpx2's defaults (100 max connections, 20 keep-alive).
 
-## Testing outbound calls
+## Testing
 
 Inject an `httpx2.MockTransport` via `create_http_client(transport=...)`
 to exercise client behaviour without real network I/O, and use
