@@ -114,29 +114,4 @@ Now that the app is running, here are the logical next steps:
 | Write tests | [Testing](testing.md) |
 | Explore the live API | [localhost:8000/docs](http://localhost:8000/docs) |
 | Work with Claude Code | [AI-Assisted Development](ai-setup.md) |
-
----
-
-## Troubleshooting
-
-### Port Conflicts
-
-If `just dev` fails, check if port **8000** is already in use.
-
-```bash
-# check the process
-lsof -i :8000
-
-# kill the process
-kill -9 $(lsof -ti:8000)
-```
-
-### Database Connection
-
-If the app cannot connect to the database:
-
-1. Ensure the Docker container is running: `docker ps`
-2. Check logs: `docker compose logs db`
-3. Restart the database: `just db`
-
-More fixes are in the [Troubleshooting guide](troubleshooting.md).
+| Fix something that won't start | [Troubleshooting](troubleshooting.md) |

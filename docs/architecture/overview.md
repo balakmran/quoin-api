@@ -28,7 +28,7 @@ graph TB
 
 ## Component Layers
 
-### 1. Application Layer (`app/main.py`)
+### Application Layer (`app/main.py`)
 
 The application factory creates and configures the FastAPI application:
 
@@ -65,7 +65,7 @@ def create_app() -> FastAPI:
 
 ---
 
-### 2. Core Infrastructure (`app/core/`)
+### Core Infrastructure (`app/core/`)
 
 Shared infrastructure every feature module builds on. It is
 template-owned: a module composes these rather than reimplementing
@@ -103,7 +103,7 @@ provides.
 
 ---
 
-### 3. Database Layer (`app/db/`)
+### Database Layer (`app/db/`)
 
 #### Engine Creation (`session.py`)
 
@@ -146,7 +146,7 @@ received the response.
 
 ---
 
-### 4. Feature Modules (`app/modules/`)
+### Feature Modules (`app/modules/`)
 
 Each module follows **Domain-Driven Design** principles:
 
