@@ -1,32 +1,41 @@
 ---
 name: quoin-docs-audit
 description: Use this skill whenever the user wants to verify that QuoinAPI's
-  documentation still matches the code — a docs-accuracy sweep. Triggers
-  include "review the docs for accuracy", "check docs against the code", "audit
-  docs/ for stale info", "are the docs still correct", "do the guides match the
-  implementation", or "find outdated documentation". Do NOT use for fixing a
-  broken docs build (that is `just docb`), writing a brand-new guide for a
-  feature you just shipped (do that inline per the CLAUDE.md docs-coverage
-  rule), or syncing root docs into `docs/project/` (that is `just docb` too).
+  documentation still matches the code — a docs-accuracy sweep, in either
+  direction. Triggers include "review the docs for accuracy", "check docs
+  against the code", "audit docs/ for stale info", "are the docs still
+  correct", "do the guides match the implementation", "find outdated
+  documentation", plus the coverage direction — "is everything documented",
+  "what's missing from the docs", "does every module have a reference page",
+  "find undocumented code". Do NOT use for fixing a broken docs build (that is
+  `just docb`), writing a brand-new guide for a feature you just shipped (do
+  that inline per the CLAUDE.md docs-coverage rule), or syncing root docs into
+  `docs/project/` (that is `just docb` too).
 allowed-tools: Read, Edit, Grep, Glob, Bash, WebFetch
 ---
 
 # Auditing QuoinAPI Docs Against the Code
 
-Periodic drift check: the guides in `docs/guides/` describe behavior that lives
-in code, and the two slip apart over time. This skill is the systematic sweep
-the project has done by hand before ("review all md under docs/ for accuracy",
-"check for old refs to py 3.12"). It is read-and-report first — propose fixes,
-then apply them in the same turn once the user agrees.
+Periodic sweep in **both directions**: docs that no longer match the code
+(drift), and code that no page documents at all (coverage). It is
+read-and-report first — propose fixes, then apply them in the same turn once
+the user agrees.
 
 ## Scope
 
-Audit `docs/guides/*.md` and `README.md` against the live code. Skip
-`docs/project/*.md` — those are build artifacts synced by `just docb` from the
-root files (`CHANGELOG.md`, `CONTRIBUTING.md`, `ROADMAP.md`, `LICENSE`); fix the
-root source, not the synced copy.
+Audit everything under `docs/`, plus `README.md`, `CONTRIBUTING.md`, and
+`SECURITY.md`. Skip `docs/project/*.md` — those are build artifacts synced by
+`just docb` from the root files (`CHANGELOG.md`, `CONTRIBUTING.md`,
+`ROADMAP.md`, `SECURITY.md`, `LICENSE`); fix the root source, not the synced
+copy.
 
-## The high-signal checks
+`docs/api/` and `docs/architecture/` matter as much as `docs/guides/`: the
+reference is where an undocumented module hides, and the architecture overview
+is where duplication accumulates.
+
+## Direction 1 — docs → code (drift)
+
+Start from what a page claims and check it against the code.
 
 1. **Settings table vs `config.py`.** The settings table in
    `docs/guides/configuration.md` must list every `QUOIN_` setting in
@@ -34,7 +43,9 @@ root source, not the synced copy.
    - Settings in code but missing from the table → add them.
    - Settings in the table but gone from code → remove them.
    - Defaults that disagree → fix the doc.
-   Also cross-check `.env.example` carries the same surface.
+   Also cross-check `.env.example` carries the same surface. This is the one
+   check that has always run both ways, and it is the one surface that has
+   never had a coverage gap — which is the whole argument for Direction 2.
 
 2. **Endpoint lists vs routers.** Where a guide enumerates routes, confirm they
    exist in `app/modules/*/routes.py` and `app/api.py`, all under `/api/v1/`.
@@ -69,7 +80,104 @@ root source, not the synced copy.
    `context7` MCP server to confirm current library syntax rather than guessing.
 
 8. **Docs build.** Finish with `just docb` — an audit that breaks the build
-   helps no one.
+   helps no one. It also catches a link to a heading that no longer exists.
+
+## Direction 2 — code → docs (coverage)
+
+Start from the code and check that something documents it. **Reading the docs
+cannot find these**: an undocumented module is mentioned on no page, so nothing
+prompts you to look for it. Run these as commands.
+
+```bash
+# Every app/core module has a section in the Core reference. Sections are
+# anchored by their `**Source:**` link, not by the heading, because a heading
+# rarely matches the filename (config.py -> "Configuration").
+for f in app/core/*.py; do
+  b=$(basename "$f"); [ "$b" = "__init__.py" ] && continue
+  grep -q "app/core/$b" docs/api/core.md || echo "undocumented: app/core/$b"
+done
+
+# Every feature module has a reference page and a nav entry.
+for d in app/modules/*/; do
+  m=$(basename "$d"); [ -f "$d/__init__.py" ] || continue
+  [ -f "docs/api/$m.md" ] || echo "no reference page: docs/api/$m.md"
+  grep -q "api/$m.md" zensical.toml || echo "not in nav: api/$m.md"
+done
+
+# Pages that exist but never made it into the nav.
+for f in $(git ls-files 'docs/*.md' 'docs/**/*.md'); do
+  case "$f" in docs/index.md|docs/project/*) continue;; esac
+  grep -q "${f#docs/}" zensical.toml || echo "orphan page: $f"
+done
+
+# Every domain exception is in both tables that list them.
+grep -oE "^class [A-Za-z]+\([A-Za-z]*Error\)" app/core/exceptions.py |
+  sed -E 's/^class ([A-Za-z]+).*/\1/' | while read -r c; do
+  grep -q "\b$c\b" docs/guides/error-handling.md || echo "missing from error-handling.md: $c"
+  grep -q "\b$c\b" docs/api/core.md || echo "missing from core.md: $c"
+done
+
+# Every middleware class is described somewhere.
+grep -oE "^class [A-Za-z]+Middleware" app/core/middlewares.py | awk '{print $2}' |
+  while read -r c; do
+  grep -rqs "$c" docs/guides docs/api || echo "undocumented middleware: $c"
+done
+```
+
+Coverage items no grep will catch — check them by hand when the matching code
+changed:
+
+- **A new `just` recipe** belongs in the command tables in `CONTRIBUTING.md`
+  and `docs/guides/getting-started.md`, not only in `just --list`.
+- **A new skill, subagent, or hook** changes the counts asserted in three
+  places: `README.md`, `docs/guides/ai-setup.md`, and `ROADMAP.md`. Compare
+  against `ls .claude/skills | wc -l`, `ls .claude/agents | wc -l`, and the
+  hook entries in `.claude/settings.json`.
+- **A new middleware, or a change to the registration order**, belongs in the
+  ordering list in `docs/guides/security.md` and the table in
+  `docs/api/core.md`.
+
+## Duplication between pages
+
+Each page answers one question: `docs/api/` says *what a module provides*,
+`docs/architecture/` says *how the layers fit together*, `docs/guides/` says
+*how to do a task*. The same explanation in two of them will drift apart —
+one gets updated, the other quietly rots. Keep it on the page whose question it
+answers and link from the other.
+
+The reference and the architecture overview collide most often:
+
+```bash
+# Names whose definition is shown in both the reference and architecture.
+python3 - <<'PY'
+import re, subprocess, collections
+FENCE = chr(96) * 3  # built, not written: a literal fence would end this block
+files = subprocess.check_output(
+    ["git", "ls-files", "docs/api/*.md", "docs/architecture/*.md"], text=True
+).split()
+seen = collections.defaultdict(set)
+for f in files:
+    inc = False
+    for line in open(f):
+        s = line.strip()
+        if s.startswith(FENCE):
+            inc = not inc
+            continue
+        m = re.match(r"(?:async )?(?:def|class) ([A-Za-z_]\w*)", s) if inc else None
+        if m:
+            seen[m.group(1)].add(f)
+for name, fs in sorted(seen.items()):
+    if any(x.startswith("docs/api/") for x in fs) and any(
+        x.startswith("docs/architecture/") for x in fs
+    ):
+        print(f"{name}: {', '.join(sorted(fs))}")
+PY
+```
+
+A couple of hits are expected and fine — the decision log shows a `User` model
+to illustrate why SQLModel was chosen, and the architecture overview shows
+`create_user` in its concurrency section. A run that lists most of `app/core/`
+means the architecture page has turned into a second reference.
 
 ## Output
 
@@ -81,6 +189,15 @@ over.
 
 ## Things that bite
 
+- **Auditing in one direction only.** This is what a 2026-09 sweep got wrong:
+  every check but the settings table started from a doc and validated it
+  against the code, which can only find statements that are *wrong*. It is
+  structurally blind to what is *absent* — four `app/core` modules
+  (`security`, `schemas`, `lifecycle`, `openapi`) and the whole `system`
+  module had no reference at all, and nothing flagged it, because no page
+  mentioned them. Run Direction 2 as commands before reading a single page.
+- **Skipping `docs/api/` and `docs/architecture/`.** The same sweep scoped
+  itself to `docs/guides/` and `README.md`, which is where the gaps were not.
 - **Editing `docs/project/*` directly.** Those are generated; your change will
   be overwritten on the next `just docb`. Edit the root source file.
 - **Assuming a mismatch means the doc is wrong.** Sometimes the code drifted.
