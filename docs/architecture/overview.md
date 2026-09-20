@@ -67,131 +67,39 @@ def create_app() -> FastAPI:
 
 ### 2. Core Infrastructure (`app/core/`)
 
-Shared infrastructure components used across the application.
+Shared infrastructure every feature module builds on. It is
+template-owned: a module composes these rather than reimplementing
+them, which is what keeps `copier update` diffs small.
 
-#### Configuration (`config.py`)
+| Module | Responsibility |
+| :--- | :--- |
+| [`config.py`](../api/core.md#configuration) | Typed settings from the environment, with a fail-fast production check |
+| [`metadata.py`](../api/core.md#metadata) | App name, version, and OpenAPI descriptions |
+| [`logging.py`](../api/core.md#logging) | Structlog pipeline; JSON in production, console elsewhere |
+| [`exceptions.py`](../api/core.md#exceptions) | The `QuoinError` hierarchy every layer raises |
+| [`schemas.py`](../api/core.md#schemas) | The `ProblemDetail` body errors render into |
+| [`exception_handlers.py`](../api/core.md#exception-handlers) | Translates exceptions into RFC 9457 responses |
+| [`middlewares.py`](../api/core.md#middlewares) | The request pipeline: security headers, request ID, access log, trusted hosts, CORS, timeout, size limit |
+| [`security.py`](../api/core.md#security) | Token validation, `ServicePrincipal`, and `require_roles` |
+| [`lifecycle.py`](../api/core.md#lifecycle) | In-flight tracking behind readiness and the shutdown drain |
+| [`telemetry.py`](../api/core.md#telemetry) | OpenTelemetry tracing and OTLP export |
+| [`pagination.py`](../api/core.md#pagination) | The `Page[T]` envelope and sort parsing |
+| [`versioning.py`](../api/core.md#versioning) | RFC 8594 deprecation headers |
+| [`openapi.py`](../api/core.md#openapi) | Schema generation, tags, and shared error responses |
 
-```python
-class Settings(BaseSettings):
-    # Environment
-    ENV: Environment = Environment.development
-    LOG_LEVEL: LogLevel = "INFO"  # DEBUG | INFO | WARNING | ERROR
-    OTEL_ENABLED: bool = True
+Two ordering decisions shape how the rest behaves:
 
-    # Database
-    POSTGRES_DRIVER: str = "postgresql+asyncpg"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_PASSWORD: SecretStr = SecretStr("postgres")
-    POSTGRES_DB: str = "app_db"
-    # ...
+- **Middleware is registered innermost-first** (`add_middleware` is
+  LIFO), so security headers and the request ID end up outermost and
+  every manufactured error — 504, 413, 400, 500 — still carries them.
+  The [security guide](../guides/security.md#middleware-ordering) has
+  the full rationale.
+- **Configuration is validated in `create_app()`**, not on import, so
+  Alembic and the scripts stay decoupled from OAuth settings while a
+  misconfigured production deploy still fails at startup.
 
-    # A plain @property, not a @computed_field: the credential-bearing
-    # URL stays out of model_dump() and the OpenAPI schema.
-    @property
-    def DATABASE_URL(self) -> PostgresDsn:
-        return MultiHostUrl.build(...)
-```
-
-Loads settings from `.env` file using Pydantic Settings.
-
-#### Exceptions (`exceptions.py`)
-
-```python
-class QuoinError(Exception):
-    def __init__(
-        self,
-        message: str,
-        status_code: int = 500,
-        headers: dict[str, str] | None = None,
-    ) -> None:
-        self.message = message
-        self.status_code = status_code
-        self.headers = headers
-
-
-class NotFoundError(QuoinError):
-    def __init__(self, message: str = "Not Found"):
-        super().__init__(message, status_code=404)
-```
-
-Domain exception hierarchy for business logic errors.
-
-#### Logging (`logging.py`)
-
-Configures **Structlog** for structured, machine-readable logs:
-
-```python
-def setup_logging() -> None:
-    structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.processors.add_log_level,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer(),  # dev
-            # structlog.processors.JSONRenderer()  # prod
-        ],
-    )
-```
-
-#### Telemetry (`telemetry.py`)
-
-Sets up **OpenTelemetry** for distributed tracing:
-
-```python
-def setup_opentelemetry(app: FastAPI) -> None:
-    if not settings.OTEL_ENABLED:
-        return
-
-    resource = Resource.create(
-        {
-            SERVICE_NAME: metadata.APP_NAME,
-            "service.version": metadata.VERSION,
-            "deployment.environment.name": settings.ENV.value,
-            # Deprecated key, kept for one release.
-            "deployment.environment": settings.ENV.value,
-        }
-    )
-    provider = TracerProvider(resource=resource)
-    trace.set_tracer_provider(provider)
-    # OTLP exporter if endpoint set; otherwise console in development
-    # and test, or nothing (with a startup warning) in production.
-    provider.add_span_processor(BatchSpanProcessor(exporter))
-    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
-```
-
-Auto-instruments FastAPI HTTP requests. Exports via OTLP when
-`OTEL_EXPORTER_OTLP_ENDPOINT` is set. Without it, development and test
-print spans to the console; production instead logs one
-`otel_enabled_without_exporter` warning and exports nothing, so
-`QUOIN_OTEL_ENABLED=true` without a collector configured doesn't
-silently interleave every span into the JSON log stream.
-`Resource.create` also honours the standard `OTEL_RESOURCE_ATTRIBUTES`
-and `OTEL_SERVICE_NAME` environment variables for any attribute not set
-explicitly above.
-
-#### Middlewares (`middlewares.py`)
-
-Registers the whole stack. `add_middleware` is LIFO, so the first
-registered is innermost and the last is outermost:
-
-```python
-def configure_middlewares(app: FastAPI) -> None:
-    app.add_middleware(UnhandledErrorMiddleware)  # innermost of all
-    app.add_middleware(InFlightRequestMiddleware)
-    app.add_middleware(RequestSizeLimitMiddleware)
-    app.add_middleware(TimeoutMiddleware)
-    configure_cors(app)  # CORS from settings.BACKEND_CORS_ORIGINS
-    configure_trusted_hosts(app)  # TrustedHostMiddleware
-    app.add_middleware(AccessLogMiddleware)
-    app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware)  # outermost
-```
-
-SecurityHeaders and RequestID sit outermost so every manufactured error
-— 504, 413, 400, 500 — still carries security headers and an
-`X-Request-ID`. See the [security guide](../guides/security.md#middleware-ordering)
-for the full rationale.
+The [Core reference](../api/core.md) documents what each module
+provides.
 
 ---
 

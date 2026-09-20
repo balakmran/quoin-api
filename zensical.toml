@@ -49,6 +49,7 @@ nav = [
         { "API Overview" = "api/overview.md" },
         { "Core" = "api/core.md" },
         { "User" = "api/user.md" },
+        { "System" = "api/system.md" },
     ]},
     { "Project" = [
         { "API Stability & SemVer" = "guides/api-stability.md" },

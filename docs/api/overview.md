@@ -16,13 +16,20 @@ by all feature modules:
 - **[Metadata](core.md#metadata)** — App name, version, OpenAPI info
 - **[Logging](core.md#logging)** — Structured logging setup
 - **[Exceptions](core.md#exceptions)** — Domain exception classes
+- **[Schemas](core.md#schemas)** — The `ProblemDetail` error body
 - **[Exception Handlers](core.md#exception-handlers)** — Global error
   handling
 - **[Middlewares](core.md#middlewares)** — Security headers, request
   ID, CORS, timeouts, and size limits
+- **[Security](core.md#security)** — Token validation, `ServicePrincipal`,
+  and `require_roles`
+- **[Lifecycle](core.md#lifecycle)** — In-flight tracking and the
+  shutdown drain
 - **[Telemetry](core.md#telemetry)** — OpenTelemetry tracing
 - **[Pagination](core.md#pagination)** — `Page` and `PageParams`
 - **[Versioning](core.md#versioning)** — Endpoint deprecation signalling
+- **[OpenAPI](core.md#openapi)** — Schema generation, tags, and shared
+  error responses
 
 ### Feature Modules
 
@@ -35,6 +42,19 @@ The [`app/modules/user/`](user.md) package provides user management:
 - **[Repository](user.md#repository)** — Database CRUD operations
 - **[Service](user.md#service)** — Business logic
 - **[Routes](user.md#routes)** — FastAPI endpoints
+
+#### System
+
+The [`app/modules/system/`](system.md) package serves the operational
+endpoints that sit outside `/api/v1/`:
+
+- **[`GET /`](system.md#landing-page-get)** — Landing page
+- **[`GET /health`](system.md#liveness-probe-get-health)** — Liveness
+  probe
+- **[`GET /ready`](system.md#readiness-probe-get-ready)** — Readiness
+  probe, `503` while draining or when the database is unreachable
+
+None of the three is in the OpenAPI document, and none requires a token.
 
 ---
 
@@ -62,11 +82,14 @@ Every user endpoint requires a bearer token: `users.read` for the
 
 ### System Endpoints (Root Level)
 
-| Method | Endpoint  | Description      | Status |
-| :----- | :-------- | :--------------- | :----- |
-| `GET`  | `/health` | Health check     | 200    |
-| `GET`  | `/ready`  | Readiness probe  | 200    |
+No token required; none appears in the OpenAPI document. See
+[System](system.md).
 
+| Method | Endpoint  | Description      | Status   |
+| :----- | :-------- | :--------------- | :------- |
+| `GET`  | `/`       | Landing page     | 200      |
+| `GET`  | `/health` | Liveness probe   | 200      |
+| `GET`  | `/ready`  | Readiness probe  | 200, 503 |
 
 ---
 
@@ -84,15 +107,19 @@ Available in non-production environments:
 
 | Module                     | Description          | Reference                         |
 | :------------------------- | :------------------- | :-------------------------------- |
-| `app.core.config`          | Application settings | [Core](core.md#configuration)     |
-| `app.core.exceptions`      | Domain exceptions    | [Core](core.md#exceptions)        |
-| `app.core.middlewares`     | Middleware stack     | [Core](core.md#middlewares)       |
-| `app.core.pagination`      | Page and PageParams  | [Core](core.md#pagination)        |
-| `app.core.versioning`      | Deprecation helper   | [Core](core.md#versioning)        |
-| `app.modules.user.models`  | User database model  | [User](user.md#models)            |
-| `app.modules.user.schemas` | User API schemas     | [User](user.md#schemas)           |
-| `app.modules.user.service` | User business logic  | [User](user.md#service)           |
-| `app.modules.user.routes`  | User endpoints       | [User](user.md#routes)            |
+| `app.core.config`           | Application settings | [Core](core.md#configuration)     |
+| `app.core.exceptions`       | Domain exceptions    | [Core](core.md#exceptions)        |
+| `app.core.security`         | Auth and RBAC        | [Core](core.md#security)          |
+| `app.core.middlewares`      | Middleware stack     | [Core](core.md#middlewares)       |
+| `app.core.lifecycle`        | Shutdown drain       | [Core](core.md#lifecycle)         |
+| `app.core.pagination`       | Page and PageParams  | [Core](core.md#pagination)        |
+| `app.core.versioning`       | Deprecation helper   | [Core](core.md#versioning)        |
+| `app.core.openapi`          | Schema and tags      | [Core](core.md#openapi)           |
+| `app.modules.user.models`   | User database model  | [User](user.md#models)            |
+| `app.modules.user.schemas`  | User API schemas     | [User](user.md#schemas)           |
+| `app.modules.user.service`  | User business logic  | [User](user.md#service)           |
+| `app.modules.user.routes`   | User endpoints       | [User](user.md#routes)            |
+| `app.modules.system.routes` | Probes, landing page | [System](system.md#routes)        |
 
 ---
 
