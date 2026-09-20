@@ -4,6 +4,10 @@
 
 ### Changed
 
+- **Docs**: the site navigation is organised by what you are doing —
+  Build, API Design, Ship — instead of by document type, and every
+  section now opens on an index page. No page moved, so existing links
+  still resolve. Update-safe.
 - **Docs**: `README.md` now leads with using the template; the Getting
   Started guide reads correctly inside a generated project. Update-safe.
 - **Docs**: a System page joins the API reference, and the Core page
