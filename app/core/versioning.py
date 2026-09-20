@@ -10,7 +10,7 @@ without reading the changelog:
 - ``Sunset: <HTTP-date>`` — the date on/after which it may stop working
 - ``Link: <url>; rel="deprecation"`` — human-readable migration docs
 
-Usage::
+Usage:
 
     from datetime import date
     from app.core.versioning import deprecated

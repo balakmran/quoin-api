@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Docs**: the API reference is generated from source. Every section
+  of the Core page and the Models, Schemas, Repository, and Service
+  sections of the User page are mkdocstrings blocks, so signatures and
+  parameter tables cannot drift. Route sections stay hand-written.
+  Update-safe.
 - **Docs**: eight guides gain a `## Testing` section showing how to
   test the behaviour they describe, and every guide now ends with
   `## See Also`. Update-safe.
@@ -31,6 +36,9 @@
 
 ### Fixed
 
+- **App**: `app/core/` and `app/db/` gain the `__init__.py` they were
+  missing. They were implicit namespace packages, which static analysis
+  tools do not descend into. No runtime change.
 - **Skills**: six skill descriptions contained a colon that made the
   frontmatter invalid YAML. `quoin-pre-pr` lost its description
   entirely, so its trigger phrases never reached the model.

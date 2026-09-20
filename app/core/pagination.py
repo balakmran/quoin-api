@@ -6,7 +6,7 @@ responses share one shape across the whole API. Module-specific
 *filters* stay explicit query parameters on each route — only the
 pagination and sort conventions live here.
 
-Typical usage in a route::
+Typical usage in a route:
 
     @router.get("/", response_model=Page[WidgetRead])
     async def list_widgets(
@@ -16,7 +16,7 @@ Typical usage in a route::
     ) -> Page[Widget]:
         return await service.list_widgets(page, sort)
 
-and in the repository::
+and in the repository:
 
     order_by = parse_sort(sort, WIDGET_SORTABLE, default=[Widget.id])
     ...

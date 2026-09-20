@@ -1,3 +1,16 @@
+"""OpenTelemetry instrumentation for distributed tracing.
+
+``setup_opentelemetry`` runs last during startup and chooses an
+exporter by environment: OTLP when an endpoint is configured, console
+in development and test, none in production. The database engine and
+the shared outbound HTTP client are instrumented separately in the
+lifespan, once they exist.
+
+Instrumentation failures are swallowed rather than allowed to abort
+startup — a misconfigured collector should cost traces, not the
+service. Set ``QUOIN_OTEL_ENABLED=False`` to disable it entirely.
+"""
+
 import os
 
 import httpx2

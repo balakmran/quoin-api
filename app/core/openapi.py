@@ -1,3 +1,30 @@
+"""Schema generation, route tags, and shared error declarations.
+
+``DEFAULT_ERROR_RESPONSES`` covers what any authenticated endpoint can
+return (401, 403, 422, 500) and belongs on the router;
+``error_responses(*codes)`` declares what a single route adds on top.
+Requesting an undocumented code raises ``KeyError``, and a
+``descriptions`` key matching none of the requested codes raises
+``ValueError``, so a typo fails loudly instead of silently documenting
+nothing.
+
+``OPENAPI_PARAMETERS`` is the ``FastAPI(...)`` keyword set. Its
+``docs_url``, ``redoc_url``, and ``openapi_url`` are all ``None`` in
+production, so the schema and both UIs are unavailable there.
+``set_openapi_generator`` post-processes the generated schema to label
+error responses ``application/problem+json``, matching what the
+handlers actually send.
+
+Usage:
+    router = APIRouter(prefix="/users", responses=DEFAULT_ERROR_RESPONSES)
+
+    @router.get(
+        "/{user_id}",
+        responses=error_responses(404, descriptions={404: "User not found"}),
+    )
+    async def get_user(...) -> ...: ...
+"""
+
 import inspect
 from collections.abc import Mapping
 from enum import StrEnum

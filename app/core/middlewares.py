@@ -1,3 +1,27 @@
+"""The request-processing stack, registered in one call.
+
+``configure_middlewares`` adds every layer below. Starlette applies
+``add_middleware`` in reverse, so the table reads outermost first — the
+order a request actually meets them:
+
+| Middleware | Role |
+| :--- | :--- |
+| `SecurityHeadersMiddleware` | Security response headers on every response |
+| `RequestIDMiddleware` | Validates and echoes the request ID header |
+| `AccessLogMiddleware` | One structured log line per request |
+| `TrustedHostMiddleware` | Rejects an unlisted `Host` with problem+json |
+| `CORSMiddleware` | Explicit-allowlist CORS (`configure_cors`) |
+| `TimeoutMiddleware` | Per-request wall-clock timeout (`504`) |
+| `RequestSizeLimitMiddleware` | Rejects oversize bodies (`413`) |
+| `InFlightRequestMiddleware` | Tracks requests for graceful shutdown |
+| `UnhandledErrorMiddleware` | Turns an escaping exception into a `500` |
+
+The order is load-bearing: a size limit registered after the body is
+read protects nothing, and CORS outside the error handler returns a
+rejected preflight without its headers. Most layers are tunable through
+a ``QUOIN_`` setting; the Security guide carries the full rationale.
+"""
+
 import re
 import time
 import uuid

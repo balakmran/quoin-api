@@ -1,3 +1,13 @@
+"""The response body every error is rendered into.
+
+``ProblemDetail`` is the RFC 9457 document the exception handlers return
+for every failure, so a client parses one shape whether it met a
+validation error, a 404, or an uncaught 500.
+
+``errors`` is an RFC 9457 extension carrying per-field validation
+failures. It is omitted on every status but 422.
+"""
+
 from typing import Any
 
 from pydantic import BaseModel, Field

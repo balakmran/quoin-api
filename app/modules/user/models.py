@@ -1,3 +1,15 @@
+"""The `users` table.
+
+The reference model other modules are scaffolded from. Timestamps are
+timezone-aware with server-side defaults, so the database — not the
+application clock — decides when a row was written.
+
+Deletes are soft: ``deleted_at`` holds a tombstone and every read
+filters it out. The unique index on the lowercased email is therefore
+partial, scoped to live rows, so a deleted address can be registered
+again.
+"""
+
 import uuid
 from datetime import UTC, datetime
 
