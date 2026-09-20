@@ -137,6 +137,8 @@ counts as a breaking change.
 │   ├── modules/
 │   │   ├── system/    # Health, readiness & home-page routes
 │   │   └── user/      # Example domain module to mirror
+│   ├── static/        # Landing-page assets
+│   ├── templates/     # Jinja2 templates (landing page)
 │   ├── api.py         # Router registration under /api/v1/
 │   └── main.py        # App factory
 ├── alembic/           # Database migrations

@@ -64,6 +64,7 @@ tokens are validated and how to protect your own routes.
 | :--- | :--- |
 | `just setup` | Install deps and wire commit hooks — run once |
 | `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
+| `just db` / `just oauth` | Start only Postgres, or only the mock OAuth server |
 | `just new <module>` | Scaffold and register a complete DDD module |
 | `just check` | Run format → lint → typecheck → migration check → test in one gate |
 | `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
@@ -90,6 +91,8 @@ Understanding the project layout will help you navigate the codebase.
 │   │       ├── repository.py   # CRUD operations
 │   │       ├── routes.py       # API endpoints
 │   │       └── service.py      # Business logic
+│   ├── static/                 # Landing-page assets
+│   ├── templates/              # Jinja2 templates (landing page)
 │   ├── api.py                  # Router registration under /api/v1/
 │   └── main.py                 # App factory
 ├── tests/                      # Integration tests against a real database
