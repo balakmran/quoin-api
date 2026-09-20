@@ -59,9 +59,9 @@ logger.info(
 
 Authorization is enforced via **app roles** embedded in the token.
 
-QuoinAPI enforces **Domain-Scoped Permissions** rather than global read/write
-permissions. Scopes should target specific resource bounded contexts formatted as `[domain].[action]`
-to adhere to the Principle of Least Privilege.
+QuoinAPI enforces **domain-scoped permissions** rather than global
+read/write permissions. Scopes name a resource's bounded context, formatted
+`[domain].[action]`, to follow the principle of least privilege.
 
 | Role | Description | Protects |
 | :--- | :--- | :--- |
@@ -69,8 +69,9 @@ to adhere to the Principle of Least Privilege.
 | `users.write` | Mutation access to a domain | `POST /api/v1/users/` |
 | `api.superuser` | **Global Bypass** | *Local testing and master scripts* |
 
-Routes explicitly declare which role they require via `require_roles(...)`. There is no hidden baseline
-role — every route is perfectly self-documenting.
+Routes declare which role they require via `require_roles(...)`. There is
+no hidden baseline role, so every route documents its own access
+requirement.
 
 The bypass role is a **setting**, not a constant. If your IdP could
 issue a role literally named `api.superuser` to callers who should not
@@ -240,7 +241,7 @@ servers like QuoinAPI. Your token validation code does not change.
 
 ## Local Testing & Tokens
 
-For testing and rapid development locally, QuoinAPI leverages two frameworks flawlessly.
+For local development and testing, QuoinAPI provides two mechanisms.
 
 ### Layer 1 — The `mock-oauth2-server` stack
 
@@ -251,10 +252,11 @@ alongside the database, issuing real RS256 JWTs from a real JWKS endpoint.
 just dev   # Starts DB + mock OAuth server + API natively
 ```
 
-The script `scripts/gen_token.py` (wired simply as `just token`) allows you to generate completely signed and valid tokens bypassing real SSO networks instantly.
+`scripts/gen_token.py` (run as `just token`) mints signed, valid tokens
+against the mock server, so no real SSO is needed.
 
-**Testing Everything Instantly (The Bypass Token)**:
-Because QuoinAPI supports the `api.superuser` bypass flag natively in the `require_roles` validator, you can test every single endpoint seamlessly simply by requesting one token:
+**Testing everything with the bypass token.** Because `require_roles`
+honours the `api.superuser` bypass, one token exercises every endpoint:
 
 ```bash
 # Generate a master bypass token
@@ -262,7 +264,7 @@ just token --roles="api.superuser"
 ```
 
 **Testing Explicit Constraints**:
-If you want to ensure your `users.read` role is getting blocked on the `/delete` endpoints appropriately:
+If you want to ensure your `users.read` role is blocked from write endpoints:
 
 ```bash
 # 1. Get a standard token strictly limited to `users.read`
@@ -280,9 +282,9 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 ### Layer 2 — `dependency_overrides` natively in tests
 
-The unit/fast testing layer used by the automated test suite. No containers,
-no tokens, instant evaluating. Pytest scripts inject a pre-built `ServicePrincipal`
-directly via standard FastAPI dependency injection mocks:
+The fast layer used by the automated test suite: no containers and no
+tokens. Tests inject a pre-built `ServicePrincipal` through FastAPI's
+dependency overrides:
 
 ```python
 # tests/conftest.py — shared fixtures (already configured)

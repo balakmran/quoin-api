@@ -1,12 +1,14 @@
 # Quality Checks
 
-This guide covers the quality assurance tools and workflows to ensure code quality before committing changes.
+This guide covers the quality assurance tools and workflows to ensure code
+quality before committing changes.
 
 ---
 
 ## Overview
 
-The project uses a comprehensive suite of automated tools to maintain code quality:
+The project uses a comprehensive suite of automated tools to maintain code
+quality:
 
 - **Formatting**: [Ruff](https://github.com/astral-sh/ruff) formatter
 - **Linting**: [Ruff](https://github.com/astral-sh/ruff) linter

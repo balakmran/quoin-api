@@ -98,9 +98,9 @@ explicit:
 The controls the template does provide, and how they are configured:
 
 - [Security guide](../guides/security.md) — CORS hardening, security
-  headers, request size caps, request-ID validation, OAuth trust
-  anchors and fail-fast, JWKS refresh backoff, and credential
-  redaction.
+  headers, request size caps, trusted hosts, request-ID validation,
+  OAuth trust anchors and fail-fast, JWKS refresh backoff, and
+  credential redaction.
 - [Dependency Scanning](../guides/dependency-scanning.md) —
   `just audit` for on-demand CVE scanning of the locked tree;
   Dependabot and GitHub-native secret scanning; SHA-pinned Actions;
