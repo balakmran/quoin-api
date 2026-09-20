@@ -70,10 +70,14 @@ Start from what a page claims and check it against the code.
 
 6. **Referenced files/paths & README structure.** Backtick paths like
    `app/core/...`, `scripts/...`, `.claude/...` in docs should still resolve.
-   The `README.md` **Project Structure** tree lists one line per directory
-   (not per file) and must match the real top-level `app/` layout. Every
-   guide link in **Key Highlights** must resolve. The README has no table of
-   contents by design — don't flag its absence.
+   A bare module reference (`app/core/exceptions`, no `.py`) and an example
+   path (`app/modules/product/...`) are not broken — don't file them.
+
+   Two trees claim to be the `app/` layout — the one under **What You Get** in
+   `README.md` and the one in `docs/guides/getting-started.md`. Both list one
+   line per directory and must name every directory that ships, `static/` and
+   `templates/` included. The README has no table of contents by design, and
+   its **Key Highlights** are deliberately link-free — don't flag either.
 
 7. **Code samples that claim to run.** Spot-check that example snippets use
    current APIs (e.g. SQLModel/SQLAlchemy 2.x async, Pydantic v2). Use the
@@ -205,6 +209,11 @@ over.
   mentioned them. Run Direction 2 as commands before reading a single page.
 - **Skipping `docs/api/` and `docs/architecture/`.** The same sweep scoped
   itself to `docs/guides/` and `README.md`, which is where the gaps were not.
+- **Forgetting this file is documentation too.** Nothing audits the auditor.
+  When a page it names by heading gets restructured, the check silently
+  points at something that no longer exists — this file spent a sweep
+  looking for a README section that had been renamed. After restructuring a
+  page this skill names, re-read the checks that mention it.
 - **Editing `docs/project/*` directly.** Those are generated; your change will
   be overwritten on the next `just docb`. Edit the root source file.
 - **Assuming a mismatch means the doc is wrong.** Sometimes the code drifted.
