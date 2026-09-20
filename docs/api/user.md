@@ -14,7 +14,7 @@ Database model for users.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, Index, func, literal_column, text
 from sqlmodel import Field, SQLModel
 
 
@@ -22,20 +22,33 @@ class User(SQLModel, table=True):
     """User model."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        Index(
+            "ix_users_email_lower",
+            func.lower(literal_column("email")),
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
+    )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(unique=True, index=True, max_length=255)
+    email: str = Field(index=True, max_length=255)
     full_name: str | None = Field(default=None, max_length=255)
     is_active: bool = Field(default=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+        ),
     )
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(
             DateTime(timezone=True),
             nullable=False,
+            server_default=func.now(),
             onupdate=lambda: datetime.now(UTC),
         ),
     )
@@ -50,6 +63,7 @@ class User(SQLModel, table=True):
 
 **Indexes:**
 
+- `ix_users_email` — plain index on `email`, from `index=True`
 - `ix_users_email_lower` — case-insensitive **partial** unique index on
   `lower(email)` `WHERE deleted_at IS NULL` (so a soft-deleted user's
   email frees up for reuse)
@@ -66,11 +80,17 @@ Pydantic schemas for request/response validation.
 
 ```python
 class UserBase(BaseModel):
-    """Base schema for user data."""
+    """Base user schema."""
 
-    email: str
-    full_name: str | None = None
+    email: EmailStr = Field(max_length=255)
+    full_name: str | None = Field(default=None, max_length=255)
+    is_active: bool = True
+
+    model_config = ConfigDict(extra="forbid")
 ```
+
+The email is validated as an address and lower-cased, so uniqueness
+checks are case-insensitive. Unknown fields are rejected with a `422`.
 
 ### UserCreate
 
@@ -97,8 +117,10 @@ class UserUpdate(BaseModel):
     """Schema for partially updating a user."""
 
     email: EmailStr | SkipJsonSchema[None] = None
-    full_name: str | None = None
+    full_name: str | None = Field(default=None, max_length=255)
     is_active: bool | SkipJsonSchema[None] = None
+
+    model_config = ConfigDict(extra="forbid")
 ```
 
 Omit a field to leave it unchanged. Only `full_name` accepts `null`,
@@ -112,9 +134,9 @@ class UserRead(BaseModel):
     """Schema for reading a user."""
 
     id: uuid.UUID
-    email: str
-    full_name: str | None
-    is_active: bool
+    email: EmailStr
+    full_name: str | None = None
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 ```
@@ -138,7 +160,10 @@ class UserRead(BaseModel):
 
 ## Repository
 
-Database operations (CRUD).
+Database operations (CRUD). Repositories `flush()` rather than commit;
+the request's unit of work commits (see
+[Creating a Module](../guides/creating-a-module.md)). Every read excludes
+soft-deleted rows.
 
 ### UserRepository
 
@@ -158,8 +183,15 @@ class UserRepository:
         """Get user by email."""
         ...
 
-    async def list(self, skip: int = 0, limit: int = 100) -> list[User]:
-        """List users with pagination."""
+    async def list(
+        self,
+        params: PageParams,
+        *,
+        sort: str | None = None,
+        is_active: bool | None = None,
+        q: str | None = None,
+    ) -> tuple[list[User], int]:
+        """List a filtered, sorted page of users and the total count."""
         ...
 
     async def update(self, user: User, user_update: UserUpdate) -> User:
@@ -183,31 +215,28 @@ Business logic layer.
 
 ```python
 class UserService:
-    """Service for user business logic."""
+    """Business-logic layer for User operations."""
 
     async def create_user(self, user_create: UserCreate) -> User:
-        """
-        Create a new user.
+        """Create a new user, enforcing email uniqueness.
 
         Raises:
-            ConflictError: If email already exists
+            DuplicateEmailError: If the email is already registered.
         """
-        existing = await self.repository.get_by_email(user_create.email)
-        if existing:
-            raise ConflictError(message="Email already registered")
-
+        existing_user = await self.repository.get_by_email(user_create.email)
+        if existing_user:
+            raise DuplicateEmailError(email=user_create.email)
         return await self.repository.create(user_create)
 
     async def get_user(self, user_id: uuid.UUID) -> User:
-        """
-        Get user by ID.
+        """Retrieve a user by ID, raising if absent.
 
         Raises:
-            NotFoundError: If user not found
+            UserNotFoundError: If no user with user_id exists.
         """
         user = await self.repository.get(user_id)
         if not user:
-            raise NotFoundError(message="User not found")
+            raise UserNotFoundError(user_id=str(user_id))
         return user
 
     async def list_users(
@@ -218,7 +247,7 @@ class UserService:
         is_active: bool | None = None,
         q: str | None = None,
     ) -> tuple[list[User], int]:
-        """List a page of users and the total count."""
+        """Return a filtered, sorted page of users and the total count."""
         return await self.repository.list(
             params, sort=sort, is_active=is_active, q=q
         )
@@ -226,13 +255,17 @@ class UserService:
     async def update_user(
         self, user_id: uuid.UUID, user_update: UserUpdate
     ) -> User:
-        """Update a user."""
-        user = await self.get_user(user_id)  # Raises NotFoundError if not found
-        return await self.repository.update(user, user_update)
+        """Apply a partial update.
+
+        Raises:
+            UserNotFoundError: If no user with user_id exists.
+            DuplicateEmailError: If the new email belongs to another user.
+        """
+        ...
 
     async def delete_user(self, user_id: uuid.UUID) -> None:
-        """Soft-delete a user."""
-        user = await self.get_user(user_id)  # Raises NotFoundError if not found
+        """Soft-delete a user by ID."""
+        user = await self.get_user(user_id)  # UserNotFoundError if absent
         await self.repository.delete(user)
 ```
 
@@ -244,11 +277,23 @@ class UserService:
 
 FastAPI endpoint definitions.
 
+Every endpoint requires a bearer token carrying the role named in its
+heading: `users.read` for reads, `users.write` for writes. Without one
+the API answers `401`; with a valid token that lacks the role, `403`.
+The examples assume a local token:
+
+```bash
+TOKEN=$(just token --roles="users.read,users.write")
+```
+
+See the [Authentication guide](../guides/authentication.md) for how
+tokens are validated.
+
 ### Endpoints
 
 #### POST /api/v1/users/
 
-Create a new user.
+Create a new user. Requires `users.write`.
 
 **Request Body:** `UserCreate`
 
@@ -262,6 +307,7 @@ Create a new user.
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/ \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "full_name": "John Doe"}'
 ```
@@ -269,7 +315,7 @@ curl -X POST http://localhost:8000/api/v1/users/ \
 #### GET /api/v1/users/
 
 List users, paginated, sorted, and filtered. Soft-deleted users are
-excluded.
+excluded. Requires `users.read`.
 
 **Query Parameters:**
 
@@ -290,12 +336,13 @@ excluded.
 **Example:**
 
 ```bash
-curl "http://localhost:8000/api/v1/users/?limit=10&offset=0&sort=-created_at&q=alice"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8000/api/v1/users/?limit=10&offset=0&sort=-created_at&q=alice"
 ```
 
 #### GET /api/v1/users/{user_id}
 
-Get user by ID.
+Get user by ID. Requires `users.read`.
 
 **Path Parameters:**
 
@@ -310,12 +357,13 @@ Get user by ID.
 **Example:**
 
 ```bash
-curl http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000
 ```
 
 #### PATCH /api/v1/users/{user_id}
 
-Update a user.
+Update a user. Requires `users.write`.
 
 **Path Parameters:**
 
@@ -328,11 +376,14 @@ Update a user.
 **Errors:**
 
 - `404 Not Found` — User not found
+- `409 Conflict` — Email already registered to another user
 
 **Example:**
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000 \
+curl -X PATCH \
+  http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000 \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"full_name": "Jane Doe"}'
 ```
@@ -340,7 +391,8 @@ curl -X PATCH http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-4266141
 #### DELETE /api/v1/users/{user_id}
 
 Soft-delete a user (sets the `deleted_at` tombstone). The row is
-retained but excluded from all subsequent reads.
+retained but excluded from all subsequent reads. Requires
+`users.write`.
 
 **Path Parameters:**
 
@@ -355,7 +407,9 @@ retained but excluded from all subsequent reads.
 **Example:**
 
 ```bash
-curl -X DELETE http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000
+curl -X DELETE \
+  http://localhost:8000/api/v1/users/123e4567-e89b-12d3-a456-426614174000 \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **Source:** [app/modules/user/routes.py](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/routes.py)

@@ -145,6 +145,7 @@ class QuoinError(Exception):
 | `ConflictError`               | 409         | Resource conflict (e.g., duplicate email) |
 | `QuoinRequestValidationError` | 422         | Pydantic validation errors                |
 | `InternalServerError`         | 500         | Unexpected server errors                  |
+| `BadGatewayError`             | 502         | Upstream returned an invalid response     |
 | `ServiceUnavailableError`     | 503         | Required dependency unreachable           |
 | `GatewayTimeoutError`         | 504         | Request exceeded the configured timeout   |
 
@@ -462,7 +463,10 @@ type — no handler registration needed:
 ## Logging
 
 All `QuoinError` exceptions are automatically logged with structured
-logging before the response is sent:
+logging before the response is sent. The level follows who has to act on
+it: `error` (with traceback) for 5xx, `warning` for 401 and 403, and
+`info` for every other 4xx. See
+[Error Response Levels](observability.md#error-response-levels).
 
 ```json
 {
@@ -470,7 +474,7 @@ logging before the response is sent:
   "message": "User with ID 'f47ac10b' not found",
   "status_code": 404,
   "path": "/api/v1/users/f47ac10b",
-  "level": "warning"
+  "level": "info"
 }
 ```
 

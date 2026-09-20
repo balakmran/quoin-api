@@ -34,27 +34,34 @@ The application factory creates and configures the FastAPI application:
 
 ```python
 def create_app() -> FastAPI:
+    setup_logging()
+    validate_production_settings()  # crash-loop a bad production config
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.state.engine = create_db_engine()
+        # Startup: DB engine, session factory, shared HTTP client
         yield
-        await app.state.engine.dispose()
+        # Shutdown: flip /ready to 503, drain in-flight requests, then
+        # close the HTTP client and dispose the engine
 
     app = FastAPI(lifespan=lifespan, **OPENAPI_PARAMETERS)
-    configure_middlewares(app)
     add_exception_handlers(app)
+    configure_middlewares(app)
     setup_opentelemetry(app)
-    app.include_router(api_router)
+    app.mount("/static", StaticFiles(directory=...), name="static")
+    app.include_router(api_router)  # everything under /api/v1
+    app.include_router(system_router_root)  # /, /health, /ready
     return app
 ```
 
 **Responsibilities:**
 
-- Manage application lifecycle (startup/shutdown)
+- Manage application lifecycle (startup, graceful shutdown)
+- Fail fast on an incomplete production configuration
 - Configure middlewares and exception handlers
 - Set up observability (OTEL, logging)
 - Mount static files
-- Include API routes
+- Include API and system routes
 
 ---
 
@@ -197,7 +204,6 @@ def create_db_engine(url: str | None = None) -> AsyncEngine:
     return create_async_engine(
         url or str(settings.DATABASE_URL),
         echo=False,
-        future=True,
         pool_size=settings.DB_POOL_SIZE,
         max_overflow=settings.DB_MAX_OVERFLOW,
         pool_timeout=settings.DB_POOL_TIMEOUT,
@@ -241,6 +247,7 @@ app/modules/user/
 ├── __init__.py       # Export router
 ├── models.py         # SQLModel tables
 ├── schemas.py        # Pydantic request/response
+├── exceptions.py     # Domain-specific exceptions
 ├── repository.py     # Database operations (CRUD)
 ├── service.py        # Business logic
 └── routes.py         # FastAPI endpoints
@@ -316,22 +323,26 @@ counts as a breaking template change.
 
 ## Database Schema
 
-**Current Tables:**
+**Current Tables** (simplified; the migrations are the source of truth):
 
 ```sql
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    is_active BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ  -- soft-delete tombstone
 );
 
-CREATE INDEX idx_users_email ON users(email);
+-- Case-insensitive uniqueness among live rows only
+CREATE UNIQUE INDEX ix_users_email_lower
+    ON users (lower(email)) WHERE deleted_at IS NULL;
 ```
 
-Managed via **Alembic** migrations. Schema changes are versioned
+See [Soft Delete](../guides/soft-delete.md) for why the unique index is
+partial. Managed via **Alembic** migrations. Schema changes are versioned
 and tracked in `alembic/versions/`.
 
 ---
@@ -358,11 +369,16 @@ Serves:
 
 ## API Versioning
 
-All API routes are versioned:
+All API routes are versioned. The prefix is applied once, in
+`app/api.py`; each module router declares only its own prefix
+(`APIRouter(prefix="/users")`):
 
 ```python
+v1_router = APIRouter()
+v1_router.include_router(user_router)
+
 api_router = APIRouter(prefix="/api/v1")
-api_router.include_router(user_router, prefix="/users", tags=["users"])
+api_router.include_router(v1_router)
 ```
 
 **URL Structure:** `/api/v{version}/{module}/{resource}`
@@ -401,7 +417,8 @@ graph LR
 - **Async/Await** throughout the stack
 - **asyncpg** for database I/O
 - **AsyncSession** for SQLAlchemy operations
-- **AsyncClient** for external API calls
+- **ResilientHTTPClient** (`httpx2`) for external API calls, with retries
+  and a circuit breaker; see [Outbound HTTP](../guides/outbound-http.md)
 
 ```python
 async def create_user(self, user_create: UserCreate) -> User:
@@ -439,18 +456,20 @@ for details.
 ```
 tests/
 ├── conftest.py           # Shared fixtures
-├── modules/
-│   └── user/
-│       ├── test_routes.py      # Integration tests
-│       ├── test_service.py     # Business logic tests
-│       └── test_repository.py  # Database tests
+├── core/                 # Settings, security, middleware, ...
+└── modules/
+    └── user/
+        ├── test_routes.py       # Integration tests (routes → DB)
+        └── test_concurrency.py  # Cross-transaction races
 ```
 
 **Strategy:**
 
-- **Integration tests** for routes (full stack)
-- **Unit tests** for services (business logic)
-- **Database tests** for repositories (real PostgreSQL)
+- **Integration tests** drive the full stack against a real PostgreSQL;
+  each test rolls back to a SAVEPOINT
+- **Focused tests** for models, exceptions, and core infrastructure
+- Split out service or repository tests when a layer grows logic worth
+  testing on its own
 
 See [Testing Guide](../guides/testing.md) for patterns.
 
@@ -465,18 +484,26 @@ See [Testing Guide](../guides/testing.md) for patterns.
 3. **OAuth 2.0 / 2.1 Authentication** — JWT validation via JWKS with
    `require_roles()` per-route; `ServicePrincipal` identity injection
 4. **CORS Configuration** — Allowlist-driven; no wildcard in production
-5. **Environment Variables** — Secrets loaded from `.env` (not committed)
-6. **Request Timeouts** — Per-request wall-clock limit via
-   `TimeoutMiddleware`; returns 504 on breach
+5. **Trusted Hosts** — `Host` header allowlist; required in production
+6. **Security Headers** — CSP, HSTS, `X-Frame-Options`, and friends on
+   every response
+7. **Request Limits** — Body-size cap (413) and per-request timeout (504)
+8. **Environment Variables** — Secrets loaded from the environment or
+   `.env` (not committed); the database password is a `SecretStr`
+9. **Fail-fast Production Config** — the app refuses to boot without
+   OAuth trust anchors and an explicit host allowlist
+
+See the [Security guide](../guides/security.md) for each measure.
 
 ---
 
 ## Performance Optimizations
 
-1. **Connection Pooling** — PostgreSQL connection pool (size: 20)
+1. **Connection Pooling** — PostgreSQL connection pool (default size
+   20, tunable with `QUOIN_DB_POOL_*`)
 2. **Async I/O** — Non-blocking database and HTTP operations
 3. **Database Indexes** — Indexed `users.email` for fast lookups
-4. **Lazy Loading** — OTEL disabled in dev for faster startup
+4. **Bounded Pagination** — list endpoints cap `limit` at 100
 
 ---
 

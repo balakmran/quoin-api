@@ -1,6 +1,7 @@
 # Release Workflow
 
-This guide covers version management, release tagging, and the changelog process.
+This guide covers version management, release tagging, and the changelog
+process.
 
 ## Semantic Versioning
 
@@ -268,7 +269,7 @@ bump → changelog → merge → tag flow as any other release. Other
 pre-release labels (`-beta.N`, `-alpha.N`) are not supported.
 
 ```bash
-just bump major --rc   # 0.14.0 → 1.0.0-rc.1 (also minor/patch --rc)
+just bump major --rc   # 0.16.0 → 1.0.0-rc.1 (also minor/patch --rc)
 just bump rc           # 1.0.0-rc.1 → 1.0.0-rc.2
 just bump release      # 1.0.0-rc.2 → 1.0.0
 ```
@@ -287,10 +288,10 @@ finals:
 
 | Tag pushed | Verifies from |
 | :--- | :--- |
-| `v1.0.0-rc.1` | `v0.14.0`, `v0.13.0` |
-| `v1.0.0-rc.2` | `v1.0.0-rc.1`, `v0.14.0` |
-| `v1.0.0` | `v1.0.0-rc.2`, `v0.14.0` |
-| `v1.0.1` | `v1.0.0`, `v0.14.0` |
+| `v1.0.0-rc.1` | `v0.16.0`, `v0.15.0` |
+| `v1.0.0-rc.2` | `v1.0.0-rc.1`, `v0.16.0` |
+| `v1.0.0` | `v1.0.0-rc.2`, `v0.16.0` |
+| `v1.0.1` | `v1.0.0`, `v0.16.0` |
 
 ---
 

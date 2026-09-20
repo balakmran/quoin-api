@@ -60,7 +60,13 @@ Each module declares which fields are sortable (a name → column map).
 is never silently ignored and never reaches the database:
 
 ```json
-{ "detail": "Cannot sort by 'password'. Sortable fields: created_at, email, full_name, updated_at." }
+{
+  "type": "urn:quoin:error:bad_request_error",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "Cannot sort by 'password'. Sortable fields: created_at, email, full_name, updated_at.",
+  "instance": "/api/v1/users/"
+}
 ```
 
 Repositories always append their primary key as a final tiebreaker, so

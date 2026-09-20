@@ -29,6 +29,12 @@ tests/
 ├── test_db.py                   # Session and engine tests
 ├── test_migration_guard.py      # Migration safety checks
 ├── test_scaffold_module.py      # `just new` output
+├── test_problem_details_hook.py # Error-contract hook on every response
+├── test_template_substitution.py # Copier substitution and headroom
+├── test_tool_pins.py            # Tool versions agree across files
+├── test_bump_version.py         # `just bump`
+├── test_tag_release.py          # `just tag`
+├── test_copier_update_workflow.py # Update-check workflow
 ├── core/                        # config, security, middlewares,
 │   └── ...                      # logging, telemetry, pagination, ...
 ├── http/
@@ -58,6 +64,8 @@ Pytest is configured in `pyproject.toml`:
 ```toml
 [tool.pytest.ini_options]
 asyncio_mode = "auto"   # All async tests run without @pytest.mark.asyncio
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["."]
 python_files = ["test_*.py"]
@@ -70,16 +78,21 @@ concurrency = ["thread", "greenlet"]
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
+    "def __repr__",
     "if __name__ == .__main__.:",
+    "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
 show_missing = true
+fail_under = 100
 ```
 
 !!! warning
     `asyncio_mode = "auto"` means all `async def test_*` functions run
     automatically as async. Do **not** add `@pytest.mark.asyncio` —
-    it's redundant and causes a warning.
+    it's redundant and causes a warning. Tests and fixtures share one
+    session-scoped event loop, so an async resource built at module
+    level or in a sync fixture can end up on a different loop.
 
 ---
 
@@ -132,20 +145,24 @@ before calling `command.upgrade` / `command.downgrade`.
 
 ### `db_session` — Isolated Database Session
 
-Provides a session bound to a transaction that is rolled back after
-each test — guaranteeing a clean slate:
+Provides a session bound to an outer transaction that is rolled back
+after each test — guaranteeing a clean slate. With
+`join_transaction_mode="create_savepoint"`, a `session.commit()` inside
+a test releases a SAVEPOINT instead of committing for real, so tests
+that commit still stay isolated:
 
 ```python
 @pytest.fixture
 async def db_session(
     initialize_db: None,
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     connection = await fastapi_app.state.engine.connect()
     trans = await connection.begin()
     session_maker = async_sessionmaker(
         bind=connection,
         class_=AsyncSession,
         expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
     )
     session = session_maker()
     try:
@@ -203,7 +220,8 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
 
 ### Pre-built Auth Clients
 
-For tests that hit authenticated endpoints, use the role-scoped client fixtures instead of `client`:
+For tests that hit authenticated endpoints, use the role-scoped client fixtures
+instead of `client`:
 
 | Fixture | Roles | Use for |
 | :--- | :--- | :--- |
@@ -211,7 +229,7 @@ For tests that hit authenticated endpoints, use the role-scoped client fixtures 
 | `read_client` | `users.read` | Read-only endpoints (`GET`) |
 | `admin_client` | `users.read`, `users.write` | Write endpoints (`POST`, `PATCH`, `DELETE`) |
 
-These fixtures work by injecting a `ServicePrincipal` with the appropriate roles via
+These fixtures inject a `ServicePrincipal` with the appropriate roles via
 `dependency_overrides`, bypassing actual JWT validation in tests.
 
 ---
@@ -429,22 +447,24 @@ async def test_send_email_notification(
 
 ## Testing Configuration
 
-Use `monkeypatch` to override settings:
+To test how code reacts to a setting, build a fresh `Settings` from
+environment variables. Pass `_env_file=None` so a developer's local
+`.env` can't leak into the assertion:
 
 ```python
-async def test_with_custom_config(monkeypatch, app):
-    # Override settings
-    monkeypatch.setenv("QUOIN_ENV", "test")
-    monkeypatch.setenv("QUOIN_OTEL_ENABLED", "false")
+from app.core.config import Settings
 
-    # Re-import to pick up new settings
-    from importlib import reload
-    from app.core import config
 
-    reload(config)
+def test_with_custom_config(monkeypatch):
+    monkeypatch.setenv("QUOIN_LOG_LEVEL", "WARNING")
 
-    assert config.settings.ENV == "test"
+    settings = Settings(_env_file=None)
+
+    assert settings.LOG_LEVEL == "WARNING"
 ```
+
+Avoid `importlib.reload(config)`: it rebinds the module-level
+`settings` that the rest of the suite already imported.
 
 ---
 
@@ -462,8 +482,9 @@ with a reason rather than lowering the gate.
 Excluded from coverage:
 
 - `if __name__ == "__main__"` blocks
-- Type checking code
-- Debug-only code paths
+- `if TYPE_CHECKING:` blocks
+- `__repr__` methods and `raise NotImplementedError` lines
+- Anything marked `# pragma: no cover`
 
 ---
 
@@ -507,29 +528,32 @@ enforce the identical gate.
 
 ## Debugging Failed Tests
 
+Run pytest through `uv run` so it uses the project environment. Start
+the database first with `just db`; `just test` does it for you.
+
 ### Verbose Output
 
 ```bash
-pytest -vv
+uv run pytest -vv
 ```
 
 ### Show Print Statements
 
 ```bash
-pytest -s
+uv run pytest -s
 ```
 
 ### Drop into Debugger
 
 ```bash
-pytest --pdb
+uv run pytest --pdb
 ```
 
 ### Re-run Failed Tests
 
 ```bash
-pytest --lf  # last failed
-pytest --ff  # failed first
+uv run pytest --lf  # last failed
+uv run pytest --ff  # failed first
 ```
 
 ---

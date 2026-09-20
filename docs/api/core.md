@@ -49,9 +49,13 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:8000",
     ]
+    # ... plus the CORS, security-header, pool, timeout, OAuth, and
+    # outbound HTTP settings
 ```
 
-All settings use the `QUOIN_` prefix (e.g., `QUOIN_POSTGRES_HOST`).
+All settings use the `QUOIN_` prefix (e.g., `QUOIN_POSTGRES_HOST`). The
+[Configuration guide](../guides/configuration.md#key-settings) lists
+every setting and its default.
 
 **Usage:**
 
@@ -92,6 +96,12 @@ first during application startup.
 
 ### setup_logging
 
+Configures Structlog and the standard library to share one pipeline:
+context variables (request ID, caller), log level, timestamp, and trace
+correlation. `production` renders JSON in UTC; development and test
+render human-readable console lines. `QUOIN_LOG_LEVEL` sets the
+verbosity.
+
 ```python
 def setup_logging() -> None:
     structlog.configure(
@@ -99,10 +109,13 @@ def setup_logging() -> None:
             structlog.contextvars.merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.dev.ConsoleRenderer(),  # dev
+            # ... trace correlation, then JSONRenderer in production or
+            # ConsoleRenderer otherwise
         ],
     )
 ```
+
+See the [Observability guide](../guides/observability.md).
 
 **Source:** [app/core/logging.py](https://github.com/balakmran/quoin-api/blob/main/app/core/logging.py)
 
@@ -140,11 +153,18 @@ class QuoinError(Exception):
 | Class | Status | Default Message |
 | :---- | :----: | :-------------- |
 | `BadRequestError` | 400 | `"Bad Request"` |
+| `UnauthorizedError` | 401 | `"Unauthorized"` |
 | `ForbiddenError` | 403 | `"Forbidden"` |
 | `NotFoundError` | 404 | `"Not Found"` |
 | `ConflictError` | 409 | `"Conflict"` |
-| `InternalServerError` | 500 | `"Internal Server Error"` |
 | `QuoinRequestValidationError` | 422 | _(Pydantic errors, internal)_ |
+| `InternalServerError` | 500 | `"Internal Server Error"` |
+| `BadGatewayError` | 502 | `"Bad Gateway"` |
+| `ServiceUnavailableError` | 503 | `"Service Unavailable"` |
+| `GatewayTimeoutError` | 504 | `"Gateway Timeout"` |
+
+See the [Error Handling guide](../guides/error-handling.md) for when to
+use each.
 
 **Usage:**
 
@@ -161,44 +181,53 @@ raise ConflictError(message="Email already registered")
 
 ## Exception Handlers
 
-Converts `QuoinError` domain exceptions to JSON HTTP responses.
-Registered with the FastAPI app during startup.
+Converts exceptions to [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+`application/problem+json` responses. Registered with the FastAPI app
+during startup.
 
 ### quoin_exception_handler
 
+Renders a `QuoinError` as a `ProblemDetail` body (`type`, `title`,
+`status`, `detail`, `instance`) with the exception's status code and
+headers, and logs it at a level matching the status.
+
 ```python
-async def quoin_exception_handler(
-    request: Request, exc: QuoinError
-) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message},
-        headers=exc.headers,
+async def quoin_exception_handler(request: Request, exc: Any) -> Response:
+    problem = ProblemDetail(
+        type=_problem_type(exc),  # urn:quoin:error:<snake_case_name>
+        title=_problem_title(exc.status_code),
+        status=exc.status_code,
+        detail=exc.message,
+        instance=request.url.path,
     )
+    ...
 ```
 
 ### validation_exception_handler
 
-Converts Pydantic `ValidationError` to 422 JSON responses.
+Renders request validation failures as a 422 problem document with an
+`errors` array. Handles `RequestValidationError` and
+`QuoinRequestValidationError`.
 
-```python
-async def validation_exception_handler(
-    request: Request, exc: ValidationError
-) -> JSONResponse:
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
-```
+### http_exception_handler and unhandled_exception_handler
+
+Render Starlette `HTTPException`s (404, 405, ...) and any uncaught
+exception (500) in the same problem-details shape. The 500 never carries
+the exception message.
 
 ### add_exception_handlers
 
-Registers both handlers with the application.
+Registers all of the above with the application.
 
 ```python
 def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(QuoinError, quoin_exception_handler)
-    app.add_exception_handler(ValidationError, validation_exception_handler)
+    app.add_exception_handler(
+        RequestValidationError, validation_exception_handler
+    )
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(Exception, unhandled_exception_handler)
+    # ... plus QuoinRequestValidationError -> validation_exception_handler
 ```
 
 **Source:** [app/core/exception_handlers.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
@@ -211,18 +240,23 @@ Request-level processing applied before routes are hit.
 
 ### configure_middlewares
 
-```python
-def configure_middlewares(app: FastAPI) -> None:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-```
+Registers the whole stack in one call. From outermost to innermost:
 
-Allowed origins are configured via `QUOIN_BACKEND_CORS_ORIGINS`
-(defaults to `localhost:3000` and `localhost:8000`).
+| Middleware | Role |
+| :--- | :--- |
+| `SecurityHeadersMiddleware` | Security response headers on every response |
+| `RequestIDMiddleware` | Validates and echoes the request ID header |
+| `AccessLogMiddleware` | One structured log line per request |
+| `TrustedHostMiddleware` | Rejects an unlisted `Host` with problem+json |
+| `CORSMiddleware` | Explicit-allowlist CORS (`configure_cors`) |
+| `TimeoutMiddleware` | Per-request wall-clock timeout (`504`) |
+| `RequestSizeLimitMiddleware` | Rejects oversize bodies (`413`) |
+| `InFlightRequestMiddleware` | Tracks requests for graceful shutdown |
+| `UnhandledErrorMiddleware` | Turns an escaping exception into a `500` |
+
+Most layers are tunable through a `QUOIN_` setting; see
+[Configuration](../guides/configuration.md#key-settings). The ordering
+rationale is in the [Security guide](../guides/security.md#middleware-ordering).
 
 **Source:** [app/core/middlewares.py](https://github.com/balakmran/quoin-api/blob/main/app/core/middlewares.py)
 
@@ -240,11 +274,18 @@ def setup_opentelemetry(app: FastAPI) -> None:
     if not settings.OTEL_ENABLED:
         return
 
-    FastAPIInstrumentor.instrument_app(app)
-    SQLAlchemyInstrumentor().instrument()
+    # Tracer provider and exporter: OTLP when OTEL_EXPORTER_OTLP_ENDPOINT
+    # is set, console in development/test, none in production.
+    ...
+    FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
 ```
 
-Disable with `QUOIN_OTEL_ENABLED=False` in `.env`.
+The database engine (`instrument_sqlalchemy_engine`) and the shared
+outbound HTTP client (`instrument_http_client`) are instrumented
+separately, in the application lifespan, once they exist.
+
+Disable with `QUOIN_OTEL_ENABLED=False` in `.env`. See the
+[Observability guide](../guides/observability.md).
 
 **Source:** [app/core/telemetry.py](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py)
 

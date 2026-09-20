@@ -11,8 +11,8 @@ for containerized deployment.
 
 ## Local Docker Development
 
-Run the entire stack (Application + PostgreSQL Database) locally using Docker
-Compose:
+Run the entire stack (application, PostgreSQL, and a mock OAuth server)
+locally using Docker Compose:
 
 ```bash
 just up
@@ -21,11 +21,17 @@ just up
 This command:
 
 - Builds the application Docker image
-- Starts PostgreSQL container
+- Starts the PostgreSQL and mock OAuth containers
 - Starts the application container
 - Configures networking between containers
 
-Access the application at [http://localhost:8000](http://localhost:8000) (or via `http://api.quoin-api.orb.local` if using OrbStack).
+Access the application at [http://localhost:8000](http://localhost:8000) (or via
+`http://api.quoin-api.orb.local` if using OrbStack).
+
+!!! note
+    The Compose file is a **development** stack: it runs
+    `fastapi dev` with the source mounted, `QUOIN_ENV=development`, and
+    the mock OAuth server. Don't use it as a production deployment.
 
 ### Stop Containers
 
@@ -87,34 +93,33 @@ docker inspect --format '{{.State.Health.Status}}' quoin-api
 
 ### Running in Production
 
-**With Docker Compose:**
+The image runs `fastapi run` and ships no `.env` file, so settings come
+from the container environment. Point it at a managed PostgreSQL and
+your OAuth provider, passing the settings listed under
+[Environment Variables](#environment-variables):
 
 ```bash
-docker-compose up -d
-```
-
-**With Docker CLI:**
-
-```bash
-# Run PostgreSQL. The image reads POSTGRES_*, its own variables --
-# the QUOIN_POSTGRES_* settings belong to the app container.
-docker run -d \
-  --name postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=app_db \
-  -p 5432:5432 \
-  -v postgres_data:/var/lib/postgresql \
-  postgres:18
-
-# Run Application
 docker run -d \
   --name quoin-api \
-  --link postgres:db \
   -p 8000:8000 \
-  -e QUOIN_POSTGRES_HOST=db \
+  --env-file production.env \
   quoin-api:latest
 ```
+
+Production refuses to boot without an explicit `QUOIN_ALLOWED_HOSTS`
+and the three OAuth trust anchors.
+
+**Apply migrations before the new version takes traffic.** The image
+does not run them on start. Run them as a one-off job from the same
+image, so a rollout with several replicas doesn't race:
+
+```bash
+docker run --rm --env-file production.env \
+  quoin-api:latest alembic upgrade head
+```
+
+See [Database Migrations](database-migrations.md#production-deployments)
+for the Kubernetes form and zero-downtime ordering.
 
 ---
 
@@ -164,6 +169,13 @@ Configure the application using environment variables. See
 # Application
 QUOIN_ENV=production
 QUOIN_OTEL_ENABLED=true
+QUOIN_ALLOWED_HOSTS=["api.example.com"]   # required; default is rejected
+QUOIN_BACKEND_CORS_ORIGINS=["https://app.example.com"]
+
+# OAuth trust anchors: all three required; the JWKS URI must be https
+QUOIN_OAUTH_JWKS_URI=https://idp.example.com/.well-known/jwks.json
+QUOIN_OAUTH_ISSUER=https://idp.example.com/
+QUOIN_OAUTH_AUDIENCE=api://your-api
 
 # Database
 QUOIN_POSTGRES_HOST=db
@@ -173,6 +185,10 @@ QUOIN_POSTGRES_PASSWORD=<strong-password>
 QUOIN_POSTGRES_DB=app_db
 ```
 
+If `QUOIN_ALLOWED_HOSTS` or an OAuth trust anchor is missing, the app
+exits at startup with a message naming it. See
+[Security](security.md#what-else-production-refuses-to-boot-without).
+
 > **Security Warning**: Never commit `.env` files with production credentials to
 > version control!
 
@@ -180,7 +196,8 @@ QUOIN_POSTGRES_DB=app_db
 
 ## Health Checks
 
-The application includes dedicated endpoints for health and readiness monitoring:
+The application includes dedicated endpoints for health and readiness
+monitoring:
 
 ### Health Probe
 
@@ -200,7 +217,8 @@ Expected response:
 
 ### Readiness Probe
 
-The `/ready` endpoint checks if the application is ready to accept traffic (e.g., database is connected):
+The `/ready` endpoint checks if the application is ready to accept traffic
+(e.g., database is connected):
 
 ```bash
 curl http://localhost:8000/ready

@@ -213,6 +213,29 @@ QUOIN_MAX_REQUEST_BODY_BYTES=10485760
 
 ---
 
+## Trusted Hosts
+
+`TrustedHostMiddleware` rejects any request whose `Host` header is not in
+`QUOIN_ALLOWED_HOSTS`, so a forged `Host` can't poison absolute URLs or
+cache keys. Patterns are exact hosts, `*.example.com` subdomain
+wildcards, or a bare `*` (which turns the check off).
+
+| Variable | Default | Notes |
+| :--- | :--- | :--- |
+| `QUOIN_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "test", "*.orb.local"]` | **Required in production**; the development default is refused there |
+
+A rejected request gets a `400` `application/problem+json` response
+(`Invalid host header`), and the host is logged as `invalid_host_header`.
+The middleware is QuoinAPI's own rather than Starlette's, so the failure
+looks like every other error; see
+[Middleware ordering](#middleware-ordering) for why it sits outside CORS.
+
+```bash
+QUOIN_ALLOWED_HOSTS=["api.example.com","*.internal.example.com"]
+```
+
+---
+
 ## Request ID validation
 
 `RequestIDMiddleware` propagates an inbound `X-Request-ID` into the log

@@ -130,10 +130,10 @@ the target is met. Prefers real tests over `# pragma: no cover`.
 **Triggers on:** "create a PR", "open a pull request", "I'm done with this
 feature", "ready to merge", "ship this"
 
-Three-step pre-PR checklist: run `just check` (format, lint, typecheck, tests
-at 100% coverage) → update `CHANGELOG.md [Unreleased]` with a concise entry →
-run `just docb` to verify the docs build and commit the synced files → create
-the PR.
+Four-step pre-PR checklist: run `just check` (format, lint, typecheck,
+migration check, tests at 100% coverage) → update `CHANGELOG.md [Unreleased]`
+with a concise entry → run `just docb` to verify the docs build and commit the
+synced files → create the PR.
 
 ### `quoin-deps-upgrade`
 
@@ -231,7 +231,11 @@ no-op for non-Python files.
 ### PreToolUse hook — block sensitive files (automatic)
 
 Script at `.claude/hooks/block-sensitive.sh`. Fires before any
-`Edit` / `Write` / `MultiEdit` tool call.
+`Edit` / `Write` / `MultiEdit` tool call, and before `Bash` commands that
+look like writes to the same files. The `Bash` check matches command text,
+so a command that merely names one of these paths next to an interpreter
+or a redirect is refused too — reword it rather than working around the
+guard.
 
 Refuses edits to:
 

@@ -169,15 +169,21 @@ config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
 
 ### SQLModel Metadata
 
-All SQLModel tables are automatically discovered:
+Alembic discovers every table registered on `SQLModel.metadata`.
+`alembic/env.py` imports `app/db/base.py`, which is where each module's
+model is imported:
 
 ```python
-# alembic/env.py
-from sqlmodel import SQLModel
-from app.modules.user.models import User  # Import all models
+# app/db/base.py
+from sqlmodel import SQLModel  # noqa
 
-target_metadata = SQLModel.metadata
+# Import models here
+from app.modules.user.models import User  # noqa
 ```
+
+`just new <module>` registers the router but not the model, so add the
+import here yourself (see
+[Creating a Module](creating-a-module.md#10-import-the-model-for-migrations)).
 
 ---
 
@@ -398,27 +404,29 @@ uv run python scripts/migration_guard.py alembic/versions/<file>.py
 
 ## Production Deployments
 
-### Option 1: Run Migrations in Dockerfile
+The image already contains `alembic/` and `alembic.ini` but does not run
+them on start.
 
-```dockerfile
-# Add to Dockerfile
-COPY alembic/ alembic/
-COPY alembic.ini .
+### Option 1: Separate Migration Job (recommended)
 
-# Run migrations on container start
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0"]
-```
-
-### Option 2: Separate Migration Job
-
-Run migrations as a separate one-off job before deploying:
+Run migrations as a one-off job from the same image before rolling out
+the new version. Only one process migrates, however many replicas start
+afterwards:
 
 ```bash
 # Kubernetes Job
-kubectl run migrations --image=myapp:latest --command -- alembic upgrade head
+kubectl run migrations --image=quoin-api:latest --command -- alembic upgrade head
 
-# Docker Compose
-docker-compose run app alembic upgrade head
+# Docker
+docker run --rm --env-file production.env quoin-api:latest alembic upgrade head
+```
+
+### Option 2: Run Migrations on Container Start
+
+Simpler for a single instance, but every replica races to migrate:
+
+```dockerfile
+CMD ["sh", "-c", "alembic upgrade head && fastapi run app/main.py --host 0.0.0.0 --port 8000"]
 ```
 
 ---
@@ -478,16 +486,16 @@ uv run alembic current
 
 Common causes:
 
-1. **Model not imported** in `alembic/env.py`
+1. **Model not imported** in `app/db/base.py`
 2. **Schema change not saved** — ensure you've saved the model file before
    running autogenerate
 3. **SQLModel metadata not set** as target_metadata
 
-**Solution**: Add import to [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py):
+**Solution**: Add the import to [`app/db/base.py`](https://github.com/balakmran/quoin-api/blob/main/app/db/base.py):
 
 ```python
-from app.modules.user.models import User
-from app.modules.product.models import Product  # Add new models here
+from app.modules.user.models import User  # noqa
+from app.modules.product.models import Product  # noqa
 ```
 
 ### "NameError: name 'sqlmodel' is not defined"

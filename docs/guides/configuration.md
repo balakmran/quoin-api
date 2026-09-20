@@ -4,7 +4,8 @@ The application is configured using **environment variables** and **[Pydantic Se
 
 ## Environment-Based Configuration
 
-The application supports three environments with automatic `.env` file selection based on the `QUOIN_ENV` variable:
+The application supports three environments with automatic `.env` file selection
+based on the `QUOIN_ENV` variable:
 
 | Environment | `QUOIN_ENV` Value       | Config File       | Use Case              |
 | :---------- | :---------------------- | :---------------- | :-------------------- |
@@ -22,7 +23,8 @@ checks and the `/docs`/`/openapi.json` disable guard.
 
 ## Environment Variable Prefix
 
-All application settings use the `QUOIN_` prefix for namespacing. This prevents conflicts with system or other application variables.
+All application settings use the `QUOIN_` prefix for namespacing. This prevents
+conflicts with system or other application variables.
 
 ```bash
 # Example: setting log level
@@ -148,12 +150,13 @@ connection pool uses httpx2 defaults. See the
 
 ## Core Settings Module
 
-All settings are defined in [`app/core/config.py`](../../app/core/config.py). The `Settings` class defines the schema and validation rules.
+All settings are defined in [`app/core/config.py`](../../app/core/config.py).
+The `Settings` class defines the schema and validation rules.
 
 ```python
 from enum import StrEnum
 from pydantic import PostgresDsn, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Environment(StrEnum):
@@ -175,6 +178,7 @@ class Settings(BaseSettings):
     ENV: Environment = Environment.development
     LOG_LEVEL: LogLevel = "INFO"  # DEBUG | INFO | WARNING | ERROR
     OTEL_ENABLED: bool = True
+    # ... see the table above for the remaining settings
 
     # Database - constructed from individual POSTGRES_* vars
     POSTGRES_HOST: str = "localhost"
@@ -207,10 +211,16 @@ class Settings(BaseSettings):
 
 ## Database Configuration
 
-The database connection is managed in [`app/db/session.py`](../../app/db/session.py). The async engine is created via `create_db_engine()` and stored on `app.state.engine` during the application lifespan. It uses `SQLModel` (a wrapper around SQLAlchemy) with the async `asyncpg` driver for high performance.
+The database connection is managed in
+[`app/db/session.py`](../../app/db/session.py). The async engine is created via
+`create_db_engine()` and stored on `app.state.engine` during the application
+lifespan. It uses `SQLModel` (a wrapper around SQLAlchemy) with the async
+`asyncpg` driver for high performance.
 
-- **Changes**: Never modify the database schema manually. Always change the `SQLModel` definition in Python.
-- **Migrations**: Use `just migrate-gen \"message\"` to generate migration scripts.
+- **Changes**: Never modify the database schema manually. Always change the
+  `SQLModel` definition in Python.
+- **Migrations**: Use `just migrate-gen "message"` to generate migration
+  scripts.
 
 ---
 

@@ -472,7 +472,7 @@ app = FastAPI(lifespan=lifespan)
 
 ### Outbound HTTP Client (Resilience)
 
-**Decision:** A single lifespan-managed `httpx.AsyncClient` on
+**Decision:** A single lifespan-managed `httpx2.AsyncClient` on
 `app.state.http_client`, wrapped by **stamina** (retries) and
 **purgatory** (circuit breaker).
 
@@ -544,10 +544,11 @@ logger.info(
 
 - ✅ Excellent observability in production
 - ✅ Vendor-agnostic
-- ❌ Performance overhead (~5-10%)
+- ❌ Some runtime overhead for span creation and export
 - ❌ Additional infrastructure required (OTEL collector)
 
-**Configuration:** Toggleable via `OTEL_ENABLED` environment variable.
+**Configuration:** Toggleable via the `QUOIN_OTEL_ENABLED` environment
+variable.
 
 ---
 

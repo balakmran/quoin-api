@@ -18,8 +18,9 @@ deleted_at: datetime | None = Field(
 ```
 
 `deleted_at` is **not** in `UserRead`, `UserCreate`, or `UserUpdate`. It
-is set only by the service on delete, so a client can neither read nor
-write it directly.
+is set only by the delete path (`UserRepository.delete`, reached through
+`UserService.delete_user`), so a client can neither read nor write it
+directly.
 
 ## `deleted_at` vs `is_active`
 
