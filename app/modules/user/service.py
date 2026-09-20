@@ -1,3 +1,14 @@
+"""Business rules for the user module.
+
+Sits between the routes and the repository: routes handle HTTP, the
+repository handles SQL, and everything that is neither lives here.
+
+It raises domain exceptions rather than ``HTTPException`` — the global
+handlers turn those into problem documents — so the same service is
+callable from a background job or another service with no HTTP context
+at all.
+"""
+
 import uuid
 
 from app.core.pagination import PageParams

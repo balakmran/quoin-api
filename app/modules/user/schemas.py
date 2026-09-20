@@ -1,3 +1,15 @@
+"""Request and response shapes for the user module.
+
+Separate schemas per direction keep the wire contract independent of
+the table: ``UserCreate`` and ``UserUpdate`` say what a client may set,
+``UserRead`` says what it gets back, and neither exposes system-owned
+columns such as the soft-delete tombstone.
+
+``UserUpdate`` distinguishes "field absent" from "field set to null",
+so a partial update can clear an optional value without clearing the
+ones it did not mention.
+"""
+
 import uuid
 from datetime import datetime
 

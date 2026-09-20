@@ -159,7 +159,12 @@ paths = ["."]
 docstring_style = "google"
 inherited_members = true
 show_source = false
-show_root_heading = true
+# Each reference section keeps its own human-readable `##` heading, so
+# the generated block starts at the members rather than repeating the
+# dotted module path.
+show_root_heading = false
+show_root_toc_entry = false
+heading_level = 3
 show_symbol_type_heading = true
 show_symbol_type_toc = true
 members_order = "source"

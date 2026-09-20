@@ -198,6 +198,31 @@ says* → *proposed fix*. Then, once the user confirms, apply the edits and run
 right and the code having regressed, which is worth surfacing, not papering
 over.
 
+## The reference is generated
+
+`docs/api/core.md` and the Models/Schemas/Repository/Service sections of
+`docs/api/user.md` are `::: app.core.<module>` blocks. The prose you see
+on those pages is the module's **docstring** — fixing a wrong statement
+there means editing the Python file, not the Markdown. Each section still
+carries a hand-written `## Heading`, a `**Usage:**` link, and the
+`**Source:**` link the coverage test matches on; those are the only parts
+of the page to audit as Markdown.
+
+Route sections stay hand-written — `docs/api/system.md` entirely, and
+`user.md`'s Endpoints — because they document an HTTP contract, which no
+docstring describes.
+
+Two things to check on those pages:
+
+- **A module with no module-level docstring** renders a section that
+  opens straight into its first class. Ten modules had none before the
+  reference was generated; `ast.get_docstring(ast.parse(src))` finds any
+  that regress.
+- **`QUOIN_` in a docstring.** Copier substitutes a longer prefix into
+  generated projects, so a line with two prefix tokens can pass ruff here
+  and break `ruff check` there. Keep it to one per line.
+  `test_template_substitution.py` catches it.
+
 ## Things that bite
 
 - **Auditing in one direction only.** This is what a 2026-09 sweep got wrong:
@@ -216,6 +241,15 @@ over.
   page this skill names, re-read the checks that mention it.
 - **Editing `docs/project/*` directly.** Those are generated; your change will
   be overwritten on the next `just docb`. Edit the root source file.
+- **Configuring a Markdown extension inline.** Options belong in their
+  own `[project.markdown_extensions."<name>"]` table. Passing them as an
+  inline table inside `[project.markdown] extensions` silently disables
+  the extension — the build still says "No issues found".
+- **Grepping built HTML to check a page rendered.** Syntax highlighting
+  splits text across `<span>` tags, so a literal you search for may never
+  appear contiguously even though it is on the page. Search for a string
+  that can only come from the source you expect, and rebuild into a clean
+  `site/` first.
 - **Assuming a mismatch means the doc is wrong.** Sometimes the code drifted.
   Surface the discrepancy and let the user decide which side to fix.
 - **Forgetting the settings table is the most drift-prone doc** — `config.py`

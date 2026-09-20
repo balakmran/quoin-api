@@ -466,7 +466,7 @@ def _is_superuser(caller: ServicePrincipal) -> bool:
 def require_roles(*roles: str) -> Callable[..., Any]:
     """Dependency factory for role-based authorization.
 
-    Usage::
+    Usage:
 
         @router.delete("/{id}", status_code=204)
         async def delete_resource(

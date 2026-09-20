@@ -1,3 +1,12 @@
+"""Tracks in-flight requests so shutdown can drain them.
+
+One ``Lifecycle`` instance lives on ``app.state.lifecycle``.
+``InFlightRequestMiddleware`` maintains the counter and the lifespan
+handler drives the drain: readiness flips first so a load balancer
+stops sending new traffic, then the server waits for the requests it
+already accepted to finish.
+"""
+
 import asyncio
 
 import anyio

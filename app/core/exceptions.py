@@ -1,3 +1,33 @@
+"""Domain exceptions that map business failures to HTTP status codes.
+
+Service and repository code raises these rather than ``HTTPException``,
+and the global handlers render them as RFC 9457 problem documents. That
+keeps transport concerns out of the domain layers and gives every
+failure the same response shape.
+
+Every class below inherits ``QuoinError``, which carries a message, a
+status code, and optional response headers.
+
+| Class | Status |
+| :---- | :----: |
+| `BadRequestError` | 400 |
+| `UnauthorizedError` | 401 |
+| `ForbiddenError` | 403 |
+| `NotFoundError` | 404 |
+| `ConflictError` | 409 |
+| `QuoinRequestValidationError` | 422 |
+| `InternalServerError` | 500 |
+| `BadGatewayError` | 502 |
+| `ServiceUnavailableError` | 503 |
+| `GatewayTimeoutError` | 504 |
+
+Usage:
+    from app.core.exceptions import ConflictError, NotFoundError
+
+    raise NotFoundError("User not found")
+    raise ConflictError("Email already registered")
+"""
+
 from collections.abc import Sequence
 from typing import Any, LiteralString, NotRequired, TypedDict
 

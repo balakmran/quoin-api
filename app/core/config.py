@@ -1,3 +1,25 @@
+"""Application settings, loaded from the environment.
+
+Every setting carries the ``QUOIN_`` prefix, so the database host
+is ``QUOIN_POSTGRES_HOST``. The active profile is chosen by
+``QUOIN_ENV``. The Configuration guide lists every setting and
+its default.
+
+``DATABASE_URL`` is a plain property rather than a computed field, so
+the credential-bearing URL stays out of ``model_dump()`` and the
+OpenAPI schema. The password is a ``SecretStr`` and redacts in dumps.
+
+In production the settings are validated at startup rather than on
+first use, so a deployment missing a trust anchor crash-loops instead
+of serving 401s while looking healthy.
+
+Usage:
+    from app.core.config import settings
+
+    database_url = settings.DATABASE_URL
+    is_production = settings.ENV == "production"
+"""
+
 import os
 from enum import StrEnum
 from typing import Literal

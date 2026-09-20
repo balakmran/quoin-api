@@ -1,3 +1,14 @@
+"""Structured logging, configured once at startup.
+
+``setup_logging`` wires structlog and the standard library into a single
+pipeline: context variables (request ID, caller), log level, timestamp,
+and trace correlation. It runs first during startup, before anything
+else has a chance to log.
+
+``production`` renders JSON in UTC; development and test render
+human-readable console lines. ``QUOIN_LOG_LEVEL`` sets the verbosity.
+"""
+
 import logging
 import sys
 from collections.abc import MutableMapping

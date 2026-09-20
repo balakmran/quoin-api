@@ -1,3 +1,15 @@
+"""Renders exceptions as RFC 9457 ``application/problem+json``.
+
+``add_exception_handlers`` registers the whole set with the application
+at startup: ``QuoinError``, request validation failures, Starlette's
+``HTTPException`` (404, 405, ...), and anything that escapes uncaught.
+Between them they cover every way a request can fail, so no response
+falls back to FastAPI's default ``{"detail": ...}`` shape.
+
+The 500 handler never puts the exception message in the response. It is
+logged instead, with the request ID to join on.
+"""
+
 import json
 import re
 from http import HTTPStatus

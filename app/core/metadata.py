@@ -1,3 +1,10 @@
+"""Static application identity.
+
+Feeds the OpenAPI parameters and the landing-page template, so the name,
+version, repository, and copyright owner are declared once rather than
+repeated across the app.
+"""
+
 from app import __version__
 
 APP_NAME = "QuoinAPI"

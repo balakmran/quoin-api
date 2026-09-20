@@ -1,3 +1,13 @@
+"""Database access for the user module.
+
+Repositories ``flush()`` rather than commit — the request's unit of
+work owns the transaction boundary, so a single request can touch
+several repositories and still commit or roll back as one.
+
+Every read filters out soft-deleted rows, which is what makes a
+tombstoned user read as absent rather than as a row with a flag set.
+"""
+
 import uuid
 from datetime import UTC, datetime
 from typing import Any

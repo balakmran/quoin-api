@@ -57,6 +57,26 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+#: A `::: app.core.config` mkdocstrings block.
+_INCLUDE = re.compile(r"^::: +([\w.]+)\s*$", re.M)
+
+
+def _rendered(path: Path) -> str:
+    """Return a page's text with every mkdocstrings block resolved.
+
+    A generated section names only its module, so the symbols it
+    documents live in the source file rather than in the Markdown. These
+    checks ask "does anything document this", and generated output
+    counts, so the module's source is appended before searching.
+    """
+    body = _read(path)
+    for dotted in _INCLUDE.findall(body):
+        source = ROOT.joinpath(*dotted.split(".")).with_suffix(".py")
+        if source.is_file():
+            body += "\n" + _read(source)
+    return body
+
+
 @pytest.mark.parametrize("module", _core_modules(), ids=lambda p: p.name)
 def test_core_module_has_a_reference_section(module: Path) -> None:
     """Every `app/core` module is documented in the Core reference.
@@ -113,9 +133,16 @@ def test_doc_page_is_reachable_from_the_nav(page: Path) -> None:
     _EXCEPTION_CLASS.findall(_read(ROOT / "app" / "core" / "exceptions.py")),
 )
 def test_domain_exception_is_documented(name: str) -> None:
-    """Every domain exception appears in both tables that list them."""
+    """Every domain exception appears in both places that list them.
+
+    The Core reference half is self-satisfying while that section is
+    generated — `:::` documents every public class in the module, which
+    is the point of generating it. It stays here so the guard returns
+    automatically if the section is ever hand-written again. The
+    error-handling guide is hand-written, and is what this really pins.
+    """
     for doc in (ERROR_GUIDE, CORE_REFERENCE):
-        assert re.search(rf"\b{name}\b", _read(doc)), (
+        assert re.search(rf"\b{name}\b", _rendered(doc)), (
             f"{name} is missing from docs/{doc.relative_to(DOCS)}. Both the "
             f"error-handling guide and the Core reference list every "
             f"exception with its status code."
@@ -134,7 +161,7 @@ def test_middleware_is_documented(name: str) -> None:
     only asserts that one of them mentions it.
     """
     mentioned = any(
-        re.search(rf"\b{name}\b", _read(page))
+        re.search(rf"\b{name}\b", _rendered(page))
         for page in _doc_pages()
         if page.parent.name in ("guides", "api")
     )
