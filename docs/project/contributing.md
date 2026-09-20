@@ -34,7 +34,9 @@ just dev
 
 ## Application Home Page
 
-After running the server, you can visit [http://localhost:8000](http://localhost:8000) to see the application's home page:
+After running the server, you can visit
+[http://localhost:8000](http://localhost:8000) to see the application's home
+page:
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
 
@@ -94,10 +96,10 @@ commands.
 | `just install`           | Install project dependencies using `uv`                   |
 | `just dev`               | Start DB, apply migrations, and run the dev server        |
 | `just reset-db`          | Reset the database cleanly                                |
-| `just up`                | Start all Docker containers (App + DB)                    |
+| `just up`                | Start all Docker containers (API, DB, mock OAuth)         |
 | `just down`              | Stop and remove all Docker containers                     |
 | `just logs`              | Tail live logs from the API container                     |
-| `just check`             | Run all quality checks (format, lint, typecheck, test)    |
+| `just check`             | Run all quality checks (format, lint, typecheck, migration check, test) |
 | `just clean`             | Remove build artifacts and cache directories              |
 | `just pi`                | Install pre-commit hooks (`prek install`)                 |
 | `just pr`                | Run pre-commit hooks on all files (`prek run`)            |

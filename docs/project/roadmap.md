@@ -235,8 +235,8 @@ Intent, not commitments — this section exists so that work deferred
 
 - **Boring is the brand.** Strict semver, quarterly minors, security
   patches immediately. The cadence work is already dated: Python 3.12
-  dropped at its end of life (October 2028), Postgres 19 in Compose and CI once it
-  is generally available, and OpenTelemetry semantic-convention
+  dropped at its end of life (October 2028), Postgres 19 in Compose and CI
+  once it is generally available, and OpenTelemetry semantic-convention
   renames followed as they stabilise rather than pinned forever.
 - **The update path is the differentiator.** The verify script, the
   two smoke jobs, the two-tag update check, and `staying-current.md`
