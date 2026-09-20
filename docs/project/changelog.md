@@ -20,6 +20,10 @@
 
 ### Added
 
+- **Tests**: an `anonymous_client` fixture and two RBAC tests cover the
+  denial paths on a protected route — a caller without the role gets
+  `403`, and a caller with no token at all gets `401`. Nothing
+  previously proved the second end-to-end. Update-safe.
 - **Tests**: `test_docs_coverage.py` fails the gate when a core module,
   feature module, exception, or middleware has no documentation, and
   `test_skill_frontmatter.py` keeps every skill's description

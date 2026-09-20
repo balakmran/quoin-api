@@ -360,26 +360,35 @@ async def test_create_user(admin_client: AsyncClient) -> None:
 ```
 
 The negative cases are the ones worth writing, and they're the ones
-people skip. An authenticated caller without the role gets `403`; the
-plain `client` fixture leaves `get_current_caller` in place, so a
-request with no `Authorization` header gets `401`:
+people skip. An authenticated caller without the role gets `403`, and
+`anonymous_client` — a client carrying no credentials at all — gets
+`401`:
 
 ```python
 async def test_create_user_requires_write(read_client: AsyncClient) -> None:
-    """users.read alone cannot create."""
+    """A caller holding only users.read cannot create."""
     response = await read_client.post(
         "/api/v1/users/", json={"email": "denied@example.com"}
     )
-    assert response.status_code == 403
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-async def test_create_user_requires_a_token(client: AsyncClient) -> None:
+async def test_create_user_requires_a_token(
+    anonymous_client: AsyncClient,
+) -> None:
     """A missing token is 401, not 403."""
-    response = await client.post(
+    response = await anonymous_client.post(
         "/api/v1/users/", json={"email": "anon@example.com"}
     )
-    assert response.status_code == 401
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 ```
+
+`anonymous_client` exists because the plain `client` fixture cannot
+reach the 401 path. `get_token_claims` rejects a missing header before
+it touches the HTTP client, but FastAPI resolves every dependency in
+the signature first — and `get_http_client` raises unless the lifespan
+ran, which it does not under `ASGITransport`. The fixture overrides
+that one dependency so the rejection happens where it should.
 
 Every protected route deserves all three: the allowed caller, the
 under-privileged caller, and no caller at all. Distinguishing 401 from

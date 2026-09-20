@@ -28,6 +28,30 @@ async def test_create_user(admin_client: AsyncClient) -> None:
     assert "updated_at" in data
 
 
+async def test_create_user_requires_write(read_client: AsyncClient) -> None:
+    """A caller holding only users.read cannot create."""
+    response = await read_client.post(
+        "/api/v1/users/",
+        json={"email": "denied@example.com"},
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_create_user_requires_a_token(
+    anonymous_client: AsyncClient,
+) -> None:
+    """A missing token is 401, not 403.
+
+    Collapsing the two tells an already-authenticated client to go and
+    re-authenticate, which will not help it.
+    """
+    response = await anonymous_client.post(
+        "/api/v1/users/",
+        json={"email": "anon@example.com"},
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_create_user_duplicate_email(admin_client: AsyncClient) -> None:
     """Test creating a user with a duplicate email."""
     # Create the first user

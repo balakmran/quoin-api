@@ -393,21 +393,18 @@ The thing that breaks silently here is **order**, not behaviour. Each
 layer works in isolation while the stack as a whole stops protecting
 anything — a size limit registered after the body is read, or CORS
 outside the error handler so a rejected preflight comes back without
-its headers. `configure_middlewares` is a plain function, so assert the
-assembled stack directly rather than inferring it from a live request:
+its headers.
 
-```python
-def test_configure_middlewares() -> None:
-    """The stack is assembled in the documented order."""
-    app = FastAPI()
-    configure_middlewares(app)
+`configure_middlewares` is a plain function, and `app.user_middleware`
+after calling it is the assembled list, so the stack can be inspected
+directly rather than inferred from a live request. `tests/core/test_middlewares.py` uses
+it to assert every layer is **present** — and it is worth being precise
+that presence is all it asserts. The ordering above is not currently
+pinned by a test; it is held by this table and by the behaviour tests
+that would fail if a layer moved.
 
-    names = [m.cls.__name__ for m in app.user_middleware]
-    assert names == [...]  # the order from the table above
-```
-
-`tests/core/test_middlewares.py` pins the rest: CORS present when
-enabled and absent when disabled, the Host allowlist applied, an unsafe
+Those behaviour tests carry the rest: CORS present when enabled and
+absent when disabled, the Host allowlist applied, an unsafe
 `X-Request-ID` rejected rather than echoed, and a slow request answered
 with `504` while a fast one passes.
 
