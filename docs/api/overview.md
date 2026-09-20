@@ -18,8 +18,11 @@ by all feature modules:
 - **[Exceptions](core.md#exceptions)** — Domain exception classes
 - **[Exception Handlers](core.md#exception-handlers)** — Global error
   handling
-- **[Middlewares](core.md#middlewares)** — CORS configuration
+- **[Middlewares](core.md#middlewares)** — Security headers, request
+  ID, CORS, timeouts, and size limits
 - **[Telemetry](core.md#telemetry)** — OpenTelemetry tracing
+- **[Pagination](core.md#pagination)** — `Page` and `PageParams`
+- **[Versioning](core.md#versioning)** — Endpoint deprecation signalling
 
 ### Feature Modules
 
@@ -44,6 +47,10 @@ http://localhost:8000/api/v1
 ```
 
 ### User Endpoints
+
+Every user endpoint requires a bearer token: `users.read` for the
+`GET` routes, `users.write` for the rest. Mint one locally with
+`just token --roles="users.read,users.write"`.
 
 | Method   | Endpoint              | Description     | Status |
 | :------- | :-------------------- | :-------------- | :----- |
@@ -79,6 +86,9 @@ Available in non-production environments:
 | :------------------------- | :------------------- | :-------------------------------- |
 | `app.core.config`          | Application settings | [Core](core.md#configuration)     |
 | `app.core.exceptions`      | Domain exceptions    | [Core](core.md#exceptions)        |
+| `app.core.middlewares`     | Middleware stack     | [Core](core.md#middlewares)       |
+| `app.core.pagination`      | Page and PageParams  | [Core](core.md#pagination)        |
+| `app.core.versioning`      | Deprecation helper   | [Core](core.md#versioning)        |
 | `app.modules.user.models`  | User database model  | [User](user.md#models)            |
 | `app.modules.user.schemas` | User API schemas     | [User](user.md#schemas)           |
 | `app.modules.user.service` | User business logic  | [User](user.md#service)           |
@@ -90,10 +100,15 @@ Available in non-production environments:
 
 ### Create a User
 
+The examples assume a token minted with
+`just token --roles="users.read,users.write"`.
+
 ```python
 import httpx
 
-async with httpx.AsyncClient() as client:
+headers = {"Authorization": f"Bearer {token}"}
+
+async with httpx.AsyncClient(headers=headers) as client:
     response = await client.post(
         "http://localhost:8000/api/v1/users/",
         json={"email": "user@example.com", "full_name": "John Doe"},
@@ -104,9 +119,9 @@ async with httpx.AsyncClient() as client:
 ### List Users
 
 ```python
-async with httpx.AsyncClient() as client:
+async with httpx.AsyncClient(headers=headers) as client:
     response = await client.get("http://localhost:8000/api/v1/users/")
-    users = response.json()
+    page = response.json()  # {"items": [...], "total": ..., ...}
 ```
 
 ---

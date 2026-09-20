@@ -46,8 +46,13 @@ just migrate-up
 ### Connection Refused
 
 ```
-psycopg.OperationalError: connection refused
+psycopg.OperationalError: connection failed: connection to server at
+"127.0.0.1", port 5432 failed: Connection refused
 ```
+
+The migration commands connect with `psycopg`; the running app uses
+`asyncpg`, which reports the same problem as
+`ConnectionRefusedError: [Errno 61] Connect call failed`.
 
 **Check:**
 
@@ -88,24 +93,27 @@ QUOIN_POSTGRES_DRIVER=postgresql+asyncpg
 
 ```
 FAILED: Can't locate revision identified by 'abc123'
+ERROR: Multiple head revisions are present
 ```
 
-**Cause**: Git merge created conflicting migration files.
+**Cause**: Two branches each added a migration off the same parent, or
+the database was stamped with a revision this checkout doesn't have.
 
 **Solution**:
 
-1. Check migration history:
+1. Compare the history with the database:
 
    ```bash
-   ls alembic/versions/
+   uv run alembic heads      # more than one line means two heads
+   uv run alembic current
    ```
 
-2. Delete conflicting migrations (keep the correct one)
+2. For two heads, rebase one branch's migration onto the other (edit its
+   `down_revision`) if it hasn't been applied anywhere; otherwise join
+   them with `uv run alembic merge -m "merge heads" <rev1> <rev2>`.
 
-3. Regenerate if needed:
-   ```bash
-   just migrate-gen "merge migrations"
-   ```
+3. Never delete a migration that has been applied to a shared
+   database. See [Database Migrations](database-migrations.md).
 
 ---
 
@@ -117,16 +125,12 @@ FAILED: Can't locate revision identified by 'abc123'
 pytest.fixture.FixtureNotFound: fixture 'app' not found
 ```
 
-**Cause**: Missing import or fixture not in visible scope.
+**Cause**: The fixture name is misspelled or defined outside the test's
+scope. The shared fixtures live in `tests/conftest.py`: `db_session`,
+`client`, `read_client`, and `admin_client`.
 
-**Solution**: Check fixture is defined in `conftest.py`:
-
-```python
-# tests/conftest.py
-@pytest.fixture
-def app() -> FastAPI:
-    return create_app()
-```
+**Solution**: Use one of those, or define the fixture in the nearest
+`conftest.py`. See the [Testing guide](testing.md).
 
 ### Tests Fail with "Event loop is closed"
 
@@ -134,33 +138,27 @@ def app() -> FastAPI:
 RuntimeError: Event loop is closed
 ```
 
-**Cause**: Mixing sync and async test fixtures.
+**Cause**: An async resource (engine, client, session) created outside
+the shared event loop, or a sync fixture holding onto one.
 
-**Solution**: Use `pytest-asyncio` and mark tests async:
+**Solution**: The suite runs `pytest-asyncio` in `auto` mode on one
+session-scoped loop, so declare tests and fixtures as plain
+`async def` — no `@pytest.mark.asyncio` — and take the shared fixtures
+rather than building your own engine:
 
 ```python
-import pytest
-
-
-@pytest.mark.asyncio
 async def test_user_creation(client: AsyncClient):
     response = await client.post("/api/v1/users/", ...)
 ```
 
 ### Database State Leaks Between Tests
 
-**Cause**: Transactions not rolled back.
+**Cause**: The test wrote through a session other than `db_session`, or
+committed on a connection outside its SAVEPOINT.
 
-**Solution**: Use session fixture that auto-rolls back:
-
-```python
-@pytest.fixture
-async def session(app) -> AsyncGenerator[AsyncSession, None]:
-    async with async_session() as session:
-        async with session.begin():
-            yield session
-            await session.rollback()
-```
+**Solution**: Take the `db_session` fixture (or a client built on it,
+such as `client`), which rolls back after each test. See
+[Testing](testing.md).
 
 ---
 
@@ -168,12 +166,14 @@ async def session(app) -> AsyncGenerator[AsyncSession, None]:
 
 ### Auto-reload Not Working
 
-**Cause**: Running without `--reload` flag.
+**Cause**: The server was started with `fastapi run`, or another way
+that doesn't watch files.
 
-**Solution**: Use the `just dev` command:
+**Solution**: Use the `just dev` command (or `just run` if the database
+is already up):
 
 ```bash
-just dev  # Uses uvicorn with --reload
+just dev  # Runs `fastapi dev`, which reloads on change
 ```
 
 ### Port Already in Use
@@ -200,10 +200,8 @@ uv run fastapi dev app/main.py --port 8001
 
 ### "mkdocstrings plugin is enabled but not installed"
 
-```
-Error: mkdocstrings plugin is enabled, but mkdocstrings is not
-installed.
-```
+A docs build fails on a missing module such as `zensical` or
+`mkdocstrings`.
 
 **Solution**: Install the docs dependencies:
 
@@ -249,11 +247,14 @@ uv sync
 error: The lockfile is out of sync with pyproject.toml
 ```
 
-**Solution**: Regenerate the lockfile:
+**Solution**: Re-resolve the lockfile against `pyproject.toml`:
 
 ```bash
-uv lock --upgrade
+uv lock
 ```
+
+Don't add `--upgrade`; that also bumps every dependency, which belongs
+in its own change.
 
 ---
 
@@ -281,9 +282,12 @@ docker logs <container-id>
 
 **Common causes:**
 
-1. Database not accessible (check `DATABASE_URL`)
-2. Missing environment variables
-3. Migrations failed (run migrations manually)
+1. Database not accessible (check the `QUOIN_POSTGRES_*` variables)
+2. Production config incomplete: the app exits at startup if
+   `QUOIN_ALLOWED_HOSTS` or an OAuth trust anchor is missing; the log
+   names it (see [Deployment](deployment.md#environment-variables))
+3. Migrations not applied (the image doesn't run them; see
+   [Database Migrations](database-migrations.md#production-deployments))
 
 ---
 
@@ -292,8 +296,8 @@ docker logs <container-id>
 ### "Incompatible types in assignment"
 
 ```
-error: Incompatible types in assignment (expression has type "None",
-variable has type "User")
+error[invalid-return-type]: Return type does not match returned value
+  expected `User`, found `User | None`
 ```
 
 **Cause**: Function can return `None` but type hint doesn't allow it.
@@ -307,9 +311,8 @@ async def get_user(user_id: UUID) -> User | None:  # Allow None
 
 ### "Missing type parameters"
 
-```
-error: Missing type parameters for generic type "list"
-```
+The project requires 100% type hints, and a bare `list` or `dict` is
+rejected in review.
 
 **Solution**: Add type parameters:
 
@@ -331,27 +334,30 @@ def get_users() -> list[User]: ...
 **Enable SQL echo** to see queries:
 
 ```python
-# app/db/session.py
-engine = create_async_engine(
-    str(settings.DATABASE_URL),
-    echo=True,  # Print all SQL
+# app/db/session.py, in create_db_engine()
+return create_async_engine(
+    url or str(settings.DATABASE_URL),
+    echo=True,  # Print all SQL; revert before committing
+    ...
 )
 ```
 
 **Common fixes:**
 
 1. Add database indexes
-2. Use `select_related` for joins
+2. Load related rows in one query (`selectinload` / `joinedload`)
+   instead of one query per row
 3. Paginate large result sets
 
 ### High Memory Usage
 
 **Check:**
 
-1. Connection pool size (default: 20):
+1. Connection pool size (default: 20), per process:
 
-   ```python
-   engine = create_async_engine(..., pool_size=10)
+   ```bash
+   QUOIN_DB_POOL_SIZE=10
+   QUOIN_DB_MAX_OVERFLOW=5
    ```
 
 2. Leaked sessions (use `async with` context manager)
@@ -362,16 +368,18 @@ engine = create_async_engine(
 
 ## Production Issues
 
-### 500 Errors with No Logs
+### Unexpected 500 Errors
 
-**Cause**: An exception type the global handlers don't map.
-`HTTPException` and `QuoinError` subclasses are already rendered as
-Problem Details.
+An exception no handler maps comes back as a generic `500`
+`application/problem+json` response and is logged as
+`unhandled_exception` with the exception type and path. The response
+never carries the message; find it in the log by the request ID.
 
 **Solution**: Raise a domain exception (a `QuoinError` subclass from
-`app/core/exceptions.py`) instead. If a third-party exception needs its
-own mapping, register a handler in `add_exception_handlers()` in
-`app/core/exception_handlers.py`, typing `exc` as `Any`:
+`app/core/exceptions.py`) so the caller gets a meaningful status. If a
+third-party exception needs its own mapping, register a handler in
+`add_exception_handlers()` in `app/core/exception_handlers.py`, typing
+`exc` as `Any`:
 
 ```python
 async def vendor_exception_handler(request: Request, exc: Any) -> Response:
@@ -386,12 +394,15 @@ See [Error Handling](error-handling.md).
 
 ### OTEL Slowing Down Requests
 
-**Solution**: Disable in development or reduce sampling:
+**Solution**: Disable tracing in development:
 
 ```bash
 # .env
 QUOIN_OTEL_ENABLED=False  # Disable tracing
 ```
+
+In production, a slow or unreachable OTLP collector is the usual
+cause; see [Observability](observability.md).
 
 ---
 
@@ -399,7 +410,7 @@ QUOIN_OTEL_ENABLED=False  # Disable tracing
 
 If you're still stuck:
 
-1. **Check logs**: `docker-compose logs` or `just dev` output
+1. **Check logs**: `just logs` or `just dev` output
 2. **Search docs**: Use the search bar in the documentation site
 3. **Check GitHub Issues**: Look for similar problems
 4. **Review tests**: See how the feature is tested in `tests/`
@@ -414,6 +425,6 @@ If you're still stuck:
 | Run migrations        | `just migrate-up`        |
 | Run all checks        | `just check`             |
 | Rebuild docs          | `just docb`              |
-| View logs             | `docker-compose logs -f` |
-| Reset database        | `docker-compose down -v` |
+| View logs             | `just logs`              |
+| Reset database        | `just reset-db`          |
 | Clean build artifacts | `just clean`             |

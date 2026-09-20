@@ -181,7 +181,10 @@ class DuplicateProductNameError(ConflictError):
 
 ### 5. Implement the Repository
 
-Database operations only — no business logic here:
+Database operations only — no business logic here. Repositories
+`flush()`, never `commit()`: `get_session` wraps each request in a unit
+of work that commits on success and rolls back if anything raises, so a
+service that touches several repositories stays atomic.
 
 ```python
 # app/modules/product/repository.py
@@ -206,7 +209,7 @@ class ProductRepository:
         """Create a new product."""
         db_product = Product.model_validate(product_create)
         self.session.add(db_product)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(db_product)
         return db_product
 
@@ -248,15 +251,19 @@ class ProductRepository:
         for key, value in product_data.items():
             setattr(product, key, value)
         self.session.add(product)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(product)
         return product
 
     async def delete(self, product: Product) -> None:
         """Delete a product."""
         await self.session.delete(product)
-        await self.session.commit()
+        await self.session.flush()
 ```
+
+This `delete` is a hard delete to keep the example short. The `user`
+module soft-deletes instead; see the [Soft Delete guide](soft-delete.md)
+if rows should be recoverable.
 
 ### 6. Implement the Service
 
@@ -312,21 +319,24 @@ class ProductService:
 
 ### 7. Create the Router
 
-!!! note "Auth omitted for brevity"
+!!! warning "Auth omitted for brevity"
     The example below shows routes without `require_roles()` to keep it
-    focused on structure. In production modules, add the auth dependency
-    to each endpoint as shown in the [user module](https://github.com/balakmran/quoin-api/tree/main/app/modules/user/routes.py)
+    focused on structure. **A route without it is open to any caller** —
+    auth here is opt-in per route, not default-deny. Add the dependency
+    to every endpoint before shipping, as shown in the [user module](https://github.com/balakmran/quoin-api/tree/main/app/modules/user/routes.py)
     and documented in the [Authentication guide](authentication.md).
 
 ```python
 # app/modules/product/routes.py
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
 from app.core.openapi import DEFAULT_ERROR_RESPONSES, error_responses
 from app.core.pagination import Page, PageParams
 from app.db.session import SessionDep
+from app.modules.product.models import Product
 from app.modules.product.repository import ProductRepository
 from app.modules.product.schemas import (
     ProductCreate,

@@ -27,7 +27,7 @@ Quick comparison to understand when to use each tool:
 | **Purpose**       | Record events and errors   | Track request lifecycle    |
 | **When to Use**   | Business events, debugging | Performance analysis, flow |
 | **Output Format** | JSON logs (production)     | Spans with attributes      |
-| **Overhead**      | 2-5% CPU                   | 5-10% (when enabled)       |
+| **Overhead**      | JSON serialisation         | Span creation and export   |
 | **Control**       | `QUOIN_LOG_LEVEL` setting  | `QUOIN_OTEL_ENABLED` flag  |
 | **Best For**      | "What happened?"           | "How long did it take?"    |
 
@@ -48,8 +48,8 @@ setup_logging()
 
 ### Log Output Formats
 
-> **TIP**: `QUOIN_ENV` controls log **format** (human vs JSON). `QUOIN_LOG_LEVEL`
-> controls **verbosity**. They are independent knobs.
+> **TIP**: `QUOIN_ENV` controls log **format** (human vs JSON).
+> `QUOIN_LOG_LEVEL` controls **verbosity**. They are independent knobs.
 
 #### Development and test (`QUOIN_ENV=development` / `test`)
 
@@ -275,18 +275,19 @@ instrument_sqlalchemy_engine(engine)  # database spans
 
 - HTTP requests (FastAPI)
 - Database queries (SQLAlchemy, via `instrument_sqlalchemy_engine`)
-- Outgoing HTTP calls (the shared `ResilientHTTPClient`, via `instrument_http_client`)
+- Outgoing HTTP calls (the shared `ResilientHTTPClient`, via
+  `instrument_http_client`)
 
 **Example trace hierarchy:**
 
 ```
 POST /api/v1/users/
-├── UserService.create_user
-│   ├── UserRepository.get_by_email
-│   │   └── SELECT * FROM users WHERE email = ?
-│   └── UserRepository.create
-│       └── INSERT INTO users VALUES (...)
+├── SELECT ... FROM users WHERE email = ?
+└── INSERT INTO users ...
 ```
+
+Service and repository methods get no span of their own; add one where
+the time is worth seeing (see [Custom Spans](#custom-spans)).
 
 ### Custom Spans
 
@@ -407,7 +408,7 @@ log fields attached.
 ### Production
 
 Any OTLP-compatible backend works — set the endpoint and the app
-ships spans and metrics without code changes:
+ships spans without code changes:
 
 | Backend | Type | OTLP endpoint |
 | :--- | :--- | :--- |
@@ -473,16 +474,19 @@ ships spans and metrics without code changes:
 
 ### Logging
 
-- **Development**: Minimal (<1% overhead)
-- **Production**: ~2-5% CPU overhead for JSON serialization
+The cost is mostly JSON serialisation in production and scales with log
+volume. Raise `QUOIN_LOG_LEVEL` or turn off the access log
+(`QUOIN_ACCESS_LOG_ENABLED=False`) if it shows up in a profile.
 
 ### Tracing
 
-- **Disabled** (`QUOIN_OTEL_ENABLED=False`): Zero overhead
-- **Enabled** (`QUOIN_OTEL_ENABLED=True`): ~5-10% overhead
+- **Disabled** (`QUOIN_OTEL_ENABLED=False`): no instrumentation is
+  installed, so there is no tracing overhead.
+- **Enabled** (`QUOIN_OTEL_ENABLED=True`): every request and database
+  query creates and exports spans. Measure it under your own load.
 
 > **TIP**: For high-throughput services, consider sampling (e.g., trace 10% of
-> requests).
+> requests) in the OpenTelemetry Collector.
 
 ---
 

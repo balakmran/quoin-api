@@ -139,10 +139,10 @@ will be installed — rather than the declared ranges.
 `uv audit` scans Python packages only. The **OS packages in the
 container base image** (`python:3.14-slim-bookworm`) are outside its
 scope, and Dependabot's `docker` ecosystem bumps the pinned tag and
-digest without scanning the resulting image. Nothing in this repo closes that gap by
-design — the template does not build or publish an image, so image
-scanning belongs in whatever pipeline does. If you publish a container,
-add an image scanner (Trivy, Grype, or your registry's built-in
+digest without scanning the resulting image. Nothing in this repo closes
+that gap by design — the template does not build or publish an image, so
+image scanning belongs in whatever pipeline does. If you publish a
+container, add an image scanner (Trivy, Grype, or your registry's built-in
 scanning) to that pipeline and rebuild on base-image updates.
 
 ---
@@ -151,21 +151,22 @@ scanning) to that pipeline and rebuild on base-image updates.
 
 The committed configuration lives in
 [`.github/dependabot.yml`](../../.github/dependabot.yml). It opens
-**weekly, grouped** pull requests for two ecosystems.
+**weekly, grouped** pull requests for three ecosystems.
 
 | Ecosystem | Watches | Commit prefix |
 | :--- | :--- | :--- |
 | `uv` | `pyproject.toml` + `uv.lock` | `chore(deps)` |
+| `docker` | the Python base image and `uv` build stage pinned in the `Dockerfile` | `chore(deps)` |
 | `github-actions` | actions pinned in `.github/workflows/*.yml` | `chore(deps)` |
 
 ### Grouping and cadence
 
 Each ecosystem checks once a week. Minor and patch bumps are collapsed
 into a **single grouped PR** per ecosystem (`python-minor-patch`,
-`actions-minor-patch`), so routine updates arrive as one reviewable
-change instead of a flood. **Major** version bumps are deliberately left
-**ungrouped** — they can carry breaking changes and deserve their own PR
-and review. `open-pull-requests-limit` is `5` per ecosystem.
+`docker-minor-patch`, `actions-minor-patch`), so routine updates arrive
+as one reviewable change instead of a flood. **Major** version bumps are
+deliberately left **ungrouped** — they can carry breaking changes and
+deserve their own PR and review. `open-pull-requests-limit` is `5` per ecosystem.
 
 Commit messages use the `chore(deps): …` prefix so Dependabot's PRs
 satisfy the project's [Conventional Commits](quality-checks.md) rule.

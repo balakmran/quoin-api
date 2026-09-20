@@ -9,8 +9,8 @@ The API is organized hierarchically in [`app/api.py`](https://github.com/balakmr
 
 ```python
 from fastapi import APIRouter
+from app.modules.system import router as system_router
 from app.modules.user import router as user_router
-from app.modules.system import router as system_router_root
 
 # Versioned API router
 v1_router = APIRouter()
@@ -20,8 +20,9 @@ v1_router.include_router(user_router)
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(v1_router)
 
-# System router (no prefix)
-# Included separately at root level in main.py
+# System routes stay at root (health, ready, root page); main.py
+# includes them separately as `system_router_root`
+system_router_root = system_router
 ```
 
 ## API Versioning
@@ -93,8 +94,12 @@ The following changes **do not** require a new version:
 
 ### Create User
 
+Every `/api/v1/` request needs a bearer token; see the
+[Authentication guide](../guides/authentication.md).
+
 ```bash
 POST /api/v1/users/
+Authorization: Bearer <token with users.write>
 Content-Type: application/json
 
 {
@@ -107,7 +112,9 @@ Content-Type: application/json
   "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "email": "user@example.com",
   "full_name": "John Doe",
-  "created_at": "2026-02-16T15:30:00.000000"
+  "is_active": true,
+  "created_at": "2026-02-16T15:30:00Z",
+  "updated_at": "2026-02-16T15:30:00Z"
 }
 ```
 
@@ -115,13 +122,16 @@ Content-Type: application/json
 
 ```bash
 GET /api/v1/users/f47ac10b-58cc-4372-a567-0e02b2c3d479
+Authorization: Bearer <token with users.read>
 
 # Response: 200 OK
 {
   "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "email": "user@example.com",
   "full_name": "John Doe",
-  "created_at": "2026-02-16T15:30:00.000000"
+  "is_active": true,
+  "created_at": "2026-02-16T15:30:00Z",
+  "updated_at": "2026-02-16T15:30:00Z"
 }
 ```
 
