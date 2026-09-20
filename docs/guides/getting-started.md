@@ -1,56 +1,23 @@
 # Getting Started
 
-## Start a new project
-
-Use QuoinAPI as a [Copier](https://copier.readthedocs.io/) template to
-scaffold a production-ready API. Only `uv` needs to be installed — `uvx`
-runs Copier without a separate install step:
-
-```bash
-uvx copier copy --trust gh:balakmran/quoin-api my-api
-cd my-api
-cp .env.example .env
-just setup
-just dev
-```
-
-Visit [http://localhost:8000](http://localhost:8000) once the server is up.
-
-## Common recipes
-
-`just` is the task runner. The commands you'll reach for most:
-
-| Command | What it does |
-|---|---|
-| `just setup` | Install deps and wire commit hooks — run once |
-| `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
-| `just new <module>` | Scaffold and register a complete DDD module |
-| `just check` | Run format → lint → typecheck → migration check → test in one gate |
-| `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
-| `just token` | Mint a signed JWT against the local mock OAuth server |
-
-!!! tip "Run `just --list` for the full menu."
-
----
-
-## Develop QuoinAPI itself
-
-The rest of this guide covers working on QuoinAPI directly — cloning the
-repo, running the test suite, and contributing changes.
+Clone the project, start the stack, and make your first authenticated
+request.
 
 ## Prerequisites
 
 Ensure you have the following tools installed:
 
 - **[Git](https://git-scm.com/)**: Version control system.
-- **[Python 3.12+](https://www.python.org/downloads/)**: The programming language used.
-- **[uv](https://github.com/astral-sh/uv)**: A fast Python package installer and manager.
-- **[just](https://github.com/casey/just)**: A handy command runner for project tasks.
-- **[Docker](https://www.docker.com/)**: Required for running the database and services.
+- **[Python 3.12+](https://www.python.org/downloads/)**: The programming
+  language used.
+- **[uv](https://github.com/astral-sh/uv)**: A fast Python package
+  installer and manager.
+- **[just](https://github.com/casey/just)**: A handy command runner for
+  project tasks.
+- **[Docker](https://www.docker.com/)**: Required for running the
+  database and services.
 
 ## Quick Start
-
-Follow these steps to get up and running in minutes.
 
 ```bash
 # 1. Clone the Repository
@@ -63,15 +30,46 @@ cp .env.example .env
 # 3. Setup Project (installs deps & git hooks)
 just setup
 
-# 4. Start DB, Apply Migrations, and Run the Server
+# 4. Start DB + mock OAuth, Apply Migrations, and Run the Server
 just dev
 ```
 
-Visit [http://localhost:8000](http://localhost:8000) — the home page confirms
-the app is up. API docs are at [/docs](http://localhost:8000/docs) (Swagger UI)
-and [/redoc](http://localhost:8000/redoc).
+Visit [http://localhost:8000](http://localhost:8000) — the home page
+confirms the app is up. API docs are at
+[/docs](http://localhost:8000/docs) (Swagger UI) and
+[/redoc](http://localhost:8000/redoc).
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
+
+## Make an Authenticated Request
+
+Every `/api/v1/` endpoint requires a bearer token. With `just dev`
+running, mint one from the local mock OAuth server in a second terminal
+and call a protected endpoint:
+
+```bash
+TOKEN=$(just token --roles="users.read,users.write")
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/
+```
+
+Without the header the API answers `401`; with a token that lacks the
+role, `403`. The [Authentication guide](authentication.md) covers how
+tokens are validated and how to protect your own routes.
+
+## Common Recipes
+
+`just` is the task runner. The commands you'll reach for most:
+
+| Command | What it does |
+| :--- | :--- |
+| `just setup` | Install deps and wire commit hooks — run once |
+| `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
+| `just new <module>` | Scaffold and register a complete DDD module |
+| `just check` | Run format → lint → typecheck → migration check → test in one gate |
+| `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
+| `just token` | Mint a signed JWT against the local mock OAuth server |
+
+!!! tip "Run `just --list` for the full menu."
 
 ## Project Structure
 
@@ -80,18 +78,21 @@ Understanding the project layout will help you navigate the codebase.
 ```plaintext
 .
 ├── app/
-│   ├── core/                   # Core configuration (settings, logging, exceptions)
+│   ├── core/                   # Settings, security, errors, logging, middleware
 │   ├── db/                     # Database session and base models
-│   ├── modules/                # Domain-specific feature modules (e.g., user)
-│   │   └── user/               # Example module
+│   ├── http/                   # Shared outbound HTTP client
+│   ├── modules/                # Domain-specific feature modules
+│   │   ├── system/             # Health, readiness, and home-page routes
+│   │   └── user/               # Example module to mirror
 │   │       ├── exceptions.py   # Domain-specific exceptions
-│   │       ├── models.py       # database tables
+│   │       ├── models.py       # Database tables
 │   │       ├── schemas.py      # Pydantic models
 │   │       ├── repository.py   # CRUD operations
 │   │       ├── routes.py       # API endpoints
 │   │       └── service.py      # Business logic
-│   └── main.py                 # Application entry point
-├── tests/                      # Test suite
+│   ├── api.py                  # Router registration under /api/v1/
+│   └── main.py                 # App factory
+├── tests/                      # Integration tests against a real database
 ├── alembic/                    # Database migrations
 ├── docker-compose.yml          # Local development services
 ├── justfile                    # Task runner configuration
@@ -134,3 +135,5 @@ If the app cannot connect to the database:
 1. Ensure the Docker container is running: `docker ps`
 2. Check logs: `docker compose logs db`
 3. Restart the database: `just db`
+
+More fixes are in the [Troubleshooting guide](troubleshooting.md).
