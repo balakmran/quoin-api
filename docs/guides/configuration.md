@@ -31,7 +31,7 @@ conflicts with system or other application variables.
 export QUOIN_LOG_LEVEL=DEBUG
 
 # Without prefix (won't work)
-export LOG_LEVEL=DEBUG  # ❌ Ignored
+export LOG_LEVEL=DEBUG  # ignored: no prefix
 ```
 
 ## Setup

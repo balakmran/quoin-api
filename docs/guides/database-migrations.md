@@ -194,12 +194,14 @@ import here yourself (see
 Use descriptive names that explain **what** changed:
 
 ```bash
-✅ just migrate-gen "add email verification fields"
-✅ just migrate-gen "create orders table"
-✅ just migrate-gen "add index on user email"
+# Good — names the change
+just migrate-gen "add email verification fields"
+just migrate-gen "create orders table"
+just migrate-gen "add index on user email"
 
-❌ just migrate-gen "update database"
-❌ just migrate-gen "changes"
+# Bad — tells a later reader nothing
+just migrate-gen "update database"
+just migrate-gen "changes"
 ```
 
 ### Handling Data Migrations

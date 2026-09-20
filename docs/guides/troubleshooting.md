@@ -69,8 +69,15 @@ The migration commands connect with `psycopg`; the running app uses
    ```
 
 3. Is the port already in use?
+
    ```bash
    lsof -i :5432
+   ```
+
+4. Did the container start but then fail? Check what it logged:
+
+   ```bash
+   just logs
    ```
 
 ### "Async driver Required for Async Operations"

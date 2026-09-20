@@ -508,7 +508,7 @@ enforce the identical gate.
 
 ## Best Practices
 
-### ✅ Do
+### Do
 
 - Use descriptive test names: `test_create_user_duplicate_email_returns_409`
 - Test both success and failure paths
@@ -516,7 +516,7 @@ enforce the identical gate.
 - Clean up resources (database handles itself via transactions)
 - Test edge cases (empty lists, None values, boundary conditions)
 
-### ❌ Don't
+### Don't
 
 - Mock the database (use a real test DB)
 - Write tests that depend on execution order

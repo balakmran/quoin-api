@@ -454,14 +454,14 @@ ships spans without code changes:
 
 ### Logging
 
-✅ **Do:**
+**Do:**
 
 - Use keyword arguments for structured data
 - Log business events (user_created, order_placed)
 - Include relevant IDs (user_id, request_id)
 - Use appropriate log levels
 
-❌ **Don't:**
+**Don't:**
 
 - Log sensitive data (passwords, tokens, PII without redaction)
 - Use string formatting: `logger.info(f"User {user_id}")`
@@ -470,14 +470,14 @@ ships spans without code changes:
 
 ### Tracing
 
-✅ **Do:**
+**Do:**
 
 - Add spans for expensive operations
 - Include relevant attributes (IDs, amounts, flags)
 - Use semantic naming: `validate_order` not `step_1`
 - Propagate context across async boundaries
 
-❌ **Don't:**
+**Don't:**
 
 - Create spans for trivial operations (<1ms)
 - Add excessive attributes (keep <10 per span)

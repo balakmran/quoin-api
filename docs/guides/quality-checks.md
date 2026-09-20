@@ -211,7 +211,7 @@ would fail pull requests that changed nothing. It runs weekly on its own
 schedule instead; see
 [Dependency Scanning](dependency-scanning.md#uv-audit).
 
-Pull requests cannot be merged until all checks pass ✅
+Pull requests cannot be merged until all checks pass.
 
 ---
 
