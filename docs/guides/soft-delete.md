@@ -69,6 +69,39 @@ statement, it cannot raise a foreign-key `IntegrityError`. There is no
 "cannot delete: still referenced" (409) path — referencing rows remain
 valid, pointing at a row that still exists but reads as deleted.
 
+## Testing
+
+Soft delete is only correct if the tombstone is invisible everywhere a
+live row would appear, so assert absence from *both* read paths — the
+single fetch and the listing — not just the 204:
+
+```python
+async def test_delete_user(admin_client: AsyncClient) -> None:
+    """Soft delete hides the user from reads and returns 204."""
+    created = await admin_client.post(
+        "/api/v1/users/", json={"email": "delete@example.com"}
+    )
+    user_id = created.json()["id"]
+
+    response = await admin_client.delete(f"/api/v1/users/{user_id}")
+    assert response.status_code == 204
+
+    fetched = await admin_client.get(f"/api/v1/users/{user_id}")
+    assert fetched.status_code == 404
+
+    listing = await admin_client.get("/api/v1/users/?limit=100")
+    assert user_id not in [row["id"] for row in listing.json()["items"]]
+```
+
+Two further cases catch the mistakes this pattern actually produces.
+Deleting twice must return **404, not a second 204** — a repository that
+forgets the `deleted_at IS NULL` predicate will happily re-tombstone a
+dead row. And the partial unique index must let the address go: register
+an email, delete it, and register it again, expecting `201`.
+`tests/modules/user/test_routes.py` holds both as
+`test_delete_user_twice_returns_404` and
+`test_delete_user_frees_email_for_reuse`.
+
 ## What's intentionally not here
 
 - **Hard delete / purge** — true removal of tombstoned rows (for GDPR
@@ -79,3 +112,11 @@ valid, pointing at a row that still exists but reads as deleted.
 - **Un-delete / restore** — trivial to add (clear `deleted_at`) but left
   out of the template until a resource needs it; mind the partial index
   if the email was re-registered in the meantime.
+
+## See Also
+
+- [Database Migrations](database-migrations.md) — the hand-written step
+  that swaps the full unique index for the partial one
+- [Creating a Module](creating-a-module.md) — where the repository's
+  `deleted_at IS NULL` predicate belongs
+- [Testing](testing.md) — the `admin_client` fixture used above

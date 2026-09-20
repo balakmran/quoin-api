@@ -150,6 +150,40 @@ Clients should treat `total` as an estimate for page math, not an exact
 invariant. If a module needs them to agree, fold the count into the page
 query with `func.count().over()`, or run the listing at REPEATABLE READ.
 
+## Testing
+
+A list endpoint has two things worth asserting: the envelope the caller
+receives, and the sort parsing behind it.
+
+The envelope is an HTTP-level check. `read_client` is already
+authenticated, so seed a row through `db_session` and read it back:
+
+```python
+async def test_list_users(
+    read_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """A list endpoint returns the shared envelope."""
+    db_session.add(User(email="list@example.com", full_name="List User"))
+    await db_session.commit()
+
+    response = await read_client.get("/api/v1/users/")
+
+    data = response.json()
+    assert data["limit"] == 100
+    assert data["offset"] == 0
+    assert data["total"] >= 1
+    assert isinstance(data["items"], list)
+```
+
+Sort parsing needs neither a database nor a client — `parse_sort` is a
+pure function, so cover it directly the way
+`tests/core/test_pagination.py` does: the default when `sort` is absent,
+a `-field` direction prefix, and the rejection of an unknown field.
+
+Per module, three cases earn their keep: the default page when no
+params are given, a non-default `limit`/`offset`, and a sort field your
+allowlist should refuse.
+
 ## What's intentionally not here
 
 - **Cursor / keyset pagination** — offset pagination is sufficient
@@ -157,3 +191,11 @@ query with `func.count().over()`, or run the listing at REPEATABLE READ.
   [backlog](../project/roadmap.md#backlog).
 - **A generic filter DSL** — per-module explicit filters are clearer and
   keep the schema honest.
+
+## See Also
+
+- [Creating a Module](creating-a-module.md) — where the list route and
+  its repository method come from
+- [Testing](testing.md) — the `read_client` and `db_session` fixtures
+- [Conventions](../api/conventions.md) — the envelope's place in the
+  wider response contract

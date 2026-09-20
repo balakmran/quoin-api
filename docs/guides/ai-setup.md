@@ -393,3 +393,11 @@ it at production.** Requires the dev DB running (`just db`).
 
 For broader automation ideas, run the `claude-automation-recommender`
 skill (say "recommend Claude automations for this project").
+
+## See Also
+
+- [Quality Checks](quality-checks.md) — the gate the hooks enforce
+- [Creating a Module](creating-a-module.md) — the conventions the
+  skills encode
+- [Contributing](../project/contributing.md) — working on the template
+  itself

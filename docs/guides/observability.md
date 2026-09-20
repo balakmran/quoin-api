@@ -506,6 +506,49 @@ volume. Raise `QUOIN_LOG_LEVEL` or turn off the access log
 
 ---
 
+## Testing
+
+Assert on the **event dictionary**, not on formatted output. structlog's
+`capture_logs()` intercepts entries before rendering, so a test stays
+valid whether the environment renders JSON or console lines:
+
+```python
+from structlog.testing import capture_logs
+
+
+def test_log_level_filters_below_threshold() -> None:
+    """QUOIN_LOG_LEVEL suppresses logs below itself."""
+    try:
+        with patch("app.core.logging.settings.LOG_LEVEL", "WARNING"):
+            setup_logging()
+            logger = structlog.get_logger()
+            with capture_logs() as cap_logs:
+                logger.info("suppressed")
+                logger.warning("emitted")
+    finally:
+        setup_logging()  # restore for later tests
+
+    events = [entry["event"] for entry in cap_logs]
+    assert "emitted" in events
+    assert "suppressed" not in events
+```
+
+The `finally` is not optional. `setup_logging()` rebinds structlog's
+configuration process-wide, so a test that reconfigures it and returns
+leaves every later test asserting against the wrong setup. Restore it.
+
+For contextual fields — request ID, caller — assert that the key is
+*present* on the entry rather than pinning its value; the value is
+generated per request and pinning it makes the test a liability.
+
+Tracing is tested differently. `tests/core/test_telemetry.py` asserts
+the **setup** path — that the right exporter is chosen for the
+environment, that resource attributes carry service version and
+environment, that instrumentation failures are swallowed rather than
+crashing startup — and not the spans themselves. Asserting on emitted
+spans mostly re-tests the OpenTelemetry SDK; asserting that a
+misconfigured exporter can't take the app down tests your code.
+
 ## Troubleshooting
 
 ### Logs Not Appearing

@@ -387,6 +387,41 @@ contextvar is already bound) but outside the timeout and size limits, so
 
 ---
 
+## Testing
+
+The thing that breaks silently here is **order**, not behaviour. Each
+layer works in isolation while the stack as a whole stops protecting
+anything — a size limit registered after the body is read, or CORS
+outside the error handler so a rejected preflight comes back without
+its headers. `configure_middlewares` is a plain function, so assert the
+assembled stack directly rather than inferring it from a live request:
+
+```python
+def test_configure_middlewares() -> None:
+    """The stack is assembled in the documented order."""
+    app = FastAPI()
+    configure_middlewares(app)
+
+    names = [m.cls.__name__ for m in app.user_middleware]
+    assert names == [...]  # the order from the table above
+```
+
+`tests/core/test_middlewares.py` pins the rest: CORS present when
+enabled and absent when disabled, the Host allowlist applied, an unsafe
+`X-Request-ID` rejected rather than echoed, and a slow request answered
+with `504` while a fast one passes.
+
+Two are worth copying if you add a layer of your own. A timeout that
+fires **after the response has started** must not try to send a second
+response — that is a different code path from the ordinary timeout, and
+it is the one that crashes. And a rejected request must still carry
+`X-Request-ID`, or the log line you need in order to debug it has
+nothing to join on.
+
+Settings-driven behaviour belongs with the settings tests: build a
+`Settings` with the value you want and assert the layer reacts, rather
+than mutating the process environment mid-suite.
+
 ## See Also
 
 - [Configuration reference](configuration.md) — all `QUOIN_SECURITY_*` variables

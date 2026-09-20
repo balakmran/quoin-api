@@ -224,6 +224,50 @@ lifespan. It uses `SQLModel` (a wrapper around SQLAlchemy) with the async
 
 ---
 
+## Testing
+
+Settings tests have one trap: **your local `.env` is still on disk**.
+Construct `Settings` against a cleared environment and no env file, or
+a correct default will read as wrong — `OTEL_ENABLED` is declared
+`True` but resolves to `False` in a typical development `.env`:
+
+```python
+def test_settings_defaults() -> None:
+    """Declared defaults, not whatever .env happens to say."""
+    with patch.dict(os.environ, {}, clear=True):
+        settings = Settings(_env_file=None)
+        assert settings.ENV == Environment.development
+        assert settings.OTEL_ENABLED is True
+        assert settings.POSTGRES_PORT == 5432
+```
+
+The same pattern with values in the dict covers prefix handling: set
+`QUOIN_LOG_LEVEL` and assert it lands, set a bare `LOG_LEVEL` and
+assert it does **not**.
+
+The production profile is worth its own tests, because its whole job is
+to refuse to boot. `validate_production_settings` raises `RuntimeError`
+naming the offending setting:
+
+```python
+def test_production_requires_explicit_allowed_hosts() -> None:
+    """Production rejects the development Host allow-list."""
+    with patch.dict(os.environ, {}, clear=True):
+        with pytest.raises(RuntimeError, match="QUOIN_ALLOWED_HOSTS"):
+            validate_production_settings(
+                _prod(ALLOWED_HOSTS=list(DEFAULT_ALLOWED_HOSTS))
+            )
+```
+
+Matching on the setting name, rather than just the exception type, is
+what keeps the error message useful — an operator reading a crash loop
+needs to know *which* setting is missing. See
+`tests/core/test_config.py` for the full set.
+
+When you add a setting, add it to the defaults test, to `.env.example`,
+and to the table above — those three drift apart faster than anything
+else in the repository.
+
 ## See Also
 
 - [Database Migrations Guide](database-migrations.md) — Managing schema changes

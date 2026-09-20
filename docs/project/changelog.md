@@ -4,6 +4,9 @@
 
 ### Changed
 
+- **Docs**: eight guides gain a `## Testing` section showing how to
+  test the behaviour they describe, and every guide now ends with
+  `## See Also`. Update-safe.
 - **Docs**: the site navigation is organised by what you are doing —
   Build, API Design, Ship — instead of by document type, and every
   section now opens on an index page. No page moved, so existing links

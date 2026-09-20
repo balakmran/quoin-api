@@ -456,6 +456,38 @@ just migrate-up
 
 ---
 
+## Testing
+
+You don't write tests for your migrations. The suite already runs them:
+`initialize_db` builds the test schema by applying the full chain with
+`alembic upgrade head`, and tears it down with `downgrade base`.
+
+Two classes of bug fall out of that for free. A model change with no
+matching migration fails the whole suite, because the schema the tests
+run against is built from the migrations and won't have your column. And
+a down-migration that doesn't reverse its up-migration fails in teardown
+— the half of every script that is otherwise never executed until the
+day you need it at 3am.
+
+`just check` also runs `alembic check`, which compares your models
+against the migration chain and fails on drift before anything reaches
+CI.
+
+What's left to you is the **data** a migration moves. A schema-only
+migration needs no test; one with a backfill, a type change, or a
+computed default does. Seed rows in the old shape, run the upgrade, and
+assert the new shape — including the rows that were `NULL`, empty, or
+already correct, which is where backfills go wrong.
+
+`just migrate-gen` runs `scripts/migration_guard.py` over the generated
+script automatically and flags what is unsafe against a live table:
+dropped columns and tables, `SET NOT NULL` on an existing column, a
+`NOT NULL` column added without a server default, `CREATE INDEX` without
+`CONCURRENTLY`, and `UPDATE` without a `WHERE`. A flag is a prompt to
+split the change across releases, not an error — but review it before
+you apply, since none of it will hurt on an empty dev database and all
+of it will in production.
+
 ## Troubleshooting
 
 ### "Target database is not up to date"

@@ -428,3 +428,11 @@ If you're still stuck:
 | View logs             | `just logs`              |
 | Reset database        | `just reset-db`          |
 | Clean build artifacts | `just clean`             |
+
+## See Also
+
+- [Getting Started](getting-started.md) — the setup these failures
+  interrupt
+- [Configuration](configuration.md) — every setting named above
+- [Observability](observability.md) — reading the logs and traces that
+  explain a failure
