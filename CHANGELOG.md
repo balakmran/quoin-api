@@ -6,6 +6,10 @@
 
 - **Docs**: `README.md` now leads with using the template; the Getting
   Started guide reads correctly inside a generated project. Update-safe.
+- **Docs**: a System page joins the API reference, and the Core page
+  gains the `security`, `schemas`, `lifecycle`, and `openapi` modules.
+  The architecture overview now links to that reference instead of
+  repeating it. Update-safe.
 
 ### Fixed
 

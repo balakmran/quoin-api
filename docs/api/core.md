@@ -179,6 +179,31 @@ raise ConflictError(message="Email already registered")
 
 ---
 
+## Schemas
+
+The response body every error is rendered into.
+
+### ProblemDetail
+
+```python
+class ProblemDetail(BaseModel):
+    """RFC 9457 Problem Details response body."""
+
+    type: str = "about:blank"  # urn:quoin:error:<snake_case_name>
+    title: str  # HTTP reason phrase
+    status: int  # mirrors the response status
+    detail: str  # explanation of this occurrence
+    instance: str  # request path
+    errors: list[dict[str, Any]] | None = None  # 422 only
+```
+
+`errors` is an RFC 9457 extension carrying per-field validation
+failures, and is omitted on every other status.
+
+**Source:** [app/core/schemas.py](https://github.com/balakmran/quoin-api/blob/main/app/core/schemas.py)
+
+---
+
 ## Exception Handlers
 
 Converts exceptions to [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
@@ -262,6 +287,78 @@ rationale is in the [Security guide](../guides/security.md#middleware-ordering).
 
 ---
 
+## Security
+
+OAuth 2.0 / OIDC bearer-token validation and role-based access control.
+
+### ServicePrincipal
+
+The authenticated caller, injected into every protected route.
+
+```python
+class ServicePrincipal(BaseModel):
+    subject: str  # JWT `sub`
+    roles: list[str]  # normalized app roles
+    claims: dict[str, Any]  # full decoded payload
+```
+
+### require_roles
+
+```python
+from app.core.security import ServicePrincipal, require_roles
+
+
+@router.get("/")
+async def list_users(
+    caller: Annotated[ServicePrincipal, Depends(require_roles("users.read"))],
+) -> ...: ...
+```
+
+Returns a dependency that validates the token and requires **any** of
+the named roles, plus the configurable superuser bypass. A missing or
+invalid token is a `401`; a valid token without the role is a `403`.
+
+### Other entry points
+
+| Name | Role |
+| :--- | :--- |
+| `validate_token` | Verifies signature, required claims, `exp`, `aud`, and `iss` |
+| `get_token_claims` | Bearer extraction, returning the raw claims |
+| `get_current_caller` | Builds the `ServicePrincipal` and binds `caller` to the log context |
+| `extract_roles` | Reads the roles claim, accepting an array or a space-separated string |
+| `JWKSCache` | Caches signing keys, refreshing stale sets in the background with backoff on an unknown `kid` |
+
+**Usage:** see the [Authentication guide](../guides/authentication.md).
+
+**Source:** [app/core/security.py](https://github.com/balakmran/quoin-api/blob/main/app/core/security.py)
+
+---
+
+## Lifecycle
+
+Tracks in-flight requests so shutdown can drain them.
+
+### Lifecycle
+
+One instance lives on `app.state.lifecycle`.
+`InFlightRequestMiddleware` maintains the counter; the lifespan handler
+drives the drain.
+
+| Member | Role |
+| :--- | :--- |
+| `in_flight` | Requests currently being processed |
+| `is_shutting_down` | Once true, `/ready` answers `503` |
+| `acquire` / `release` | Enter and leave the in-flight set |
+| `begin_shutdown` | Flip readiness so traffic drains away |
+| `drain(timeout)` | Await an idle server; `True` if it settled in time |
+
+**Usage:** see
+[Graceful Shutdown](../guides/deployment.md#graceful-shutdown).
+
+**Source:** [app/core/lifecycle.py](https://github.com/balakmran/quoin-api/blob/main/app/core/lifecycle.py)
+
+---
+
 ## Telemetry
 
 OpenTelemetry instrumentation for distributed tracing. Added last
@@ -342,6 +439,58 @@ async def legacy() -> ...: ...
 Returns a dependency that stamps `Deprecation: true` (plus `Sunset` and
 `Link` when configured) on every response, without changing the
 handler's return value.
+
+**Source:** [app/core/versioning.py](https://github.com/balakmran/quoin-api/blob/main/app/core/versioning.py)
+
+---
+
+## OpenAPI
+
+Schema generation, route tags, and the shared error-response
+declarations.
+
+### error_responses and DEFAULT_ERROR_RESPONSES
+
+```python
+from app.core.openapi import DEFAULT_ERROR_RESPONSES, error_responses
+
+router = APIRouter(prefix="/users", responses=DEFAULT_ERROR_RESPONSES)
+
+
+@router.get(
+    "/{user_id}",
+    responses=error_responses(404, descriptions={404: "User not found"}),
+)
+async def get_user(...) -> ...: ...
+```
+
+`DEFAULT_ERROR_RESPONSES` covers what any authenticated endpoint can
+return (401, 403, 422, 500) and belongs on the router;
+`error_responses(*codes)` declares what one route adds. Requesting an
+undocumented code raises `KeyError`, and a `descriptions` key matching
+none of the requested codes raises `ValueError`, so a typo fails loudly.
+
+### APITag
+
+The tag enum backing the grouping in Swagger UI. A new module's tag is
+added here so its description travels with it.
+
+### OPENAPI_PARAMETERS and set_openapi_generator
+
+`OPENAPI_PARAMETERS` is the `FastAPI(...)` keyword set: title, version,
+and long description from
+[Metadata](#metadata), plus the docs routes — `docs_url`, `redoc_url`,
+and `openapi_url` are all `None` in production, so the schema and both
+UIs are unavailable there.
+
+`set_openapi_generator(app)` post-processes the generated schema to
+label error responses `application/problem+json`, matching what the
+handlers actually send.
+
+**Usage:** see
+[OpenAPI Documentation](../guides/error-handling.md#openapi-documentation).
+
+**Source:** [app/core/openapi.py](https://github.com/balakmran/quoin-api/blob/main/app/core/openapi.py)
 
 **Usage:** see the
 [Deprecating Endpoints guide](../guides/deprecating-endpoints.md).

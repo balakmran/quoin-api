@@ -269,6 +269,22 @@ setup_opentelemetry(app)  # FastAPI spans
 instrument_sqlalchemy_engine(engine)  # database spans
 ```
 
+### Resource attributes
+
+Every span carries the identity of the service that produced it:
+
+| Attribute | Value |
+| :--- | :--- |
+| `service.name` | Application name from `app/core/metadata.py` |
+| `service.version` | Application version |
+| `deployment.environment.name` | `QUOIN_ENV` |
+| `deployment.environment` | The same value under the superseded key, kept for one release so existing dashboards keep matching |
+
+These are built with `Resource.create`, which also runs the standard
+OpenTelemetry detectors — so `OTEL_SERVICE_NAME` and
+`OTEL_RESOURCE_ATTRIBUTES` still contribute any attribute not set
+above, though the explicit values win over them.
+
 ### What Gets Traced
 
 **Automatically instrumented:**
