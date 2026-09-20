@@ -11,8 +11,18 @@
   The architecture overview now links to that reference instead of
   repeating it. Update-safe.
 
+### Added
+
+- **Tests**: `test_docs_coverage.py` fails the gate when a core module,
+  feature module, exception, or middleware has no documentation, and
+  `test_skill_frontmatter.py` keeps every skill's description
+  parseable. Update-safe.
+
 ### Fixed
 
+- **Skills**: six skill descriptions contained a colon that made the
+  frontmatter invalid YAML. `quoin-pre-pr` lost its description
+  entirely, so its trigger phrases never reached the model.
 - **Docs**: corrected stale examples and claims in the deployment,
   troubleshooting, migrations, testing, observability, architecture, and
   API-reference pages. The production example now lists the required

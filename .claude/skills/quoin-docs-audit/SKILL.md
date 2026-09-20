@@ -86,7 +86,14 @@ Start from what a page claims and check it against the code.
 
 Start from the code and check that something documents it. **Reading the docs
 cannot find these**: an undocumented module is mentioned on no page, so nothing
-prompts you to look for it. Run these as commands.
+prompts you to look for it.
+
+`tests/test_docs_coverage.py` already enforces the mechanical half of this, so
+`just check` fails on an undocumented core module, a feature module with no
+reference page or nav entry, an orphaned page, and an exception or middleware
+that no page names. Run the suite first; the commands below are for when you
+want the findings without the traceback, or are auditing something the test
+does not cover.
 
 ```bash
 # Every app/core module has a section in the Core reference. Sections are
