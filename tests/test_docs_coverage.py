@@ -23,10 +23,6 @@ NAV = ROOT / "zensical.toml"
 CORE_REFERENCE = DOCS / "api" / "core.md"
 ERROR_GUIDE = DOCS / "guides" / "error-handling.md"
 
-#: Pages the nav deliberately omits: the home page is the site root, and
-#: `just docb` regenerates everything under `project/` from the root files.
-_UNNAVIGATED = ("index.md",)
-
 _EXCEPTION_CLASS = re.compile(r"^class ([A-Za-z]+)\([A-Za-z]*Error\)", re.M)
 _MIDDLEWARE_CLASS = re.compile(r"^class ([A-Za-z]+Middleware)\b", re.M)
 
@@ -117,10 +113,12 @@ def test_feature_module_page_is_in_the_nav(module: Path) -> None:
 
 @pytest.mark.parametrize("page", _doc_pages(), ids=lambda p: p.name)
 def test_doc_page_is_reachable_from_the_nav(page: Path) -> None:
-    """No page is orphaned — every one is listed in `zensical.toml`."""
+    """No page is orphaned — every one is listed in `zensical.toml`.
+
+    Including `index.md`: the home page is the site root, but the nav
+    still names it, so it needs no exemption.
+    """
     relative = page.relative_to(DOCS).as_posix()
-    if relative in _UNNAVIGATED:
-        pytest.skip(f"{relative} is deliberately outside the nav")
 
     assert relative in _read(NAV), (
         f"docs/{relative} is not in the nav in zensical.toml, so the built "

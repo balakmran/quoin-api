@@ -28,9 +28,10 @@ NAV = ROOT / "zensical.toml"
 #: and therefore behaviour you can test.
 _TESTABLE_SECTIONS = ("Build", "API Design")
 
-#: `getting-started.md` closes with a "What's Next?" table, which does
-#: the same job for a first-run page and does it better.
-_NO_SEE_ALSO = ("guides/getting-started.md",)
+#: Guides that close on something other than `## See Also`. The
+#: first-run page ends on a next-steps table, which does the same job
+#: and does it better there.
+_CLOSING_HEADING = {"guides/getting-started.md": "What's Next?"}
 
 
 def _nav() -> list[dict[str, object]]:
@@ -97,17 +98,20 @@ def test_guide_documents_how_to_test_it(page: str) -> None:
 
 
 @pytest.mark.parametrize("page", _guide_pages())
-def test_guide_ends_with_see_also(page: str) -> None:
-    """Every guide closes by pointing somewhere else."""
-    if page in _NO_SEE_ALSO:
-        pytest.skip(f"{page} closes with its own next-steps table")
+def test_guide_ends_by_pointing_somewhere_else(page: str) -> None:
+    """Every guide closes with somewhere for the reader to go next.
 
+    That is `## See Also` everywhere but the first-run page, which ends
+    on its own next-steps table. Asserting which ending each page has,
+    rather than skipping the exception, means deleting that table is
+    still caught.
+    """
+    expected = _CLOSING_HEADING.get(page, "See Also")
     headings = _headings(page)
 
-    assert headings and headings[-1] == "See Also", (
-        f"docs/{page} should end with a `## See Also` section listing "
-        f"the two or three pages a reader wants next. Its last heading "
-        f"is {headings[-1]!r}."
-        if headings
-        else f"docs/{page} has no `##` headings at all."
+    assert headings, f"docs/{page} has no `##` headings at all."
+    assert headings[-1] == expected, (
+        f"docs/{page} should end with a `## {expected}` section giving "
+        f"the reader somewhere to go next. Its last heading is "
+        f"{headings[-1]!r}."
     )
