@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-09-20
+
+The first `1.0` candidate. It carries no behaviour change on the
+request path: this cycle went into the documentation, the tests that
+keep it honest, and one authorization gap those tests exposed.
+
+Scope from here is **fixes only** — anything the launch checklist
+catches becomes `rc.2`, and `1.0.0` is this commit with a version bump
+if it passes clean.
+
+`copier update` from `0.16.0` is expected to apply cleanly. Two things
+to know if you have diverged: `docs/api/core.md` and most of
+`docs/api/user.md` are now generated from module docstrings, so local
+edits to that prose belong in the Python files instead; and the docs
+nav was reorganised, though no page moved, so existing links still
+resolve.
+
 ### Changed
 
 - **Scaffolding**: `just new <module>` now also writes
@@ -1161,7 +1178,11 @@ written down at all.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/balakmran/quoin-api/compare/v0.16.0...v1.0.0-rc.1
+[0.16.0]: https://github.com/balakmran/quoin-api/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/balakmran/quoin-api/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/balakmran/quoin-api/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/balakmran/quoin-api/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/balakmran/quoin-api/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/balakmran/quoin-api/compare/v0.10.0...v0.11.0
