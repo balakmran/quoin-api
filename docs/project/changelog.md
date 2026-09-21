@@ -71,6 +71,12 @@ resolve.
   troubleshooting, migrations, testing, observability, architecture, and
   API-reference pages. The production example now lists the required
   settings and the migration step. Update-safe.
+- **Landing page**: the copy button swapped its icons through the
+  `hidden` DOM property, which SVG elements do not have, so the success
+  tick never appeared. It now toggles the attribute, waits for the
+  clipboard write to resolve, and marks the button on failure instead of
+  leaving the rejection unhandled. Same fix on the docs home page.
+  Update-safe.
 
 ## [0.16.0] - 2026-09-13
 

@@ -102,14 +102,38 @@
 })();
 
 // Copy CLI command. Bound here, not with an onclick attribute: the CSP
-// blocks inline event handlers.
-document.getElementById('copy-btn')?.addEventListener('click', () => {
-  navigator.clipboard.writeText('git clone https://github.com/balakmran/quoin-api.git');
+// blocks inline event handlers. The clipboard API is absent outside a
+// secure context and rejects when permission is denied, so the tick waits
+// for the write to resolve - otherwise the button claims a copy that never
+// happened. Icons toggle the `hidden` *attribute*: these are SVG elements,
+// where `hidden` is not a property, so assigning it sets an expando that
+// CSS never sees.
+const copyBtn = document.getElementById('copy-btn');
+copyBtn?.addEventListener('click', () => {
+  const cmd = document.querySelector('.quoin-cli__cmd');
   const copyIcon = document.getElementById('copy-icon');
   const checkIcon = document.getElementById('check-icon');
-  copyIcon.hidden = true;
-  checkIcon.hidden = false;
-  setTimeout(() => { copyIcon.hidden = false; checkIcon.hidden = true; }, 1800);
+  const label = copyBtn.getAttribute('aria-label');
+  const showCheck = (on) => {
+    copyIcon.toggleAttribute('hidden', on);
+    checkIcon.toggleAttribute('hidden', !on);
+  };
+  const write = navigator.clipboard
+    ? navigator.clipboard.writeText(cmd.textContent.trim())
+    : Promise.reject(new Error('clipboard unavailable'));
+  write
+    .then(() => {
+      showCheck(true);
+      setTimeout(() => showCheck(false), 1800);
+    })
+    .catch(() => {
+      copyBtn.classList.add('quoin-cli__copy--error');
+      copyBtn.setAttribute('aria-label', 'Copy failed - select the command to copy it');
+      setTimeout(() => {
+        copyBtn.classList.remove('quoin-cli__copy--error');
+        copyBtn.setAttribute('aria-label', label);
+      }, 1800);
+    });
 });
 
 // Status LEDs

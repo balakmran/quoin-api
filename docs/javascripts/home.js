@@ -6,15 +6,37 @@
     if (!cmd) return;
     const iconCopy = btn.querySelector(".quoin-cli__copy-icon");
     const iconCheck = btn.querySelector(".quoin-cli__copy-check");
+    // The clipboard API is absent outside a secure context and rejects
+    // when permission is denied, so the tick waits for the write to
+    // resolve and a rejection says so instead of going unhandled. Icons
+    // toggle the `hidden` *attribute*: these are SVG elements, where
+    // `hidden` is not a property, so assigning it sets an expando that
+    // CSS never sees.
+    const showCheck = (on) => {
+      iconCopy.toggleAttribute("hidden", on);
+      iconCheck.toggleAttribute("hidden", !on);
+    };
     btn.addEventListener("click", () => {
-      navigator.clipboard.writeText(cmd.textContent.trim()).then(() => {
-        iconCopy.hidden = true;
-        iconCheck.hidden = false;
-        setTimeout(() => {
-          iconCopy.hidden = false;
-          iconCheck.hidden = true;
-        }, 1800);
-      });
+      const label = btn.getAttribute("aria-label");
+      const write = navigator.clipboard
+        ? navigator.clipboard.writeText(cmd.textContent.trim())
+        : Promise.reject(new Error("clipboard unavailable"));
+      write
+        .then(() => {
+          showCheck(true);
+          setTimeout(() => showCheck(false), 1800);
+        })
+        .catch(() => {
+          btn.classList.add("quoin-cli__copy--error");
+          btn.setAttribute(
+            "aria-label",
+            "Copy failed - select the command to copy it",
+          );
+          setTimeout(() => {
+            btn.classList.remove("quoin-cli__copy--error");
+            btn.setAttribute("aria-label", label);
+          }, 1800);
+        });
     });
   };
 
