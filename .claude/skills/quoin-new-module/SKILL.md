@@ -38,6 +38,11 @@ minimally-working stubs that pass `just check` (100% coverage) as-is:
 - `test_routes.py` — a skeleton test asserting the router prefix.
 - `test_service.py` — a skeleton test that wires the stub layers
   together; replace it with behaviour tests as the layers fill in.
+- `docs/api/<module>.md` — a reference page whose Python layers are
+  `:::` mkdocstrings blocks, registered in the Reference nav in
+  `zensical.toml`. `test_docs_coverage.py` fails the gate without it,
+  so the page and its nav entry are scaffolded rather than left to you.
+  Its Routes section is the one part to write by hand.
 - `models.py` — a documented **empty** stub; a real table needs a
   migration (step 10), so define the model, then `just migrate-gen`.
 
