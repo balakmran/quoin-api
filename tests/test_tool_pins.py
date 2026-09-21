@@ -11,7 +11,24 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "Dockerfile"
-WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+SETUP_TEMPLATE = ROOT / "scripts" / "copier_setup.py.jinja"
+
+# Template-maintenance CI, excluded from generation since 0.12.0. A
+# project generated from 0.10.0 or 0.11.0 still carries a stale copy that
+# `copier update` never touches, so outside the template these are not
+# the project's workflows to keep pinned.
+_TEMPLATE_ONLY = {"copier-update.yml", "scaffold-smoke.yml"}
+
+
+def _workflows() -> list[Path]:
+    """Return the workflows this repository is responsible for."""
+    found = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    if SETUP_TEMPLATE.is_file():
+        return found
+    return [p for p in found if p.name not in _TEMPLATE_ONLY]
+
+
+WORKFLOWS = _workflows()
 
 _UV_IMAGE = re.compile(r"ghcr\.io/astral-sh/uv:(\S+?)@sha256:[0-9a-f]{64}")
 _SETUP_UV = re.compile(
