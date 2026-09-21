@@ -77,6 +77,11 @@ resolve.
   clipboard write to resolve, and marks the button on failure instead of
   leaving the rejection unhandled. Same fix on the docs home page.
   Update-safe.
+- **Template**: the migration guard's module docstring is rewrapped, and
+  `quoin_exception_handler`'s local alias no longer carries the
+  substituted prefix, so a long `project_name` has more room before a
+  generated project's line passes `E501`. `README.md` now states the
+  30-character budget the lint headroom is sized for. Update-safe.
 
 ## [0.16.0] - 2026-09-13
 

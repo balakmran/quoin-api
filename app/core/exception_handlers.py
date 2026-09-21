@@ -142,22 +142,22 @@ def _log_error_response(
 
 async def quoin_exception_handler(request: Request, exc: Any) -> Response:
     """Handle QuoinError exceptions."""
-    quoin_exc: QuoinError = exc
+    error: QuoinError = exc
     _log_error_response(
         "quoin_error",
-        quoin_exc.status_code,
-        quoin_exc,
-        message=quoin_exc.message,
+        error.status_code,
+        error,
+        message=error.message,
         path=request.url.path,
     )
     problem = ProblemDetail(
-        type=_problem_type(quoin_exc),
-        title=_problem_title(quoin_exc.status_code),
-        status=quoin_exc.status_code,
-        detail=quoin_exc.message,
+        type=_problem_type(error),
+        title=_problem_title(error.status_code),
+        status=error.status_code,
+        detail=error.message,
         instance=request.url.path,
     )
-    return _problem_response(problem, quoin_exc.status_code, quoin_exc.headers)
+    return _problem_response(problem, error.status_code, error.headers)
 
 
 async def http_exception_handler(request: Request, exc: Any) -> Response:
