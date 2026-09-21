@@ -210,6 +210,97 @@ def scaffold_module(root: Path, module: str) -> None:
 
     register_router(root / "app" / "api.py", module)
 
+    docs_page = root / "docs" / "api" / f"{module}.md"
+    docs_page.parent.mkdir(parents=True, exist_ok=True)
+    docs_page.write_text(_reference_stub(module))
+    register_reference_page(root / "zensical.toml", module)
+
+
+def title_name(module: str) -> str:
+    """Return the nav/heading title for a module.
+
+    Args:
+        module: Valid snake_case module name.
+
+    Returns:
+        The title-cased form, e.g. ``order_item`` -> ``Order Item``.
+    """
+    module = validate_module_name(module)
+    return module.replace("_", " ").title()
+
+
+def _reference_stub(module: str) -> str:
+    """Return the ``docs/api/<module>.md`` stub for a module.
+
+    Mirrors ``docs/api/user.md``: the Python layers are generated from
+    docstrings, and Routes is hand-written because it documents an HTTP
+    contract that no docstring carries.
+    """
+    title = title_name(module)
+    sections = "\n".join(
+        f"## {heading}\n\n::: app.modules.{module}.{name}\n"
+        for heading, name in (
+            ("Models", "models"),
+            ("Schemas", "schemas"),
+            ("Repository", "repository"),
+            ("Service", "service"),
+        )
+    )
+    return (
+        f"# {title}\n\n"
+        f"Reference for the `{module}` module. The sections below are\n"
+        f"generated from the module's docstrings — write the prose there,\n"
+        f"not here.\n\n"
+        f"{sections}\n"
+        f"## Routes\n\n"
+        f"Document each endpoint here: method, path, the role it requires,\n"
+        f"and its request and response shapes. Mirror [User](user.md).\n"
+        f"This section stays hand-written because it describes an HTTP\n"
+        f"contract, which no docstring carries.\n\n"
+        f"**Source:** `app/modules/{module}/routes.py`\n\n"
+        f"## See Also\n\n"
+        f"- [Creating a Module](../guides/creating-a-module.md) — filling\n"
+        f"  in the layers this page documents\n"
+        f"- [Conventions](conventions.md) — the response contract every\n"
+        f"  route follows\n"
+    )
+
+
+def register_reference_page(nav_path: Path, module: str) -> bool:
+    """Add a module's reference page to the Reference nav section.
+
+    The entry goes after the last `api/*.md` line, which keeps it inside
+    the Reference block without needing to parse the TOML.
+
+    Args:
+        nav_path: Path to ``zensical.toml``.
+        module: Valid snake_case module name.
+
+    Returns:
+        True if an entry was added or already present, False if no
+        Reference section was found to add it to.
+    """
+    module = validate_module_name(module)
+    if not nav_path.is_file():
+        return False
+
+    entry = f'        {{ "{title_name(module)}" = "api/{module}.md" }},'
+    lines = nav_path.read_text().splitlines()
+
+    if any(f'"api/{module}.md"' in line for line in lines):
+        return True
+
+    last = max(
+        (i for i, line in enumerate(lines) if '"api/' in line),
+        default=-1,
+    )
+    if last == -1:
+        return False
+
+    lines.insert(last + 1, entry)
+    nav_path.write_text("\n".join(lines) + "\n")
+    return True
+
 
 def register_router(api_path: Path, module: str) -> None:
     """Register a module router in ``app/api.py``.
@@ -295,6 +386,10 @@ def main() -> None:
         f"app/modules/{args.module}/ and tests/modules/{args.module}/"
     )
     print(f"Router registered in app/api.py as {args.module}_router")
+    print(
+        f"Reference page created at docs/api/{args.module}.md and added "
+        "to the Reference nav in zensical.toml"
+    )
     print(
         "Stubs (repository, service, schemas, exceptions, skeleton tests) "
         "are minimal and pass 'just check' as-is."

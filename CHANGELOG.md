@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Scaffolding**: `just new <module>` now also writes
+  `docs/api/<module>.md` and registers it in the Reference nav, so a
+  scaffolded module passes the docs-coverage gate as-is. Its Python
+  layers are `:::` blocks; only the Routes section is hand-written.
+  Update-safe.
 - **Docs**: the API reference is generated from source. Every section
   of the Core page and the Models, Schemas, Repository, and Service
   sections of the User page are mkdocstrings blocks, so signatures and

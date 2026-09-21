@@ -9,7 +9,9 @@ following the same patterns used by the existing `user` module.
 
 !!! tip "Scaffold first"
     Run `just new product` before following the steps below. This creates
-    the module directory and `app/api.py` registration, with every file
+    the module directory, its `app/api.py` registration, and its
+    reference page at `docs/api/product.md` (added to the Reference
+    nav), with every file
     as a minimally-working stub that passes `just check` immediately: a
     router with the pluralized prefix, `ProductRepository` /
     `ProductService` classes, a `ProductBase(SQLModel)` schema, a

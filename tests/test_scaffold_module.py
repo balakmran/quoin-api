@@ -92,6 +92,55 @@ def test_scaffold_module_creates_files_and_registers_router(
     )
     assert "v1_router.include_router(order_item_router)" in api_text
 
+    # A scaffolded module must satisfy the docs-coverage gate it ships
+    # with, which requires a reference page for every feature module.
+    reference = tmp_path / "docs" / "api" / "order_item.md"
+    assert reference.is_file()
+    page = reference.read_text()
+    assert page.startswith("# Order Item\n")
+    for layer in ("models", "schemas", "repository", "service"):
+        assert f"::: app.modules.order_item.{layer}" in page
+    # Routes stay hand-written — no docstring carries an HTTP contract.
+    assert "::: app.modules.order_item.routes" not in page
+    assert page.rstrip().endswith("route follows")
+
+
+def test_scaffold_module_adds_the_page_to_the_nav(tmp_path: Path) -> None:
+    """The reference page is registered in the Reference nav section.
+
+    A page nobody can navigate to is not documentation, and
+    `test_docs_coverage.py` fails the gate on one that is missing.
+    """
+    _write_api(tmp_path / "app" / "api.py")
+    (tmp_path / "zensical.toml").write_text(
+        "[project]\nnav = [\n"
+        '    { "Reference" = [\n'
+        '        "api/overview.md",\n'
+        '        { "User" = "api/user.md" },\n'
+        "    ]},\n]\n"
+    )
+
+    scaffold_module(root=tmp_path, module="order_item")
+
+    nav = (tmp_path / "zensical.toml").read_text()
+    assert '{ "Order Item" = "api/order_item.md" },' in nav
+    # It lands inside the Reference block, after the last api/ entry.
+    assert nav.index("api/order_item.md") > nav.index("api/user.md")
+    assert nav.index("api/order_item.md") < nav.index("]},")
+
+
+def test_scaffold_module_without_a_nav_still_succeeds(tmp_path: Path) -> None:
+    """A project whose nav was restructured still scaffolds.
+
+    The page is written either way; only the nav entry is skipped, so a
+    missing or reorganised `zensical.toml` cannot break `just new`.
+    """
+    _write_api(tmp_path / "app" / "api.py")
+
+    scaffold_module(root=tmp_path, module="order_item")
+
+    assert (tmp_path / "docs" / "api" / "order_item.md").is_file()
+
 
 def test_scaffold_module_refuses_existing_module(tmp_path: Path) -> None:
     """Existing modules are not overwritten."""
