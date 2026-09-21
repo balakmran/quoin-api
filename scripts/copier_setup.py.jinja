@@ -300,18 +300,52 @@ def clean_zensical() -> None:
 
 
 def strip_removed_links() -> None:
-    """Remove cross-references to docs pages that were dropped."""
+    """Remove cross-references to docs pages that were dropped.
+
+    The roadmap is template-only: copier.yml excludes it and
+    prune_sync_docs() stops it being regenerated. Any link to it would
+    dangle in a generated project, so they are rewritten here rather
+    than left for the first docs build to warn about.
+    """
     overview_path = BASE_DIR / "docs" / "architecture" / "overview.md"
-    if not overview_path.exists():
-        return
-    content = overview_path.read_text(encoding="utf-8")
-    content = re.sub(
-        r"- \[Decision Log\]\(decision-log\.md\)[^\n]*\n",
-        "",
-        content,
+    if overview_path.exists():
+        content = overview_path.read_text(encoding="utf-8")
+        content = re.sub(
+            r"- \[Decision Log\]\(decision-log\.md\)[^\n]*\n",
+            "",
+            content,
+        )
+        overview_path.write_text(content, encoding="utf-8")
+        print("Stripped dropped-page links from architecture/overview.md")
+
+    docs_dir = BASE_DIR / "docs"
+    # (page, pattern, replacement) — a whole list item goes, but a link
+    # inside a sentence is unwrapped so the prose still reads.
+    roadmap_links = (
+        (
+            docs_dir / "project.md",
+            r"- \[Roadmap\]\(project/roadmap\.md\)[^\n]*\n",
+            "",
+        ),
+        (
+            docs_dir / "guides" / "pagination.md",
+            r"\[backlog\]\(\.\./project/roadmap\.md#backlog\)",
+            "backlog",
+        ),
+        (
+            docs_dir / "guides" / "dependency-scanning.md",
+            r"\(see the\n\[Roadmap backlog\]\(\.\./project/roadmap\.md\)\)",
+            "(a deliberate non-goal)",
+        ),
     )
-    overview_path.write_text(content, encoding="utf-8")
-    print("Stripped dropped-page links from architecture/overview.md")
+    for path, pattern, replacement in roadmap_links:
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8")
+        updated = re.sub(pattern, replacement, content)
+        if updated != content:
+            path.write_text(updated, encoding="utf-8")
+            print(f"Stripped roadmap link from {path.relative_to(BASE_DIR)}")
 
 
 def prune_sync_docs() -> None:
