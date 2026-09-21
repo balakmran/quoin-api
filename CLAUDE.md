@@ -40,7 +40,7 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **Run `just check` after every code change.** Format, lint, typecheck, migration check, and tests must all pass before you end a turn.
 - **100% type hints.** Use blanket `# type: ignore` — never `# type: ignore[arg-type]` or other MyPy-style tags. The project uses `ty` (Pyright), which rejects unrecognized tag names.
 - **FastAPI exception handlers** registered via `app.add_exception_handler` must type the `exc` parameter as `Any` (Pyright requirement).
-- **80-char line limit** for Python and Markdown. Tables and code blocks are exempt. The formatter wraps code at 80, but ruff's E501 only fires past 100 (`[tool.ruff.lint.pycodestyle]`). That slack exists for generated projects, where Copier substitutes a longer settings prefix into prose. It's not for you: still write to 80.
+- **80-char line limit** for Python and Markdown. Tables and code blocks are exempt. The formatter wraps code at 80, but ruff's E501 only fires past 100 (`[tool.ruff.lint.pycodestyle]`). That slack exists for generated projects, where Copier substitutes a longer settings prefix into prose. It's not for you: still write to 80. Keep `QUOIN_` to **one token per line** in docstrings and comments — two on one line can pass here and blow the 100 limit once substituted.
 - **Async-first** — every DB call, repository method, and service method is `async def`.
 - **Google-style docstrings** on public functions and classes.
 - **Keep code comments concise.** Explain the non-obvious *why* in a
@@ -57,6 +57,11 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
   create one if none exists — and add/update the settings table in
   `docs/guides/configuration.md`. Run `just docb` to verify the build.
   Don't leave docs as a follow-up; do it in the same turn as the code.
+- **The API reference is generated.** `docs/api/core.md` and the
+  Models/Schemas/Repository/Service sections of `docs/api/user.md` are
+  `::: app.core.<module>` blocks — fix the **module docstring**, not the
+  Markdown. Module docstrings are published, so they are user-facing
+  prose. Route sections stay hand-written.
 - **Never raise `HTTPException`** in service or repository code. Raise a domain exception (`NotFoundError`, `ConflictError`, `BadRequestError`, `ForbiddenError`, `InternalServerError` from `app/core/exceptions`) and let the global handler translate it.
 - **Never modify the schema by hand.** Update the SQLModel, then `just migrate-gen "<msg>"`, review the generated script, then `just migrate-up`.
 - **All endpoints under `/api/v1/`.** The prefix is applied centrally in `app/api.py`; declare module routers as `APIRouter(prefix="/<module>", ...)`.
@@ -68,7 +73,7 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 This repo enforces quality at five points — assume they exist when reasoning about what's safe to ship. All six Claude hooks live in `.claude/settings.json`:
 
 - **Before every edit** — a `PreToolUse` hook (`.claude/hooks/block-sensitive.sh`) refuses Edit/Write, and Bash commands that look like writes, to files that must not be hand-edited: `.env` credential files (`.env.example` and `.env.test` are fine), `uv.lock`, `copier.yml`, applied `alembic/versions/` migrations, and the `docs/project/` pages `just docb` syncs. The Bash arm matches command text, so a command that merely names one of those paths next to an interpreter or redirect is refused too; reword the command rather than working around the guard.
-- **After every edit** — a `PostToolUse` hook runs `ruff format` on an edited `.py` file. Re-read before an edit that targets lines it may have reformatted.
+- **After every edit** — a `PostToolUse` hook runs `ruff format` on an edited `.py` file. Re-read before an edit that targets lines it may have reformatted. `ruff format` also formats Python code blocks inside Markdown, so a `.md` sample gets reformatted too. Guard a block it must not touch with `<!-- fmt: off -->` / `<!-- fmt: on -->`.
 - **End of every Claude turn** — a `Stop` hook runs `just format && just lint && just typecheck` whenever the working tree is dirty. Failures block the turn until fixed. Tests are deliberately excluded here (too slow per turn). Three further **advisory** `Stop` hooks warn without blocking: when `app/core/config.py` changed but `.env.example` / `docs/guides/configuration.md` didn't; when a `models.py` changed but no new `alembic/versions/` script was added; and when a changed `service.py` or `repository.py` references `HTTPException`.
 - **`git commit`** — `prek` runs ruff format, ruff check, and `ty` on changed files (configured in `prek.toml`).
 - **`git push`** — `prek` runs the full pytest suite. **Postgres must be running** (`just db`) or the push aborts. Use `git push --no-verify` only in emergencies; it defeats the gate.
@@ -82,6 +87,8 @@ All env vars use the `QUOIN_` prefix. See `.env.example` for the full list; `.en
 Docker gotchas:
 - Postgres persistence volumes must map to `/var/lib/postgresql` (not `/data`) for Postgres 18.
 - The Dockerfile runs as non-root user `quoin`.
+
+**Testing the template locally** — `copier copy` against this repo resolves to the latest **tag** unless you pass `--vcs-ref=HEAD`, so a scaffold smoke test silently exercises the last release, not your work.
 
 ## Where to look for more
 
