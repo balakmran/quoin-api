@@ -69,6 +69,11 @@ match: the `QUOIN_` prefix becomes yours, `QuoinAPI` becomes your
 project name, and template-only pages such as the roadmap and changelog
 are left out. The generated project gets its own starter README.
 
+Keep the project name to **30 characters or fewer**. The prefix derived
+from it lands in docstrings and comments, which no formatter reflows,
+so a longer name can push those lines past your project's own line
+limit on the first `just check`.
+
 `--trust` is required because the template runs a post-generation
 script. Read
 [`scripts/copier_setup.py.jinja`](scripts/copier_setup.py.jinja) first
