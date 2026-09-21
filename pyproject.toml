@@ -84,6 +84,14 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["."]
 python_files = ["test_*.py"]
+filterwarnings = [
+    # starlette's testclient module aliases anyio.abc.BlockingPortal at
+    # import time, which anyio 4.15 deprecated. Third-party and nothing
+    # we can fix: starlette 1.6.0 is the latest release. tests/test_main.py
+    # imports TestClient because it runs lifespan events, which
+    # ASGITransport does not. Drop this once starlette stops warning.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 80

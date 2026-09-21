@@ -41,6 +41,9 @@
 
 ### Fixed
 
+- **Tests**: the suite runs warning-free again. starlette's testclient
+  trips an anyio deprecation at import; it is filtered by message until
+  starlette stops warning. Update-safe.
 - **App**: `app/core/` and `app/db/` gain the `__init__.py` they were
   missing. They were implicit namespace packages, which static analysis
   tools do not descend into. No runtime change.
