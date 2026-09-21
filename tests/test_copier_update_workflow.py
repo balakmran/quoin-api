@@ -3,6 +3,12 @@
 The workflow picks the tags to verify an update *from* with a one-line
 shell pipeline. It is exercised only when a tag is pushed, so a wrong
 sort order would surface after a release rather than before one.
+
+Template-only. The skip keys on the Copier setup script, not on the
+workflow: `0.10.0` and `0.11.0` generated the workflow into projects
+before `_exclude` covered it, and `copier update` leaves that stale copy
+in place while shipping this file, so a file-presence check would run
+these assertions against a workflow the template no longer maintains.
 """
 
 import json
@@ -14,6 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW = ROOT / ".github" / "workflows" / "copier-update.yml"
+SETUP_TEMPLATE = ROOT / "scripts" / "copier_setup.py.jinja"
 
 TAGS = (
     "v0.12.0",
@@ -26,8 +33,8 @@ TAGS = (
 )
 
 pytestmark = pytest.mark.skipif(
-    not WORKFLOW.is_file(),
-    reason="generated projects do not ship the template's update check",
+    not SETUP_TEMPLATE.is_file(),
+    reason="only the template repository maintains the update check",
 )
 
 

@@ -4,6 +4,15 @@
 
 ### Fixed
 
+- **Template**: `copier update` from `0.10.0` or `0.11.0` left the
+  updated project failing its own `just check` with seven errors. Those
+  two releases generated the template's Copier Update Check workflow
+  into projects; `_exclude` has covered it since `0.12.0`, so an update
+  ships the tests that inspect it but never refreshes the stale copy
+  they inspect. Both tests now key on the Copier setup script — present
+  only in the template — instead of on the workflow file. Adopters on
+  those baselines can delete `.github/workflows/copier-update.yml`,
+  which their project never runs. Update-safe.
 - **Docs**: the `1.0.0-rc.1` entry carries the date it was tagged, and
   the security policy no longer describes the project as pre-1.0 —
   supported versions are `main` and the latest tag either way.
