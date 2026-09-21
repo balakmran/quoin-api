@@ -283,6 +283,12 @@ body.quoin-home-body .md-content__inner::before {
   display: none !important;
 }
 
+.quoin-cli__copy--error {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.32);
+  color: #f87171;
+}
+
 /* Button row */
 .quoin-hero__cta-buttons {
   display: flex;
