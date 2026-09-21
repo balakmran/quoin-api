@@ -4,6 +4,11 @@
 
 ### Fixed
 
+- **Security**: `just audit-prod` scanned every dependency, not the
+  runtime set it documents. `uv audit --locked` ignores both
+  `--no-default-groups` and `--no-dev`, so the recipe now names each
+  group; the scan drops from 116 packages to 88. A test fails the gate
+  if a newly declared group is not excluded. Update-safe.
 - **Template**: `copier update` from `0.10.0` or `0.11.0` left the
   updated project failing its own `just check` with seven errors. Those
   two releases generated the template's Copier Update Check workflow

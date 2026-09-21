@@ -198,9 +198,12 @@ audit_ignore := ""
 audit *args:
     @uv audit --preview-features audit-command --locked {{ audit_ignore }} {{ args }}
 
-# Audit only what ships in the container (runtime deps, no dev/test/docs groups)
+# Audit only what ships in the container (runtime deps, no dev/test/docs groups).
+# The groups are named one by one: --no-default-groups and --no-dev are both
+# no-ops for `uv audit --locked`, which audits the whole lock unless a group
+# is excluded explicitly, so either one would silently scan everything.
 audit-prod:
-    @just audit --no-default-groups
+    @just audit --no-group dev --no-group docs --no-group test --no-group tooling
 
 # Bump one package to its newest compatible release, then re-audit
 audit-fix package:
