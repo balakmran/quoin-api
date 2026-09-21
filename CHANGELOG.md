@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
-## [1.0.0-rc.1] - 2026-09-20
+### Fixed
+
+- **Docs**: the `1.0.0-rc.1` entry carries the date it was tagged, and
+  the security policy no longer describes the project as pre-1.0 —
+  supported versions are `main` and the latest tag either way.
+  Update-safe.
+
+## [1.0.0-rc.1] - 2026-09-21
 
 The first `1.0` candidate. It carries no behaviour change on the
 request path: this cycle went into the documentation, the tests that

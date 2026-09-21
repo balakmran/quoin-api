@@ -12,8 +12,9 @@ below.
 
 ## Supported Versions
 
-QuoinAPI is pre-1.0 and ships as a source template rather than a
-published package. Security fixes are applied to:
+QuoinAPI ships as a source template rather than a published package,
+so there is no supported version range to backport across: a fix lands
+once and you pull it in. Security fixes are applied to:
 
 | Version | Supported |
 | :------ | :-------- |
