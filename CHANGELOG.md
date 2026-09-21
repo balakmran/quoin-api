@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+**Which versions can update.** `copier update` reads the tag recorded
+in `.copier-answers.yml`, and that file first shipped in `0.10.0`. A
+project generated from `0.9.0` or earlier has no recorded baseline, so
+Copier refuses the update outright — re-generate and port your modules
+across, or merge the diff by hand. From `0.10.0` onward every baseline
+updates cleanly and needs no manual reconciliation; adopters on
+`0.10.0` or `0.11.0` should also delete the stale Copier Update Check
+workflow their project never runs, per the fix below. Each release
+verifies two of these paths in CI; every one of them was walked for
+`1.0`.
+
 ### Fixed
 
 - **Security**: `just audit-prod` scanned every dependency, not the
