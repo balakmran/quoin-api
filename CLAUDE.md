@@ -86,7 +86,7 @@ All env vars use the `QUOIN_` prefix. See `.env.example` for the full list; `.en
 
 Docker gotchas:
 - Postgres persistence volumes must map to `/var/lib/postgresql` (not `/data`) for Postgres 18.
-- The Dockerfile runs as non-root user `quoin`.
+- The Dockerfile runs as non-root user `appuser` (uid 1001).
 
 **Testing the template locally** — `copier copy` against this repo resolves to the latest **tag** unless you pass `--vcs-ref=HEAD`, so a scaffold smoke test silently exercises the last release, not your work.
 

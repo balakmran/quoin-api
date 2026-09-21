@@ -34,14 +34,14 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
 
 # Create a non-root user
-RUN addgroup --system --gid 1001 quoin && \
-    adduser --system --uid 1001 --ingroup quoin quoin
+RUN addgroup --system --gid 1001 appuser && \
+    adduser --system --uid 1001 --ingroup appuser appuser
 
 # Set ownership of the application directory
-RUN chown -R quoin:quoin /app
+RUN chown -R appuser:appuser /app
 
 # Switch to non-root user
-USER quoin
+USER appuser
 
 # Liveness check hitting the /health endpoint. Uses the stdlib
 # (curl/wget are not in the slim image) and the venv's Python on PATH.

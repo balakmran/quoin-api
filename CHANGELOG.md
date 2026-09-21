@@ -13,6 +13,15 @@ workflow their project never runs, per the fix below. Each release
 verifies two of these paths in CI; every one of them was walked for
 `1.0`.
 
+### Changed
+
+- **Docker**: the container's non-root user is `appuser`, not `quoin`,
+  so a generated project no longer carries the template's name in its
+  process list and file ownership. The uid and gid stay `1001`, leaving
+  `runAsUser`, `fsGroup`, and existing volume permissions untouched;
+  only something that names the user — `docker exec -u quoin`, or a
+  derived image with its own `USER quoin` — needs updating.
+
 ### Fixed
 
 - **Security**: `just audit-prod` scanned every dependency, not the
