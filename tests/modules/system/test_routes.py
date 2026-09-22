@@ -6,6 +6,7 @@ from fastapi import FastAPI, status
 from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.core import metadata
 from app.core.config import settings
 from app.db.session import (
     create_db_engine,
@@ -32,7 +33,10 @@ async def test_root(app: FastAPI):
 
     assert response.status_code == status.HTTP_200_OK
     assert "text/html" in response.headers["content-type"]
-    assert "INITIALIZING" in response.text
+    # The name and version come from the template context, so finding
+    # both proves the page rendered rather than merely returning HTML.
+    assert metadata.APP_NAME in response.text
+    assert metadata.VERSION in response.text
 
 
 async def _landing_page(app: FastAPI) -> str:
