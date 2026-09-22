@@ -18,6 +18,7 @@ services:
       - QUOIN_OAUTH_JWKS_URI=http://oauth:8080/default/jwks
       - QUOIN_OAUTH_ISSUER=http://oauth:8080/default
       - QUOIN_OAUTH_AUDIENCE=default
+      - QUOIN_OAUTH_ROLES_CLAIM=aud
       - QUOIN_OAUTH_SUPERUSER_ENABLED=true
     depends_on:
       - db

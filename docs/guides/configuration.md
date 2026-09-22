@@ -42,17 +42,15 @@ Copy the example configuration to create your local `.env` file:
 cp .env.example .env
 ```
 
-The template contains these defaults — ready for local development
-with Docker:
+`.env.example` lists every setting, grouped by concern, with its code
+default. The only values marked `dev` point OAuth at the local mock
+server and turn on the superuser bypass, so one `just token` exercises
+every endpoint:
 
 ```bash
-# Application
-# Environment: development, test, production
-QUOIN_ENV=development
-QUOIN_LOG_LEVEL=INFO
-QUOIN_OTEL_ENABLED=True
-
+# =============================================================================
 # Database
+# =============================================================================
 QUOIN_POSTGRES_DRIVER=postgresql+asyncpg
 QUOIN_POSTGRES_HOST=localhost
 QUOIN_POSTGRES_PORT=5432
@@ -60,6 +58,12 @@ QUOIN_POSTGRES_USER=postgres
 QUOIN_POSTGRES_PASSWORD=postgres
 QUOIN_POSTGRES_DB=app_db
 ```
+
+!!! note "Quoting"
+    `just` loads `.env` with a stricter parser than the app. Wrap a JSON
+    list in single quotes (`'["a","b"]'`) and a value containing spaces
+    in double quotes; `tests/test_env_example.py` checks both parsers
+    agree.
 
 !!! note
     The defaults work out of the box with `just db`. For production,
