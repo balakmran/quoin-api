@@ -72,14 +72,25 @@ jitter, powered by [stamina](https://stamina.hynek.me/). The backoff
 shape (initial/max wait, jitter) is tuned via module constants in
 `app/http/client.py`.
 
+Which failures are retried depends on the method:
+
+| Method | Retried on |
+| :--- | :--- |
+| `GET`, `HEAD`, `OPTIONS`, `TRACE`, `PUT`, `DELETE` | Any transport error |
+| `POST`, `PATCH` | Only `ConnectError`, `ConnectTimeout`, `PoolTimeout` |
+
+A `POST` that fails with a read timeout or a dropped connection may
+already have been applied upstream, so it surfaces as a 504/502 after
+one attempt instead of being replayed.
+
 There is **no aggregate retry deadline** — each attempt is bounded by
 `QUOIN_HTTP_TIMEOUT_SECONDS`, so the worst-case wall-clock for one call
 is roughly `attempts × timeout` plus backoff (e.g. ~30s at the defaults).
 Size the inbound request timeout accordingly, or lower `attempts` for
 latency-sensitive paths.
 
-Response **status codes are not retried by default**, so non-idempotent
-writes are never silently replayed. Opt in per call when the verb is
+Response **status codes are not retried by default**, so a write that
+reached the upstream is never replayed unless you ask. Opt in per call when the verb is
 safe to repeat:
 
 ```python

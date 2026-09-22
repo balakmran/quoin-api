@@ -24,6 +24,19 @@ logger = structlog.get_logger(__name__)
 # 4xx are caller errors and 501 is not transient, so none are retried.
 _RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 
+# RFC 9110 idempotent methods: safe to resend after any transport error.
+_IDEMPOTENT_METHODS = frozenset(
+    {"GET", "HEAD", "OPTIONS", "TRACE", "PUT", "DELETE"}
+)
+
+# Failures raised before the request reached the upstream. Only these
+# are retried for POST/PATCH; a read timeout may follow an applied write.
+_NOT_SENT_ERRORS: tuple[type[Exception], ...] = (
+    httpx2.ConnectError,
+    httpx2.ConnectTimeout,
+    httpx2.PoolTimeout,
+)
+
 # Backoff and circuit-breaker tuning. These are module constants rather
 # than settings because they are rarely worth changing per deployment;
 # the two knobs that are — request timeout and retry attempts — live in
@@ -59,7 +72,9 @@ class ResilientHTTPClient:
       ``_BREAKER_THRESHOLD`` failures, sparing the upstream (and the
       caller) from doomed retries until ``_BREAKER_TTL`` elapses.
     - The **retry loop** (stamina) replays transient transport failures
-      and, when ``retry_on_status`` is set, retryable status codes.
+      and, when ``retry_on_status`` is set, retryable status codes. A
+      non-idempotent method (``POST``, ``PATCH``) is only replayed when
+      the request never reached the upstream (connect or pool failure).
 
     Transport-level failures are translated into domain exceptions
     (502/503/504); response *status codes* are deliberately left for the
@@ -130,8 +145,8 @@ class ResilientHTTPClient:
             method: HTTP method (e.g. ``"GET"``).
             url: Absolute URL of the upstream endpoint.
             retry_on_status: When True, also retry responses whose status
-                is transient (429/5xx). Off by default so non-idempotent
-                writes are never silently replayed.
+                is transient (429/5xx). Off by default, since it replays
+                a request the upstream has already received.
             **kwargs: Forwarded to ``httpx2.AsyncClient.request`` (e.g.
                 ``params``, ``json``, ``headers``, ``timeout``).
 
@@ -150,7 +165,11 @@ class ResilientHTTPClient:
             ``TooManyRedirects``) are not translated here and propagate to
             the caller / global handler.
         """
-        retry_on: tuple[type[Exception], ...] = (httpx2.TransportError,)
+        retry_on: tuple[type[Exception], ...] = (
+            (httpx2.TransportError,)
+            if method.upper() in _IDEMPOTENT_METHODS
+            else _NOT_SENT_ERRORS
+        )
         if retry_on_status:
             retry_on += (_TransientStatusError,)
 

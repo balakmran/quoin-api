@@ -103,6 +103,61 @@ async def test_transport_error_exhausted_raises_bad_gateway() -> None:
     await client.aclose()
 
 
+async def test_post_not_replayed_after_read_timeout() -> None:
+    """A POST that may have reached the upstream is sent only once."""
+    calls = 0
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        raise httpx2.ReadTimeout("slow", request=request)
+
+    client = _client(handler)
+    with pytest.raises(GatewayTimeoutError):
+        await client.post("http://upstream.test/orders", json={"a": 1})
+
+    assert calls == 1
+    await client.aclose()
+
+
+async def test_post_retried_when_request_never_sent() -> None:
+    """A connect failure means nothing was sent, so a POST is retried."""
+    calls = 0
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        if calls < settings.HTTP_RETRY_ATTEMPTS:
+            raise httpx2.ConnectError("refused", request=request)
+        return httpx2.Response(201)
+
+    client = _client(handler)
+    response = await client.request("post", "http://upstream.test/orders")
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert calls == settings.HTTP_RETRY_ATTEMPTS
+    await client.aclose()
+
+
+async def test_put_replayed_after_read_timeout() -> None:
+    """An idempotent PUT is retried on any transport error."""
+    calls = 0
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        if calls < settings.HTTP_RETRY_ATTEMPTS:
+            raise httpx2.ReadTimeout("slow", request=request)
+        return httpx2.Response(200)
+
+    client = _client(handler)
+    response = await client.put("http://upstream.test/orders/1")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert calls == settings.HTTP_RETRY_ATTEMPTS
+    await client.aclose()
+
+
 async def test_timeout_exhausted_raises_gateway_timeout() -> None:
     """Persistent timeouts surface as 504 after retries."""
 
