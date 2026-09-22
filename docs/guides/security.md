@@ -178,9 +178,8 @@ QUOIN_SECURITY_HSTS_PRELOAD=true
 
 ## Request Size Limit
 
-`RequestSizeLimitMiddleware` rejects requests whose `Content-Length`
-exceeds the configured cap before the route handler reads the body. It
-returns a `413 Content Too Large` RFC 9457 Problem Details response:
+`RequestSizeLimitMiddleware` rejects requests whose body exceeds the
+configured cap. It returns a `413 Content Too Large` RFC 9457 Problem Details response:
 
 ```json
 {
@@ -207,9 +206,10 @@ QUOIN_MAX_REQUEST_BODY_BYTES=10485760
 ```
 
 !!! note "Chunked transfers"
-    The middleware only checks the advertised `Content-Length`.
-    Conforming HTTP clients always send it. The underlying uvicorn/h11
-    layer caps raw protocol buffers for the rare chunked case.
+    An oversize `Content-Length` is rejected before the route runs. A
+    body sent without one (`Transfer-Encoding: chunked`) is counted as
+    it arrives and cut off at the cap. uvicorn itself sets no body
+    limit, so this middleware is the only one in the process.
 
 ---
 

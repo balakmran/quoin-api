@@ -37,6 +37,9 @@
 
 ### Fixed
 
+- **Security**: `QUOIN_MAX_REQUEST_BODY_BYTES` now also caps a chunked
+  body sent without `Content-Length`, which was buffered in full.
+  Update-safe.
 - **Web**: the landing page's hero command no longer overflows a phone
   screen, which cut off the copy button. The hero's call-to-action box
   was sized by the command's unwrapped width, so every `max-width`

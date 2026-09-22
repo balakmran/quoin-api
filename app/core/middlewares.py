@@ -310,16 +310,18 @@ def _apply_security_headers(headers: MutableHeaders, csp: str) -> None:
         headers.setdefault("Strict-Transport-Security", value)
 
 
+class _BodyTooLargeError(Exception):
+    """Raised from a wrapped ``receive`` once the body passes the cap."""
+
+
 class RequestSizeLimitMiddleware:
     """Reject request bodies that exceed ``QUOIN_MAX_REQUEST_BODY_BYTES``.
 
-    Pure ASGI middleware that rejects an oversize advertised
-    ``Content-Length`` up-front with a 413 RFC 9457 Problem Details
-    response. Chunked / non-conforming clients that omit
-    ``Content-Length`` are not enforced here — uvicorn/h11 caps raw
-    protocol buffers at a lower layer, and adding a streaming counter
-    here measurably complicates the request path for a vanishingly
-    small attack surface.
+    Pure ASGI middleware answering with a 413 RFC 9457 Problem Details
+    response. An oversize advertised ``Content-Length`` is rejected
+    before the app runs. A body without one (``Transfer-Encoding:
+    chunked``) is counted as it streams in, and reading stops at the
+    cap: the server does not buffer it, so neither may the app.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -345,7 +347,34 @@ class RequestSizeLimitMiddleware:
                 await _send_413(send, scope.get("path", ""), limit)
                 return
 
-        await self.app(scope, receive, send)
+        received = 0
+        exceeded = False
+        tracker = _ResponseStartedTracker(send)
+
+        async def counting_receive() -> Message:
+            nonlocal received, exceeded
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    exceeded = True
+                    raise _BodyTooLargeError
+            return message
+
+        async def guarded_send(message: Message) -> None:
+            # FastAPI turns a failed body read into its own 400; the
+            # 413 below replaces it.
+            if exceeded and not tracker.started:
+                return
+            await tracker.send(message)
+
+        try:
+            await self.app(scope, counting_receive, guarded_send)
+        except Exception:
+            if not exceeded or tracker.started:
+                raise
+        if exceeded and not tracker.started:
+            await _send_413(send, scope.get("path", ""), limit)
 
 
 class AccessLogMiddleware:
