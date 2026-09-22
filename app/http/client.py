@@ -1,3 +1,24 @@
+"""The shared outbound HTTP client.
+
+One ``ResilientHTTPClient`` is created at startup and kept on
+``app.state``; routes and services reach it through ``HTTPClientDep``.
+Every call goes through a per-host circuit breaker and a retry loop,
+and transport failures surface as ``502``/``503``/``504`` domain
+exceptions. ``POST`` and ``PATCH`` are retried only when the request
+never reached the upstream.
+
+The Outbound HTTP guide covers the retry, breaker, and timeout rules.
+
+Usage:
+    from app.http.client import HTTPClientDep
+
+
+    @router.get("/rates")
+    async def rates(http: HTTPClientDep) -> dict[str, float]:
+        response = await http.get("https://rates.example.com/latest")
+        return response.json()
+"""
+
 from typing import Annotated, Any
 
 import httpx2

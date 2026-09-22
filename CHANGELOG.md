@@ -25,6 +25,9 @@
 
 - **Config**: `.env.example` is regrouped under section banners with
   one-line comments. Update-safe.
+- **Docs**: the Core reference now documents `app/db/session.py` and
+  `app/http/client.py`, and the docs coverage test requires both.
+  Update-safe.
 
 ### Fixed
 

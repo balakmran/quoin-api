@@ -132,6 +132,26 @@ the code it describes.
 
 ---
 
+## Database Session
+
+::: app.db.session
+
+**Usage:** see the [Architecture overview](../architecture/overview.md#database-layer-appdb).
+
+**Source:** [app/db/session.py](https://github.com/balakmran/quoin-api/blob/main/app/db/session.py)
+
+---
+
+## Outbound HTTP Client
+
+::: app.http.client
+
+**Usage:** see the [Outbound HTTP guide](../guides/outbound-http.md#using-it-in-a-service).
+
+**Source:** [app/http/client.py](https://github.com/balakmran/quoin-api/blob/main/app/http/client.py)
+
+---
+
 ## See Also
 
 - [Configuration Guide](../guides/configuration.md) — Environment setup
