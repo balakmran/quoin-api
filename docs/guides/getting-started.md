@@ -56,6 +56,13 @@ Without the header the API answers `401`; with a token that lacks the
 role, `403`. The [Authentication guide](authentication.md) covers how
 tokens are validated and how to protect your own routes.
 
+!!! note "Two development-only settings"
+    `.env` (and the Compose stack) sets `QUOIN_OAUTH_ROLES_CLAIM=aud`,
+    because the mock server puts roles there, and turns on the
+    superuser bypass, so `just token --roles="api.superuser"` can call
+    every endpoint. Neither is the default, and neither belongs in
+    production; see [Deployment](deployment.md#environment-variables).
+
 ## Common Recipes
 
 `just` is the task runner. The commands you'll reach for most:
