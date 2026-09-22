@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] - 2026-09-21
+
+The second candidate. The launch checklist ran against `rc.1` and
+found six things; this is those six and nothing else. Still no
+behaviour change on the request path, and `1.0.0` remains this commit
+with a version bump if the checklist passes clean against it.
+
 **Which versions can update.** `copier update` reads the tag recorded
 in `.copier-answers.yml`, and that file first shipped in `0.10.0`. A
 project generated from `0.9.0` or earlier has no recorded baseline, so
