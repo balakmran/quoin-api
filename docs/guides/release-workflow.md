@@ -24,7 +24,9 @@ graph TD
     C --> D[Commit Changelog<br/>docs: update changelog]
     D --> E[Merge to main]
     E --> F[Create Tag<br/>just tag]
+%% template-only
     F --> G[Copier Update Check<br/>automatic]
+%% /template-only
 ```
 
 ---
@@ -293,6 +295,8 @@ Each candidate gets its own changelog section (`## [1.0.0-rc.1] -
 YYYY-MM-DD`). `just tag` then tags `v1.0.0-rc.1` and publishes it as a
 GitHub **pre-release**, which GitHub never marks as the latest release.
 
+<!-- template-only -->
+
 The Copier Update Check sorts candidates below their final release. Its
 first baseline is the preceding tag, candidate or not; its second is the
 newest *final* release before that, because adopters update from
@@ -304,6 +308,8 @@ finals:
 | `v1.0.0-rc.2` | `v1.0.0-rc.1`, `v0.16.0` |
 | `v1.0.0` | `v1.0.0-rc.2`, `v0.16.0` |
 | `v1.0.1` | `v1.0.0`, `v0.16.0` |
+
+<!-- /template-only -->
 
 ---
 
