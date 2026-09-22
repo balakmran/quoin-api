@@ -76,6 +76,9 @@ These apply on every change. Workflow-specific rules live in skills and `docs/gu
 - **All endpoints under `/api/v1/`.** The prefix is applied centrally in `app/api.py`; declare module routers as `APIRouter(prefix="/<module>", ...)`.
 - **No emojis or icons in `justfile` echo commands** (terminal compatibility). Use `@` to suppress command echoing.
 - **Conventional Commits** — `<type>(<scope>): <description>`; types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`. Feature branches off `main`, merge via PR.
+<!-- template-only -->
+- **Push only when asked.** Commit on the local feature branch, but never `git push` it or open a PR until the maintainer says so. Every push runs the GitHub Actions suite; `just check` is the local gate.
+<!-- /template-only -->
 
 ## Automated quality gates
 
