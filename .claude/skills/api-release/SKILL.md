@@ -83,21 +83,23 @@ Push the branch and merge the PR to `main` the normal way. **Do not tag from a f
 
 ### 5. Prove the release before the tag is public
 
-A pushed tag cannot be withdrawn, and `just check` never exercises the image. Create the tag
-locally, verify, then let step 6 push it (`just tag` skips a tag that already exists).
+A pushed tag cannot be withdrawn, and `just check` never exercises the image. Verify first,
+then let step 6 create and push the tag.
 
 <!-- template-only -->
 
 The checks that would catch a bad template release run later still: the Copier Update Check only
 fires **after** the tag, and no gate exercises a generated project. The tree must be clean before
 the tag as well — `copier copy` copies a dirty template as-is, untracked files included.
+Create the tag locally, verify, then let step 6 push it (`just tag` skips a tag that already
+exists).
 
 <!-- /template-only -->
 
 ```bash
 git status --porcelain   # must be empty before you tag
-git tag vX.Y.Z           # local only
 # template-only
+git tag vX.Y.Z           # local only
 just verify-template-update <preceding-tag> vX.Y.Z --check
 just verify-template-update <newest-final-release> vX.Y.Z --check
 # /template-only
@@ -141,7 +143,7 @@ just tag
 just tag --no-release
 ```
 
-The release matches every tag since `v0.8.0`: title is the bare tag (`v0.11.0`, no prose), body is the changelog section starting at `### Added`, neither draft nor pre-release.
+Every release has the same shape: title is the bare tag (`v0.11.0`, no prose), body is the changelog section starting at `### Added`, neither draft nor pre-release.
 
 A release candidate (`vX.Y.Z-rc.N`) goes through the same steps, with its own `## [X.Y.Z-rc.N] - date` changelog section; `just tag` publishes it as a GitHub pre-release. Only the `-rc.N` suffix is supported.
 
@@ -150,9 +152,12 @@ A release candidate (`vX.Y.Z-rc.N`) goes through the same steps, with its own `#
 Verify the release landed:
 
 - Confirm the GitHub Release page shows the `vX.Y.Z` entry with the changelog body.
-- Check the Actions tab: CI on `main` and **Copier Update Check** on the tag
-  should both be green. The update check is the one that matters — it proves
-  `copier update` still applies cleanly across the release boundary.
+- Check the Actions tab: CI on `main` should be green.
+<!-- template-only -->
+- **Copier Update Check** on the tag should be green too. It is the one that
+  matters — it proves `copier update` still applies cleanly across the release
+  boundary.
+<!-- /template-only -->
 - Pull `main` and confirm `git describe --tags` reports the new tag.
 
 If the release step fails after the tag is pushed, **don't delete the tag** —

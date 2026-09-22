@@ -70,8 +70,14 @@ git grep -n "3\.12"   # or the old dep/action version you just replaced
 ```
 
 Check at least: `README.md`, `docs/` guides, `Dockerfile`, `.env.example`,
-`copier.yml` and `scripts/copier_setup.py.jinja` (this repo is also a Copier
-template), and any badges.
+and any badges.
+
+<!-- template-only -->
+
+Also `copier.yml` and `scripts/copier_setup.py.jinja` — this repo is a Copier
+template.
+
+<!-- /template-only -->
 
 ## `.env` sync
 
