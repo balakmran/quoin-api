@@ -62,7 +62,10 @@ nav = [
         { "License" = "project/license.md" },
     ]},
 ]
-extra_css = ["stylesheets/extra.css"]
+extra_css = [
+    "stylesheets/extra.css",
+    "stylesheets/home.css",
+]
 extra_javascript = [
     "javascripts/home.js",
 ]

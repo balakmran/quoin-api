@@ -270,7 +270,21 @@ def clean_zensical() -> None:
             flags=re.MULTILINE,
         )
 
-    # Drop the custom home-page JavaScript include.
+    # Drop the home page's own stylesheet and script. Both style markup
+    # that clean_index() has already replaced, and the template config
+    # excludes the files themselves.
+    content, removed = re.subn(
+        r'    "stylesheets/home\.css",\n',
+        "",
+        content,
+    )
+    # A miss would point the docs build at a stylesheet the generated
+    # project does not have.
+    if not removed:
+        raise RuntimeError(
+            "zensical.toml has no home.css entry matching the pattern in "
+            "clean_zensical(); the pattern needs updating."
+        )
     content = re.sub(
         r'extra_javascript = \[\n    "javascripts/home\.js",\n\]\n',
         "",
