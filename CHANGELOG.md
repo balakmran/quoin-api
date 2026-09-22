@@ -4,6 +4,9 @@
 
 ### Changed
 
+- **Web**: the landing page's CSS classes are prefixed `app-`, not
+  `quoin-`, so a generated project's markup carries no trace of the
+  template. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
