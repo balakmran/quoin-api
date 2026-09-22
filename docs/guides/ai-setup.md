@@ -142,7 +142,7 @@ synced files → create the PR.
 Actions", "upgrade to Python 3.x", "is there a newer version of X"
 
 The version-upgrade ritual for both Python deps and GitHub Actions:
-`uv lock --upgrade` respecting `exclude-newer`, checking upstream release notes
+`uv lock --upgrade` (`exclude-newer` ships commented out), checking release notes
 for pinning changes, sweeping docs/`.env`/Dockerfile for stale version
 strings, and verifying with `just check`.
 
