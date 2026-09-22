@@ -42,10 +42,9 @@
   itself, so a generated project's copy no longer reads as though that
   project were the template. Update-safe.
 - **Docs**: the release skill, release workflow, AI-setup guide and
-  `CLAUDE.md` no longer point a generated project at CI jobs, a
-  pronunciation, or a `copier.yml` it does not have. The template-only
-  fences gained a `%% ...` form so a Mermaid node can carry one.
-  Update-safe.
+  `CLAUDE.md` no longer point a generated project at CI jobs or a
+  `copier.yml` it does not have. The template-only fences gained a
+  `%% ...` form so a Mermaid node can carry one. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
