@@ -148,44 +148,6 @@
       z-index: -1;
     }
 
-    .app-hero__status {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-      padding: 0.28rem 0.75rem;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      background: rgba(56, 189, 248, 0.06);
-      color: rgba(56, 189, 248, 0.8);
-      transition: all 0.5s ease;
-      animation: app-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .app-hero__status--ok {
-      border-color: rgba(52, 211, 153, 0.3);
-      background: rgba(52, 211, 153, 0.08);
-      color: #34d399;
-    }
-
-    .app-hero__status--error {
-      border-color: rgba(244, 63, 94, 0.3);
-      background: rgba(244, 63, 94, 0.08);
-      color: #f43f5e;
-    }
-
-    .app-hero__status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
-    }
-
     .app-hero__title {
       font-size: clamp(3.8rem, 9vw, 7.5rem);
       line-height: 1.05;
@@ -198,22 +160,6 @@
       -webkit-text-fill-color: transparent;
       color: transparent;
       animation: app-fade-up 0.8s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    .app-hero__version {
-      display: inline-flex;
-      align-items: center;
-      margin-bottom: 0.75rem;
-      padding: 0.2rem 0.65rem;
-      border-radius: 999px;
-      font-size: 11px;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: #34d399;
-      background: rgba(52, 211, 153, 0.08);
-      border: 1px solid rgba(52, 211, 153, 0.25);
-      animation: app-fade-up 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .app-hero__tagline {
@@ -231,6 +177,11 @@
       flex-direction: column;
       align-items: center;
       gap: 0.75rem;
+      /* Without these the nowrap command inside sizes this box wider
+         than the hero, and every max-width below resolves against the
+         oversized value instead of the viewport. */
+      max-width: 100%;
+      min-width: 0;
       animation: app-fade-up 0.8s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
@@ -245,6 +196,7 @@
       border-radius: 999px;
       padding: 0.32rem 0.35rem 0.32rem 1.1rem;
       max-width: 100%;
+      min-width: 0;
     }
 
     .app-cli__cmd {
@@ -312,12 +264,23 @@
       opacity: 0.92;
     }
 
+    .app-btn--ghost {
+      background: rgba(56, 189, 248, 0.07);
+      color: #cbd5e1;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+    }
+
+    .app-btn--ghost:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #e2e8f0;
+    }
+
     /* ── Bento grid ───────────────────────────────────────── */
 
     .app-bento {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      grid-template-rows: repeat(2, auto);
+      grid-auto-rows: auto;
       gap: 0.55rem;
       width: 100%;
       max-width: 1100px;
@@ -340,6 +303,7 @@
     }
 
     .app-bento__tile--wide { grid-column: span 2; }
+    .app-bento__tile--full { grid-column: span 4; }
 
     .app-bento__tile:hover {
       border-color: rgba(56, 189, 248, 0.28);
@@ -413,6 +377,73 @@
       margin: 0;
       position: relative;
       z-index: 1;
+    }
+
+    /* Stat chips inside a bento tile */
+
+    .app-bento__stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-bento__stat {
+      font-family: ui-monospace, "JetBrains Mono", monospace;
+      font-size: 10.5px;
+      color: #cbd5e1;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      background: rgba(56, 189, 248, 0.07);
+      border-radius: 999px;
+      padding: 0.28rem 0.6rem;
+      white-space: nowrap;
+    }
+
+    .app-bento__stat b {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* Live status strip, between the grid and the quick start */
+
+    .app-status-strip {
+      display: flex;
+      align-items: center;
+      /* Sized by its contents, like the CLI pill above it: the label and
+         the probes stay in one glance instead of sitting at opposite
+         ends of the grid's width. */
+      gap: 0.9rem;
+      max-width: 100%;
+      min-width: 0;
+      /* No pill chrome: the hero already stacks a command pill and two
+         buttons, so this reads as a caption under them rather than a
+         fourth rounded box competing with them. */
+      padding: 0.2rem 0;
+      animation: app-fade-up 0.8s 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .app-status-strip__icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: rgba(56, 189, 248, 0.7);
+    }
+
+    .app-status-strip__label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(56, 189, 248, 0.7);
+      flex-shrink: 0;
+    }
+
+    .app-status-strip__items {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
 
     /* Status row inside bento tile */
@@ -560,14 +591,21 @@
 
     .app-home__footer a:hover { color: #7dd3fc; }
 
+    .app-home__footer-version {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
     /* ── Responsive ───────────────────────────────────────── */
 
     @media (max-width: 959px) {
       .app-bento {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        grid-template-rows: unset;
         grid-auto-rows: minmax(130px, auto);
       }
+
+      .app-bento__tile--full { grid-column: span 2; }
     }
 
     @media (max-width: 599px) {
@@ -588,7 +626,15 @@
 
       .app-cli__cmd {
         font-size: 11px;
+        /* The command is one nowrap line wider than a phone. Let it
+           shrink and scroll inside the pill so the copy button, which
+           sits after it, stays on screen. */
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
       }
+
+      .app-cli__cmd::-webkit-scrollbar { display: none; }
 
       .app-bento {
         grid-template-columns: 1fr;
@@ -598,6 +644,8 @@
 
       .app-bento__tile--wide { grid-column: span 1; }
 
+      .app-bento__tile--full { grid-column: span 1; }
+
       .app-bento__tile { padding: 0.75rem 0.875rem; }
 
       .app-bento__tile h2 { font-size: 14px; }
@@ -605,6 +653,10 @@
       .app-bento__tile p { font-size: 12px; }
 
       .app-cmds__list li { flex-wrap: wrap; }
+
+      /* The version pushes the fixed footer onto a second line at phone
+         width. "Open Source" is the token MIT License already implies. */
+      .app-home__footer-oss { display: none; }
 
       .app-cmds__comment {
         width: 100%;
@@ -625,6 +677,20 @@
       to { transform: translateX(110%); }
     }
   </style>
+
+  <!-- template-only -->
+
+  <!-- The Ship on Day One tile is stripped from a generated project, so
+       the AI-Native tile beside it is full width by default and narrowed
+       here to share the row. Scoped to the four-column layout; the
+       narrower breakpoints are already full width. -->
+  <style>
+    @media (min-width: 960px) {
+      .app-bento__tile--ai { grid-column: span 2; }
+    }
+  </style>
+
+  <!-- /template-only -->
 </head>
 <body>
 
@@ -643,20 +709,18 @@
   <div class="app-home">
 
     <section class="app-hero">
-      <div id="status-pill" class="app-hero__status" role="status" aria-live="polite">
-        <span class="app-hero__status-dot"></span>
-        <span id="status-text">INITIALIZING</span>
-      </div>
-
       <h1 class="app-hero__title">{{ app_name }}</h1>
-
-      <div class="app-hero__version">v{{ app_version }}</div>
 
       <p class="app-hero__tagline">{{ app_description }}</p>
 
       <div class="app-hero__cta">
+        <!-- template-only -->
+
+        <!-- Scaffolding a project from the template: the command the
+             docs home page leads with. A generated project is not a
+             template, so the block is stripped there. -->
         <div class="app-cli">
-          <span class="app-cli__cmd">git clone https://github.com/balakmran/quoin-api.git</span>
+          <span class="app-cli__cmd">uvx copier copy --trust gh:balakmran/quoin-api my-api</span>
           <button type="button" id="copy-btn" class="app-cli__copy" aria-label="Copy command">
             <svg id="copy-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
@@ -666,8 +730,34 @@
             </svg>
           </button>
         </div>
+
+        <!-- /template-only -->
+
         <div class="app-btn-row">
+          <!-- template-only -->
           <a href="https://balakmran.github.io/quoin-api/guides/getting-started/" target="_blank" rel="noopener" class="app-btn app-btn--primary">Get started</a>
+          <!-- /template-only -->
+          {% if docs_url %}<a href="{{ docs_url }}" target="_blank" rel="noopener" class="app-btn app-btn--ghost">API docs</a>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Live probes of this instance, directly under the hero: the one
+         thing on the page that is true only right now. The tiles below
+         describe what the project is. -->
+    <section class="app-status-strip" aria-label="Live system status">
+      <svg class="app-status-strip__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      <span class="app-status-strip__label">Live</span>
+      <div class="app-status-strip__items">
+        <div class="app-bento__status-item">
+          <div id="health-dot" class="app-status-dot"></div>
+          <span class="app-status-label" id="health-status" aria-live="polite">Health</span>
+        </div>
+        <div class="app-bento__status-item">
+          <div id="ready-dot" class="app-status-dot"></div>
+          <span class="app-status-label" id="ready-status" aria-live="polite">Ready</span>
         </div>
       </div>
     </section>
@@ -679,7 +769,7 @@
         <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/fastapi/38bdf8" alt="FastAPI">
         <span class="app-bento__label">Async-first</span>
         <h2>High Performance</h2>
-        <p>FastAPI, asyncpg, and Pydantic v2 — built for production-grade throughput from day one.</p>
+        <p>FastAPI on asyncpg with Pydantic v2 — async top to bottom, from route to query.</p>
       </div>
 
       <!-- Row 1, col 3: Database Native -->
@@ -687,50 +777,76 @@
         <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/postgresql/38bdf8" alt="PostgreSQL">
         <span class="app-bento__label">ORM · Migrations</span>
         <h2>Database Native</h2>
-        <p>PostgreSQL with SQLModel ORM and Alembic migrations pre-wired.</p>
+        <p>PostgreSQL with SQLModel and Alembic migrations, pre-wired.</p>
       </div>
 
-      <!-- Row 1, col 4: Strict Quality -->
-      <div class="app-bento__tile">
-        <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/ruff/38bdf8" alt="Ruff">
-        <span class="app-bento__label">Zero compromise</span>
-        <h2>Strict Quality</h2>
-        <p>ty, Ruff, and Pytest enforced on every commit via pre-commit hooks.</p>
-      </div>
-
-      <!-- Row 2, col 1: Observable -->
+      <!-- Row 1, col 4: Observable -->
       <div class="app-bento__tile">
         <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/opentelemetry/38bdf8" alt="OpenTelemetry">
         <span class="app-bento__label">Built-in</span>
         <h2>Observable</h2>
-        <p>Distributed tracing with OpenTelemetry and structured logs with Structlog.</p>
+        <p>OpenTelemetry traces and Structlog logs, auto-correlated by trace and request ID.</p>
       </div>
 
-      <!-- Row 2, col 2: Modern Tooling -->
+      <!-- Row 2, col 1: Secure by Default -->
+      <div class="app-bento__tile">
+        <svg class="app-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15.25" r="1.4"/></svg>
+        <span class="app-bento__label">JWT · RBAC</span>
+        <h2>Secure by Default</h2>
+        <p>Per-route RBAC with JWKS-validated JWTs — a mock OAuth server for local dev.</p>
+      </div>
+
+      <!-- Row 2, col 2: Strict Quality -->
+      <div class="app-bento__tile">
+        <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/ruff/38bdf8" alt="Ruff">
+        <span class="app-bento__label">Zero compromise</span>
+        <h2>Strict Quality</h2>
+        <p>ty, Ruff, and Pytest gate every commit and push — 100% type and test coverage.</p>
+      </div>
+
+      <!-- Row 2, col 3: Modern Tooling -->
       <div class="app-bento__tile">
         <img class="app-bento__icon-logo" src="https://cdn.simpleicons.org/uv/38bdf8" alt="uv">
         <span class="app-bento__label">DX-first</span>
         <h2>Modern Tooling</h2>
-        <p>uv, just, prek, and Docker — fast installs, task runner, hooks, and shipping.</p>
+        <p>uv, just, prek, and Docker — installs, task runner, git hooks, and containers.</p>
       </div>
 
-      <!-- Row 2, col 3-4: System Status (wide) -->
+      <!-- Row 2, col 4: Docs Built-In -->
+      <div class="app-bento__tile">
+        <svg class="app-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5c2-1.2 4.5-1.2 8 0 3.5-1.2 6-1.2 8 0v13c-2-1.2-4.5-1.2-8 0-3.5-1.2-6-1.2-8 0V5Z"/><path d="M12 5v13"/></svg>
+        <span class="app-bento__label">Docs-as-Code</span>
+        <h2>Docs Built-In</h2>
+        <p>Guides, API reference, and this page ship from the repo to GitHub Pages on every merge.</p>
+      </div>
+
+      <!-- template-only -->
+
+      <!-- Row 3, col 1-2: Ship on Day One. Pitches the Copier template,
+           so a generated project must not carry it -- the AI-Native tile
+           beside it widens to the full row once this is stripped. -->
       <div class="app-bento__tile app-bento__tile--wide">
-        <svg class="app-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-        </svg>
-        <span class="app-bento__label">Live</span>
-        <h2>System Status</h2>
-        <p>Real-time health and readiness of this running instance.</p>
-        <div class="app-bento__status-row">
-          <div class="app-bento__status-item">
-            <div id="health-dot" class="app-status-dot"></div>
-            <span class="app-status-label" id="health-status" aria-live="polite">Health</span>
-          </div>
-          <div class="app-bento__status-item">
-            <div id="ready-dot" class="app-status-dot"></div>
-            <span class="app-status-label" id="ready-status" aria-live="polite">Ready</span>
-          </div>
+        <svg class="app-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+        <span class="app-bento__label">Golden Path</span>
+        <h2>Ship on Day One</h2>
+        <p>One Copier command scaffolds the whole stack — auth, database, observability, CI, and Docker — so day one is business logic, not setup.</p>
+      </div>
+
+      <!-- /template-only -->
+
+      <!-- Row 3, col 3-4: Built for AI-Native Development. Full width by
+           default; the template narrows it so Ship on Day One fits beside
+           it (see the template-only override in the head). -->
+      <div class="app-bento__tile app-bento__tile--full app-bento__tile--ai">
+        <svg class="app-bento__icon-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="m7 9 3 3-3 3"/><path d="M12 15h5"/></svg>
+        <span class="app-bento__label">Claude Code</span>
+        <h2>Built for AI-Native Development</h2>
+        <p>Skills, subagents, hooks, and MCP servers (context7, postgres) ship pre-wired — Claude follows this codebase's conventions automatically.</p>
+        <div class="app-bento__stats">
+          <span class="app-bento__stat"><b>12</b> Skills</span>
+          <span class="app-bento__stat"><b>2</b> Subagents</span>
+          <span class="app-bento__stat"><b>5</b> Plugins</span>
+          <span class="app-bento__stat"><b>2</b> MCP Servers</span>
         </div>
       </div>
 
@@ -768,7 +884,7 @@
     </section>
 
     <footer class="app-home__footer">
-      <p>Built by <a href="https://github.com/balakmran" target="_blank" rel="noopener">balakmran</a> &nbsp;&middot;&nbsp; Open Source &nbsp;&middot;&nbsp; MIT License</p>
+      <p><span class="app-home__footer-version">v{{ app_version }}</span> &nbsp;&middot;&nbsp; Built by <a href="https://github.com/balakmran" target="_blank" rel="noopener">balakmran</a><span class="app-home__footer-oss"> &nbsp;&middot;&nbsp; Open Source</span> &nbsp;&middot;&nbsp; MIT License</p>
     </footer>
 
   </div>

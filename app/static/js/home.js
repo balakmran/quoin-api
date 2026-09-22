@@ -136,9 +136,8 @@ copyBtn?.addEventListener('click', () => {
     });
 });
 
-// Status LEDs
-let healthOK = true, readyOK = true;
-
+// Status LEDs. Each probe reports itself; there is no aggregate banner,
+// so a failure shows as that probe's own dot going red.
 const setDot = (prefix, ok, latency) => {
   const dot = document.getElementById(`${prefix}-dot`);
   const label = document.getElementById(`${prefix}-status`);
@@ -154,18 +153,6 @@ const setDot = (prefix, ok, latency) => {
   }
 };
 
-const syncPill = () => {
-  const pill = document.getElementById('status-pill');
-  const text = document.getElementById('status-text');
-  if (healthOK && readyOK) {
-    pill.className = 'app-hero__status app-hero__status--ok';
-    text.textContent = 'ALL SYSTEMS OPERATIONAL';
-  } else {
-    pill.className = 'app-hero__status app-hero__status--error';
-    text.textContent = 'SYSTEM DEGRADED';
-  }
-};
-
 const pollStatus = async (endpoint, prefix) => {
   try {
     const t0 = performance.now();
@@ -173,14 +160,9 @@ const pollStatus = async (endpoint, prefix) => {
     const latency = Math.round(performance.now() - t0);
     const ok = res.ok;
     setDot(prefix, ok, ok ? latency : null);
-    if (prefix === 'health') healthOK = ok;
-    if (prefix === 'ready') readyOK = ok;
   } catch {
     setDot(prefix, false, null);
-    if (prefix === 'health') healthOK = false;
-    if (prefix === 'ready') readyOK = false;
   }
-  syncPill();
 };
 
 setTimeout(() => {
