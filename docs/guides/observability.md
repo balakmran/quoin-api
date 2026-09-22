@@ -278,7 +278,6 @@ Every span carries the identity of the service that produced it:
 | `service.name` | Application name from `app/core/metadata.py` |
 | `service.version` | Application version |
 | `deployment.environment.name` | `QUOIN_ENV` |
-| `deployment.environment` | The same value under the superseded key, kept for one release so existing dashboards keep matching |
 
 These are built with `Resource.create`, which also runs the standard
 OpenTelemetry detectors — so `OTEL_SERVICE_NAME` and
