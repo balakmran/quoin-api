@@ -34,6 +34,8 @@
   becomes `timestamptz` — its generated migration needs a `USING`
   clause naming the stored values' timezone.
 - **CI**: `astral-sh/setup-uv` pinned to v10.2.0.
+- **Tooling**: uv 0.12.17 in the `Dockerfile` and every workflow.
+  Update-safe; upgrade a local uv with `uv self update`.
 
 ### Fixed
 
