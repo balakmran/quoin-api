@@ -1,5 +1,5 @@
 ---
-name: quoin-observability
+name: api-observability
 description: Use this skill whenever the user wants to add or change logging,
   metrics, or tracing in QuoinAPI — adding a structured log line, binding
   request context, adding a custom OpenTelemetry span, or reasoning about

@@ -6,9 +6,9 @@ description: Scans QuoinAPI route files for endpoints missing RBAC
   coverage", "audit routes for missing require_roles", "did I forget auth on
   this endpoint", or "is every route protected". Focuses only on route
   declarations — not the correctness of a chosen role string (that is a
-  human/`quoin-auth-route` judgment call) or non-route auth code. Do NOT use
+  human/`api-auth-route` judgment call) or non-route auth code. Do NOT use
   for writing or changing RBAC on a single known route (that is the
-  `quoin-auth-route` skill) or for general code review (use the
+  `api-auth-route` skill) or for general code review (use the
   pr-review-toolkit agents).
 tools: Read, Grep, Glob, Bash
 model: sonnet
@@ -18,7 +18,7 @@ model: sonnet
 
 You check that every route in `app/modules/*/routes.py` is deliberately
 protected or deliberately public — never protected by omission. This is the
-single most-repeated warning across QuoinAPI's `quoin-*` skills: "the route
+single most-repeated warning across QuoinAPI's `api-*` skills: "the route
 compiles, runs, and returns 200 to anyone" when `require_roles()` is
 forgotten. There is no default-deny middleware in this project — auth is
 opt-in per route, so a missing dependency is silent.

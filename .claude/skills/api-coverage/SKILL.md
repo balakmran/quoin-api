@@ -1,5 +1,5 @@
 ---
-name: quoin-coverage
+name: api-coverage
 description: Use this skill whenever the user wants to raise or close test
   coverage on existing QuoinAPI code — driving a module to 100%, filling the
   gaps in a coverage report, or covering specific missing lines/branches.
@@ -7,7 +7,7 @@ description: Use this skill whenever the user wants to raise or close test
   coverage gaps", "cover the missing lines", "improve coverage", "why is this
   line uncovered", or pasting a `pytest --cov` / coverage table with a
   `Missing` column. Do NOT use for scaffolding a brand-new module's test suite
-  from scratch (that is `quoin-write-tests`) or for configuring pytest itself.
+  from scratch (that is `api-write-tests`) or for configuring pytest itself.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -16,7 +16,7 @@ allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 This is the *gap-closing loop*: you have a coverage report and need to drive
 the number up, usually to 100%. For the fixture toolkit, the test-file
 anatomy, and the auth-triple pattern, this skill builds on
-[quoin-write-tests](../quoin-write-tests/SKILL.md) — read that for the
+[api-write-tests](../api-write-tests/SKILL.md) — read that for the
 mechanics; this skill is about the loop and the judgement calls.
 
 ## Prerequisites
@@ -51,7 +51,7 @@ kind of gap it is:
 ### 3. Write the targeted tests
 
 Use the existing fixtures (`client`, `read_client`, `admin_client`,
-`db_session`) and patterns from `quoin-write-tests`. Most coverage gaps in this
+`db_session`) and patterns from `api-write-tests`. Most coverage gaps in this
 codebase are a missing leg of the route triple (401 / 403 / 404 / 409 / 422) or
 a service-layer domain-exception path. Seed via `db_session` when the missing
 branch needs state the route can't set up directly.

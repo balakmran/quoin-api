@@ -1,5 +1,5 @@
 ---
-name: quoin-docs-audit
+name: api-docs-audit
 description: Use this skill whenever the user wants to verify that QuoinAPI's
   documentation still matches the code — a docs-accuracy sweep, in either
   direction. Triggers include "review the docs for accuracy", "check docs
@@ -56,7 +56,7 @@ Start from what a page claims and check it against the code.
 4. **Version strings.** Sweep for stale versions — Python, key deps, GitHub
    Actions: `git grep -nE "3\.(12|13)"` and similar. Compare against
    `pyproject.toml` (`requires-python`) and the workflow files. (This overlaps
-   with `quoin-deps-upgrade`'s sweep — reuse it.)
+   with `api-deps-upgrade`'s sweep — reuse it.)
 
 5. **Shields badges (`README.md` only).** The badge block lives in
    `README.md` and nowhere else — keep it that way. The FastAPI and SQLModel

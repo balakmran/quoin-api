@@ -1,5 +1,5 @@
 ---
-name: quoin-auth-route
+name: api-auth-route
 description: Use this skill whenever the user wants to add authentication or role-based access control to a QuoinAPI endpoint, change which roles are required for an endpoint, protect a new route, expose a route as public, or generally touch the auth surface of routes in `app/modules/*/routes.py`. Triggers include phrases like "protect this endpoint", "add RBAC", "require the X role", "this endpoint should be admin-only", "let read-only users hit this", "make this route public", "who is the caller in this endpoint", or any request that implies a `require_roles(...)` change. Do NOT use for changing the authentication mechanism itself (JWKS, token validation), adding new core security primitives (`app/core/security.py`), or OAuth provider configuration.
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
@@ -78,7 +78,7 @@ For each new protected route, write at least three tests:
 2. **Forbidden** — call with a client whose roles don't satisfy the requirement; expect 403.
 3. **Unauthenticated** — call with the bare `client`; expect 401.
 
-If you add a new domain (e.g. `things`), the existing `caller_read` / `caller_admin` fixtures only carry `users.*` roles. Add module-specific caller fixtures to your test file rather than mutating the shared ones — see the `quoin-write-tests` skill for the pattern.
+If you add a new domain (e.g. `things`), the existing `caller_read` / `caller_admin` fixtures only carry `users.*` roles. Add module-specific caller fixtures to your test file rather than mutating the shared ones — see the `api-write-tests` skill for the pattern.
 
 ## Things that bite
 

@@ -1,12 +1,12 @@
 ---
-name: quoin-pre-pr
+name: api-pre-pr
 description: Use this skill whenever the user is about to open a pull request,
   says a feature is done, asks to create a PR, or says "ready to merge",
   "ship this", "open a PR", "create a pull request", "I'm done with this
   feature", or any phrase that signals the work is complete and heading for
   review. Always run this checklist before creating the PR — do not skip
   straight to `gh pr create`. Do NOT use for mid-development commits, the
-  release tagging flow (that is `quoin-release`), or hotfix branches where
+  release tagging flow (that is `api-release`), or hotfix branches where
   the changelog entry was already written.
 allowed-tools: Read, Edit, Bash
 model: haiku
@@ -29,7 +29,7 @@ step. The PR must not be opened until this is green.
 
 Coverage is **100%** on this project — every feature ships fully covered. If
 `just check` reports a gap, close it before continuing; the
-[quoin-coverage](../quoin-coverage/SKILL.md) skill covers the gap-closing loop.
+[api-coverage](../api-coverage/SKILL.md) skill covers the gap-closing loop.
 
 ## 2. Update `CHANGELOG.md`
 
@@ -83,7 +83,7 @@ If `just docb` fails, fix the docs issue before continuing.
 matching Shields badge in **both** `README.md` and
 `docs/guides/getting-started.md` (FastAPI/SQLModel/Python/`PostgreSQL-<major>`).
 The two badge blocks are duplicated and drift apart otherwise — see the
-[quoin-docs-audit](../quoin-docs-audit/SKILL.md) skill for the full parity check.
+[api-docs-audit](../api-docs-audit/SKILL.md) skill for the full parity check.
 
 ## 4. Create the PR
 

@@ -1,5 +1,5 @@
 ---
-name: quoin-write-tests
+name: api-write-tests
 description: Use this skill whenever the user wants to write, add, or modify tests in the QuoinAPI codebase — for routes, services, repositories, or any other module-level code. Triggers include phrases like "write tests for", "add a test", "test this endpoint", "I need coverage for", "write a unit test", "write an integration test", "test the create_user flow", or any request that involves creating files under `tests/`. Also use when the user asks how to mock the database, how to inject an authenticated caller, or why their test is leaking state — those are questions about the project's specific test fixtures. Do NOT use for configuring pytest itself, debugging the test runner, or running the existing suite without writing new tests.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
@@ -107,7 +107,7 @@ async def products_admin_client(client, caller_products_admin):
 **Don't** mutate the shared fixtures — they're used across many tests.
 
 > Driving an *existing* module to 100% from a coverage report is a different
-> loop — see [quoin-coverage](../quoin-coverage/SKILL.md).
+> loop — see [api-coverage](../api-coverage/SKILL.md).
 
 ## What to test
 

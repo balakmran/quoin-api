@@ -1,6 +1,6 @@
 ---
-name: quoin-db-migration
-description: Use this skill whenever the user wants to change the QuoinAPI database schema in any way — adding a column, adding an index, renaming a field, changing a type, dropping something, adding a new table to an existing module, or generally modifying anything in `app/modules/*/models.py` that affects the database. Triggers include phrases like "add a column", "add a field to", "make X nullable", "add an index on", "change the type of", "drop the Y column", "rename the Z field", "alter the table", or any request that implies an Alembic migration. Do NOT use for creating an entire new module from scratch (that is `quoin-new-module`'s job), pure non-table SQLModel changes (request/response schemas in `schemas.py`), or fixing a buggy in-flight migration that hasn't been committed yet.
+name: api-db-migration
+description: Use this skill whenever the user wants to change the QuoinAPI database schema in any way — adding a column, adding an index, renaming a field, changing a type, dropping something, adding a new table to an existing module, or generally modifying anything in `app/modules/*/models.py` that affects the database. Triggers include phrases like "add a column", "add a field to", "make X nullable", "add an index on", "change the type of", "drop the Y column", "rename the Z field", "alter the table", or any request that implies an Alembic migration. Do NOT use for creating an entire new module from scratch (that is `api-new-module`'s job), pure non-table SQLModel changes (request/response schemas in `schemas.py`), or fixing a buggy in-flight migration that hasn't been committed yet.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, Task
 ---
 
@@ -68,5 +68,5 @@ If the migration is already committed but never released, write a *new* migratio
 ## Things that bite
 
 - **Autogen + hand-edits in alembic/env.py drift.** If `env.py` filters tables (e.g. `include_object`), autogen won't see what you expect. Check `alembic/env.py` once if results are surprising.
-- **Forgetting to import the model.** If a new module's model isn't imported anywhere that `Base.metadata` sees, autogen produces an empty migration. The fix: ensure the module is registered (the `quoin-new-module` skill covers this for fresh modules).
+- **Forgetting to import the model.** If a new module's model isn't imported anywhere that `Base.metadata` sees, autogen produces an empty migration. The fix: ensure the module is registered (the `api-new-module` skill covers this for fresh modules).
 - **Running migrate-up against the wrong DB.** `just db` brings up the dev Postgres on the port in `.env`. If you have multiple Postgres instances, double-check you're hitting the right one before applying.

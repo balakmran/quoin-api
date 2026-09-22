@@ -20,7 +20,7 @@ findings and `0.16.0` its operational ones.
 `1.0.0-rc.1` and `rc.2` rehearsed the release: the launch checklist ran
 against each candidate, `rc.1` turned up six things, and `rc.2` carries
 those six and nothing else. The checklist has served its purpose and is
-retired — its per-release half now lives in the `quoin-release` skill,
+retired — its per-release half now lives in the `api-release` skill,
 which runs it on every tag rather than once. The Known Correctness
 Issues table is empty.
 

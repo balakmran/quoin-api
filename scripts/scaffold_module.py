@@ -396,7 +396,7 @@ def main() -> None:
     )
     print(
         "models.py is intentionally empty: define a table then run "
-        "'just migrate-gen'. See the quoin-new-module skill / "
+        "'just migrate-gen'. See the api-new-module skill / "
         "docs/guides/creating-a-module.md to fill in the layers."
     )
 
