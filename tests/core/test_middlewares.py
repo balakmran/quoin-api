@@ -1,7 +1,7 @@
 import contextlib
 import json
 import uuid
-from collections.abc import Iterable, Iterator, MutableMapping
+from collections.abc import AsyncIterator, Iterable, Iterator, MutableMapping
 from typing import Any
 from unittest.mock import patch
 
@@ -731,6 +731,136 @@ async def test_request_size_limit_invalid_content_length(
             )
 
     assert response.status_code == status.HTTP_200_OK
+
+
+async def _chunks(*parts: bytes) -> AsyncIterator[bytes]:
+    """Yield a body in parts, so httpx sends it without Content-Length."""
+    for part in parts:
+        yield part
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_rejects_oversize_chunked_body(
+    size_limit_app: FastAPI,
+) -> None:
+    """A body without Content-Length is cut off at the cap with a 413."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post(
+                "/echo",
+                content=_chunks(b'{"a":"', b"x" * 64, b'"}'),
+                headers={"Content-Type": "application/json"},
+            )
+
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE
+    assert response.headers["connection"] == "close"
+    assert response.json()["type"] == "urn:quoin:error:payload_too_large"
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_allows_chunked_body_under_cap(
+    size_limit_app: FastAPI,
+) -> None:
+    """A chunked body within the cap reaches the handler intact."""
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 1024):
+        async with AsyncClient(
+            transport=ASGITransport(app=size_limit_app),
+            base_url="http://test",
+        ) as ac:
+            response = await ac.post(
+                "/echo",
+                content=_chunks(b'{"a":', b'"b"}'),
+                headers={"Content-Type": "application/json"},
+            )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"a": "b"}
+
+
+def _body_messages(*bodies: bytes) -> Receive:
+    """Build a receive callable yielding request chunks, then disconnect."""
+    messages: list[Message] = [
+        {"type": "http.request", "body": body, "more_body": True}
+        for body in bodies
+    ]
+    messages.append({"type": "http.disconnect"})
+
+    async def receive() -> Message:
+        return messages.pop(0)
+
+    return receive
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_reraises_unrelated_errors() -> None:
+    """An app error under the cap is not mistaken for an oversize body."""
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        await receive()
+        await receive()  # http.disconnect is not counted
+        raise RuntimeError("boom")
+
+    sent: list[Message] = []
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    middleware = RequestSizeLimitMiddleware(downstream)
+    with (
+        patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16),
+        pytest.raises(RuntimeError, match="boom"),
+    ):
+        await middleware(
+            {"type": "http", "headers": []}, _body_messages(b"x"), send
+        )
+    assert sent == []
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_413_when_app_lets_read_error_escape() -> None:
+    """An app that does not catch the read error still yields a 413."""
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        await receive()
+
+    sent: list[Message] = []
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    middleware = RequestSizeLimitMiddleware(downstream)
+    with patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16):
+        await middleware(
+            {"type": "http", "headers": []}, _body_messages(b"x" * 32), send
+        )
+    assert sent[0]["status"] == status.HTTP_413_CONTENT_TOO_LARGE
+
+
+@pytest.mark.asyncio
+async def test_request_size_limit_aborts_once_response_started() -> None:
+    """Past the cap after headers went out, the read error propagates."""
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        await send({"type": "http.response.start", "status": 200})
+        await receive()
+
+    sent: list[Message] = []
+
+    async def send(message: Message) -> None:
+        sent.append(message)
+
+    middleware = RequestSizeLimitMiddleware(downstream)
+    with (
+        patch.object(settings, "MAX_REQUEST_BODY_BYTES", 16),
+        pytest.raises(middlewares._BodyTooLargeError),
+    ):
+        await middleware(
+            {"type": "http", "headers": []}, _body_messages(b"x" * 32), send
+        )
+    assert [m["type"] for m in sent] == ["http.response.start"]
 
 
 @pytest.mark.asyncio
