@@ -119,8 +119,10 @@ This command:
 2. Pushes the tag to the remote repository
 3. Publishes the GitHub Release, using that version's `CHANGELOG.md`
    section as the body
+<!-- template-only -->
 4. Triggers the [Copier Update Check](#6-copier-update-verification-automatic)
    workflow
+<!-- /template-only -->
 
 Both halves are idempotent, so re-running after a partial failure is
 safe: an existing tag is not recreated, and an existing release is left
@@ -233,8 +235,10 @@ Before creating a release:
 - [ ] Version is bumped (`just bump <part>`)
 - [ ] Changes are merged to `main` branch
 - [ ] Tag is pushed and the GitHub Release is published (`just tag`)
+<!-- template-only -->
 - [ ] Copier Update Check passes on the new tag (automatic; see
       [above](#6-copier-update-verification-automatic))
+<!-- /template-only -->
 - [ ] Documentation is deployed
 
 ---
