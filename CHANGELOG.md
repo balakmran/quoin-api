@@ -11,6 +11,11 @@
   `docs/stylesheets/extra.css` to `docs/stylesheets/home.css`, which a
   generated project no longer ships -- it styles markup the setup
   script already replaced. Update-safe.
+- **Docs**: a generated project no longer carries this template's
+  screenshots or its `Q` logo -- the images under
+  `docs/assets/images/` are excluded along with the embeds that
+  referenced them, and the docs logo takes the project's own initial.
+  Fixes the broken image link those embeds produced. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
