@@ -468,6 +468,62 @@ def strip_template_only() -> None:
                       f"{path.relative_to(BASE_DIR)}")
 
 
+def rewrite_security_policy() -> None:
+    """Replace the security policy's header with the adopter's own.
+
+    The shipped policy opens by declaring the repository a Copier
+    template and pointing reports at the template's maintainer. Renamed
+    but otherwise intact, it would tell a generated project's users that
+    *their* project is a template and invite them to report bugs in code
+    the template author no longer owns. Everything from `## Reporting a
+    Vulnerability` down is already correct once substituted -- the
+    advisory link and address are theirs -- so only the header is
+    rewritten, in both the root file and the docs copy of it.
+    """
+    # The project name goes on a line of its own: a long one would push
+    # the prose past the 80 columns the rest of the docs keep to.
+    header = f"""# Security Policy
+
+This policy covers **{PROJECT_NAME}**.
+
+It ships with the project as a starting point: review the supported
+versions and the response targets below and edit them to what you can
+actually commit to. Nothing here is a promise made on your behalf.
+
+---
+
+## Supported Versions
+
+| Version | Supported |
+| :------ | :-------- |
+| `main` (latest, unreleased) | Yes |
+| Latest tagged release | Yes |
+| Older tags | No |
+
+---
+
+"""
+    targets = (
+        BASE_DIR / "SECURITY.md",
+        BASE_DIR / "docs" / "project" / "security-policy.md",
+    )
+    marker = "## Reporting a Vulnerability"
+    for path in targets:
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8")
+        index = content.find(marker)
+        # Failing loudly beats shipping a policy addressed to the
+        # template's maintainer under the adopter's project name.
+        if index == -1:
+            raise RuntimeError(
+                f"{path.relative_to(BASE_DIR)} has no '{marker}' heading; "
+                "the anchor in rewrite_security_policy() needs updating."
+            )
+        path.write_text(header + content[index:], encoding="utf-8")
+        print(f"Rewrote the header of {path.relative_to(BASE_DIR)}")
+
+
 def prune_sync_docs() -> None:
     """Drop the ROADMAP entry from the docs sync script."""
     sync_path = BASE_DIR / "scripts" / "sync_docs.py"
@@ -584,6 +640,7 @@ if __name__ == "__main__":
     clean_zensical()
     strip_removed_links()
     strip_screenshots()
+    rewrite_security_policy()
     strip_template_only()
     brand_logo()
     prune_sync_docs()

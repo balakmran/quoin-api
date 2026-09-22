@@ -41,6 +41,7 @@ SETUP_STEPS = (
     "clean_zensical",
     "strip_removed_links",
     "strip_screenshots",
+    "rewrite_security_policy",
     "strip_template_only",
     "brand_logo",
     "prune_sync_docs",

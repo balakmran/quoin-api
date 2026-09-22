@@ -33,6 +33,11 @@
   regard to case, and checks filenames as well as contents. The old
   scan read six paths case-sensitively, which is why lowercase class
   and directory names leaked. Update-safe.
+- **Security policy**: a generated project's `SECURITY.md` no longer
+  declares the project a Copier template or solicits reports about the
+  template's own code. Its header is replaced at generation with a
+  starter the adopter owns; the reporting, deployment-scope, and
+  posture sections are kept. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
