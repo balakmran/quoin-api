@@ -147,8 +147,7 @@ class TestSetupOpenTelemetry:
         assert resource.attributes["service.version"] == metadata.VERSION
         environment = settings.ENV.value
         assert resource.attributes["deployment.environment.name"] == environment
-        # The deprecated key is kept for one release alongside the new one.
-        assert resource.attributes["deployment.environment"] == environment
+        assert "deployment.environment" not in resource.attributes
 
     @mock.patch.object(settings, "OTEL_ENABLED", True)
     @mock.patch.object(settings, "ENV", Environment.production)

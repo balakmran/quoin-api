@@ -57,6 +57,13 @@
   Swagger UI, and no longer prints its source-repo URL at its public
   root. Update-safe.
 
+### Removed
+
+- **Telemetry**: traces no longer carry `deployment.environment`,
+  superseded by `deployment.environment.name` in `0.13.0`. **Action
+  required:** move any dashboard or alert still filtering on the old
+  key.
+
 ## [1.0.0-rc.3] - 2026-09-22
 
 ### Changed
