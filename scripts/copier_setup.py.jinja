@@ -362,6 +362,54 @@ def strip_removed_links() -> None:
             print(f"Stripped roadmap link from {path.relative_to(BASE_DIR)}")
 
 
+def strip_screenshots() -> None:
+    """Remove embedded screenshots from the generated docs.
+
+    Every image under ``docs/assets/images/`` pictures this template's
+    own UI, down to the name in the header, so the template config
+    excludes them. The embeds have to go with them: the general
+    substitution pass has already rewritten their paths to the adopter's
+    slug, which points at a file that was never there.
+    """
+    # The blank line after the embed goes too, or the strip leaves a
+    # double gap the docs build renders as extra whitespace.
+    embed = re.compile(
+        r"^!\[[^\]]*\]\([^)]*assets/images/[^)]*\)\n\n?", re.MULTILINE
+    )
+    for path in BASE_DIR.rglob("*.md"):
+        if any(part in IGNORE_PATHS for part in path.parts):
+            continue
+        content = path.read_text(encoding="utf-8")
+        updated = embed.sub("", content)
+        if updated != content:
+            path.write_text(updated, encoding="utf-8")
+            print(f"Stripped screenshot from {path.relative_to(BASE_DIR)}")
+
+
+def brand_logo() -> None:
+    """Set the docs logo's letter to the project's initial.
+
+    The logo is a single glyph, and the substitution pass never reaches
+    it -- ``.svg`` is in IGNORE_EXTENSIONS. Left alone it puts this
+    template's initial in the header of every page an adopter builds.
+    """
+    logo_path = BASE_DIR / "docs" / "assets" / "logo.svg"
+    if not logo_path.exists():
+        return
+    initial = next(
+        (char for char in PROJECT_NAME if char.isalnum()), "A"
+    ).upper()
+    content = logo_path.read_text(encoding="utf-8")
+    content, replaced = re.subn(r">[^<>]</text>", f">{initial}</text>", content)
+    if not replaced:
+        raise RuntimeError(
+            "docs/assets/logo.svg has no single-glyph <text> element "
+            "matching the pattern in brand_logo(); it needs updating."
+        )
+    logo_path.write_text(content, encoding="utf-8")
+    print(f"Set the docs logo to {initial}")
+
+
 def prune_sync_docs() -> None:
     """Drop the ROADMAP entry from the docs sync script."""
     sync_path = BASE_DIR / "scripts" / "sync_docs.py"
@@ -477,6 +525,8 @@ if __name__ == "__main__":
     clean_index()
     clean_zensical()
     strip_removed_links()
+    strip_screenshots()
+    brand_logo()
     prune_sync_docs()
     format_sources()
 
