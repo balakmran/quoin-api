@@ -27,6 +27,13 @@
 - **Docs**: the Core reference now documents `app/db/session.py` and
   `app/http/client.py`, and the docs coverage test requires both.
   Update-safe.
+- **Dependencies**: `sqlmodel` 0.0.46, `ty` 0.0.83, `zensical` 0.0.64,
+  and a refreshed lock. `sqlmodel` 0.0.45 makes plain `datetime` fields
+  UTC-aware; explicit `sa_column` types, as in the user module, are
+  unaffected. **Action required:** a plain `datetime` field of your own
+  becomes `timestamptz` — its generated migration needs a `USING`
+  clause naming the stored values' timezone.
+- **CI**: `astral-sh/setup-uv` pinned to v10.2.0.
 
 ### Fixed
 
