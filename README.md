@@ -16,9 +16,9 @@
 
 **The Foundation for your Python backend API.**
 
-QuoinAPI (pronounced "koyn") is a production-ready Python backend
-foundation built with FastAPI, SQLModel, PostgreSQL, and the Astral
-stack (uv, ruff, ty). It's a working API and a
+QuoinAPI is a production-ready Python backend foundation built with
+FastAPI, SQLModel, PostgreSQL, and the Astral stack (uv, ruff, ty).
+It's a working API and a
 [Copier](https://copier.readthedocs.io/) template in one.
 
 It's for teams starting a new async Python API who want auth,
