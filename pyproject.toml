@@ -27,7 +27,7 @@ dependencies = [
     "purgatory>=3.0.1",
     "pydantic-settings>=2.15.0",
     "PyJWT[crypto]>=2.14.0",
-    "sqlmodel==0.0.42",
+    "sqlmodel==0.0.46",
     "stamina>=26.1.0",
     "structlog>=26.1.0",
 ]
@@ -43,8 +43,8 @@ dev = [
     { include-group = "tooling" },
 ]
 docs = [
-    "mkdocstrings-python>=2.0.8",
-    "zensical==0.0.63",
+    "mkdocstrings-python>=2.0.9",
+    "zensical==0.0.64",
 ]
 test = [
     "httpx2>=2.13.0",
@@ -56,7 +56,7 @@ test = [
 tooling = [
     "prek==0.5.3",
     "ruff==0.16.8",
-    "ty==0.0.82",
+    "ty==0.0.83",
 ]
 
 [tool.coverage.run]

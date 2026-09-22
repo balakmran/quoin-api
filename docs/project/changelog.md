@@ -22,12 +22,18 @@
 - **Docs**: the home page screenshot is retaken as 2x WebP, and an
   unreferenced 8.2 MB banner image is dropped (docs images: 8.4 MB to
   186 KB).
-
 - **Config**: `.env.example` is regrouped under section banners with
   one-line comments. Update-safe.
 - **Docs**: the Core reference now documents `app/db/session.py` and
   `app/http/client.py`, and the docs coverage test requires both.
   Update-safe.
+- **Dependencies**: `sqlmodel` 0.0.46, `ty` 0.0.83, `zensical` 0.0.64,
+  and a refreshed lock. `sqlmodel` 0.0.45 makes plain `datetime` fields
+  UTC-aware; explicit `sa_column` types, as in the user module, are
+  unaffected. **Action required:** a plain `datetime` field of your own
+  becomes `timestamptz` — its generated migration needs a `USING`
+  clause naming the stored values' timezone.
+- **CI**: `astral-sh/setup-uv` pinned to v10.2.0.
 
 ### Fixed
 
@@ -1348,7 +1354,9 @@ written down at all.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.3...HEAD
+[1.0.0-rc.3]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.2...v1.0.0-rc.3
+[1.0.0-rc.2]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/balakmran/quoin-api/compare/v0.16.0...v1.0.0-rc.1
 [0.16.0]: https://github.com/balakmran/quoin-api/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/balakmran/quoin-api/compare/v0.14.0...v0.15.0
