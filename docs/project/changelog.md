@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc.3] - 2026-09-22
+
 ### Changed
 
 - **Web**: the landing page's CSS classes are prefixed `app-`, not
@@ -51,7 +53,7 @@
   it that is per-release work rather than a one-time gate — both CVE
   scans, the update-path verification from two real tags, generating
   with long non-default answers, and the container probe — moved into
-  the `quoin-release` skill, so it runs on every tag instead of once.
+  the `api-release` skill, so it runs on every tag instead of once.
   Update-safe.
 - **Docs**: the API stability guide drops its pre-1.0 caveat. From
   `1.0.0` a break lands in a MAJOR release or it does not land.
