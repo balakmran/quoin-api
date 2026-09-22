@@ -172,6 +172,8 @@ show_symbol_type_heading = true
 show_symbol_type_toc = true
 members_order = "source"
 # Hide dunders (`__init__`, `__call__`) and privates; the constructor's
-# arguments are shown on the class instead.
+# arguments are shown on the class instead, without its summary line
+# (kept in the code for ruff's D107).
 filters = ["!^_"]
 merge_init_into_class = true
+docstring_options = { ignore_init_summary = true }
