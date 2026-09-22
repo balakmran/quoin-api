@@ -63,7 +63,7 @@ The `Dockerfile` uses a **multi-stage build**:
 # Stage 1: Builder — install dependencies only
 # Images pinned by version tag AND digest for reproducible builds
 FROM python:3.14-slim-bookworm@sha256:9ab8d9... AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e... /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.17@sha256:10787c... /uv /bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
