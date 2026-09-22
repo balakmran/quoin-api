@@ -187,8 +187,8 @@ allowlist should refuse.
 ## What's intentionally not here
 
 - **Cursor / keyset pagination** — offset pagination is sufficient
-  through `1.0`; cursors matter only at million-row scale and stay in the
-  [backlog](../project/roadmap.md#backlog).
+  short of million-row tables, where cursors start to matter; they stay
+  in the [backlog](../project/roadmap.md#backlog).
 - **A generic filter DSL** — per-module explicit filters are clearer and
   keep the schema honest.
 
