@@ -410,6 +410,64 @@ def brand_logo() -> None:
     print(f"Set the docs logo to {initial}")
 
 
+# Marker pairs that fence off template-only prose, by comment syntax.
+TEMPLATE_ONLY_MARKERS = (
+    ("<!-- template-only -->", "<!-- /template-only -->"),
+    ("# template-only", "# /template-only"),
+)
+
+
+def strip_template_only() -> None:
+    """Remove blocks that only apply to the template repository.
+
+    A handful of files document maintaining the template itself --
+    verifying `copier update` between two tags, the scan that keeps this
+    name out of generated projects. The scripts and tests behind them
+    are not shipped, so the prose and the `just` recipe that call them
+    would dangle. Fencing a block in the marker pair opts it out.
+    """
+    for root, dirs, files in os.walk(BASE_DIR):
+        dirs[:] = [d for d in dirs if d not in IGNORE_PATHS]
+        for file_name in files:
+            path = Path(root) / file_name
+            if path.suffix in IGNORE_EXTENSIONS:
+                continue
+            # This script carries the markers as literals.
+            if file_name == "copier_setup.py":
+                continue
+            try:
+                content = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            original = content
+            for opening, closing in TEMPLATE_ONLY_MARKERS:
+                if opening not in content:
+                    continue
+                content = re.sub(
+                    rf"^[ \t]*{re.escape(opening)}[^\n]*\n"
+                    rf".*?^[ \t]*{re.escape(closing)}[^\n]*\n",
+                    "",
+                    content,
+                    flags=re.DOTALL | re.MULTILINE,
+                )
+                # An unclosed marker would leave the block in place --
+                # silently shipping what it was written to withhold.
+                residual = re.compile(
+                    rf"^[ \t]*{re.escape(opening)}", re.MULTILINE
+                )
+                if residual.search(content):
+                    raise RuntimeError(
+                        f"{path.relative_to(BASE_DIR)} has a "
+                        f"'{opening}' marker with no matching "
+                        f"'{closing}'."
+                    )
+            if content != original:
+                content = re.sub(r"\n{3,}", "\n\n", content)
+                path.write_text(content, encoding="utf-8")
+                print(f"Stripped template-only block from "
+                      f"{path.relative_to(BASE_DIR)}")
+
+
 def prune_sync_docs() -> None:
     """Drop the ROADMAP entry from the docs sync script."""
     sync_path = BASE_DIR / "scripts" / "sync_docs.py"
@@ -526,6 +584,7 @@ if __name__ == "__main__":
     clean_zensical()
     strip_removed_links()
     strip_screenshots()
+    strip_template_only()
     brand_logo()
     prune_sync_docs()
     format_sources()

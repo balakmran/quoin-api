@@ -237,6 +237,8 @@ bump part="patch" *flags:
 tag *args:
     @uv run python scripts/tag_release.py {{args}}
 
+# template-only
 # Verify `copier update` applies cleanly between two template tags
 verify-template-update previous current *args:
     uv run python scripts/verify_template_update.py {{previous}} {{current}} {{args}}
+# /template-only
