@@ -8,7 +8,7 @@ QuoinAPI — FastAPI + SQLModel + PostgreSQL backend. Astral stack throughout: `
 
 <!-- template-only -->
 
-Pronounced "koyn". Doubles as a working API and a Copier template (`copier.yml`, `scripts/copier_setup.py.jinja`).
+Doubles as a working API and a Copier template (`copier.yml`, `scripts/copier_setup.py.jinja`).
 
 <!-- /template-only -->
 
