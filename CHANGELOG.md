@@ -22,6 +22,12 @@
   `.claude/skills/quoin-*` directories by hand -- Copier adds the new
   ones but never removes the old, and the duplicate pair triggers on
   the same phrases.
+- **Template**: a generated project no longer receives the files that
+  only maintain the template -- `scripts/verify_template_update.py` and
+  the two tests that already skipped themselves there. Prose, the
+  `just verify-template-update` recipe, and code-block lines that go
+  with them are fenced in `<!-- template-only -->` markers and stripped
+  during generation. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of

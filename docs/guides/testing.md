@@ -30,11 +30,9 @@ tests/
 ├── test_migration_guard.py      # Migration safety checks
 ├── test_scaffold_module.py      # `just new` output
 ├── test_problem_details_hook.py # Error-contract hook on every response
-├── test_template_substitution.py # Copier substitution and headroom
 ├── test_tool_pins.py            # Tool versions agree across files
 ├── test_bump_version.py         # `just bump`
 ├── test_tag_release.py          # `just tag`
-├── test_copier_update_workflow.py # Update-check workflow
 ├── core/                        # config, security, middlewares,
 │   └── ...                      # logging, telemetry, pagination, ...
 ├── http/

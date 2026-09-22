@@ -218,10 +218,14 @@ Two things to check on those pages:
   opens straight into its first class. Ten modules had none before the
   reference was generated; `ast.get_docstring(ast.parse(src))` finds any
   that regress.
+<!-- template-only -->
+
 - **`QUOIN_` in a docstring.** Copier substitutes a longer prefix into
   generated projects, so a line with two prefix tokens can pass ruff here
   and break `ruff check` there. Keep it to one per line.
   `test_template_substitution.py` catches it.
+
+<!-- /template-only -->
 
 ## Things that bite
 

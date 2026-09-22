@@ -149,13 +149,19 @@ tag and retries only the release. To correct a published release's
 notes, edit it in place with
 `gh release edit v1.2.0 --notes-file -`.
 
+<!-- template-only -->
+
 The tag itself (not the GitHub Release) is what `copier copy`,
 `copier update`, and `just verify-template-update` resolve against.
+
+<!-- /template-only -->
 
 View tags at:
 [https://github.com/balakmran/quoin-api/tags](https://github.com/balakmran/quoin-api/tags)
 
 ---
+
+<!-- template-only -->
 
 ### 6. Copier Update Verification (automatic)
 
@@ -188,6 +194,8 @@ just verify-template-update v0.8.0 v0.9.0 --check
 ```
 
 ---
+
+<!-- /template-only -->
 
 ## Conventional Commits
 

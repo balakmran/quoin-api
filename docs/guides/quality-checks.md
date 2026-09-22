@@ -175,6 +175,8 @@ enforced by `fail_under` in `[tool.coverage.report]`
 ([`pyproject.toml`](../../pyproject.toml)), not by a separate CI step,
 so the same gate applies locally and in CI.
 
+<!-- template-only -->
+
 A second job runs the same gate somewhere else: **Scaffold Smoke Test**
 ([`scaffold-smoke.yml`](../../.github/workflows/scaffold-smoke.yml))
 generates a project from the branch under review and runs *its* `just
@@ -203,6 +205,8 @@ tests leave the database at base), `just migrate-gen "add widget"`
 (which must emit a `create_table`), and `just check` again. That proves
 the scaffold and autogenerate where the settings prefix, base exception,
 and problem URN are the adopter's, not this repo's.
+
+<!-- /template-only -->
 
 Dependency CVE scanning is **not** part of this pipeline or of
 `just check` — it needs network access and its result depends on the

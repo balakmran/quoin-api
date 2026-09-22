@@ -83,17 +83,27 @@ Push the branch and merge the PR to `main` the normal way. **Do not tag from a f
 
 ### 5. Prove the release before the tag is public
 
-A pushed tag cannot be withdrawn, and the checks that would catch a bad one run too late: the Copier
-Update Check only fires **after** the tag, and `just check` never exercises a generated project or
-the image. Create the tag locally, verify, then let step 6 push it (`just tag` skips a tag that
-already exists).
+A pushed tag cannot be withdrawn, and `just check` never exercises the image. Create the tag
+locally, verify, then let step 6 push it (`just tag` skips a tag that already exists).
+
+<!-- template-only -->
+
+The checks that would catch a bad template release run later still: the Copier Update Check only
+fires **after** the tag, and no gate exercises a generated project. The tree must be clean before
+the tag as well — `copier copy` copies a dirty template as-is, untracked files included.
+
+<!-- /template-only -->
 
 ```bash
-git status --porcelain   # must be empty: a dirty template is copied as-is, untracked files included
+git status --porcelain   # must be empty before you tag
 git tag vX.Y.Z           # local only
+# template-only
 just verify-template-update <preceding-tag> vX.Y.Z --check
 just verify-template-update <newest-final-release> vX.Y.Z --check
+# /template-only
 ```
+
+<!-- template-only -->
 
 Both arguments must be real tags — the script compares them against the `_commit` recorded in
 `.copier-answers.yml`, so `HEAD` or a branch name fails. `copier update` needs that file, which
@@ -108,6 +118,8 @@ uvx copier copy --trust --vcs-ref=HEAD --defaults \
     --data project_name="Northwind Traders Platform API" . ../rel-smoke
 cd ../rel-smoke && uv sync --all-groups && just check
 ```
+
+<!-- /template-only -->
 
 Finally confirm the image: it builds, starts as the non-root user, and hides its docs in production
 — `/docs`, `/redoc` and `/openapi.json` all `404` under `QUOIN_ENV=production`, while `/health` and
