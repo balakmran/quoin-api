@@ -15,12 +15,19 @@ delete, and deprecation; `0.10.0` the stability policy; `0.11.0` to
 `0.13.0` the correctness fixes and the CI that proves a generated
 project builds and updates; `0.14.0` the day-two proof. The 2026-09-13
 full audit that followed found no High; `0.15.0` closed its request-path
-findings and `0.16.0` its operational ones. The Known Correctness Issues
-table is empty, so the next tag is the release candidate.
+findings and `0.16.0` its operational ones.
+
+`1.0.0-rc.1` and `rc.2` rehearsed the release: the launch checklist ran
+against each candidate, `rc.1` turned up six things, and `rc.2` carries
+those six and nothing else. The checklist has served its purpose and is
+retired — its per-release half now lives in the `quoin-release` skill,
+which runs it on every tag rather than once. The Known Correctness
+Issues table is empty.
 
 **`0.10.0` was the last feature release before `1.0`.** Everything since
-has been fixes and proof; after `1.0` a feature is an ordinary minor
-release.
+has been fixes and proof; from `1.0` a feature is an ordinary minor
+release, and a break is a major or does not happen — see the
+[API stability policy](docs/guides/api-stability.md).
 
 The backlog lists only demand-gated features. Operational concerns
 (alerting, deploy runbooks, backups) belong in your infrastructure repo.
@@ -32,158 +39,15 @@ OpenTelemetry, with no vendor-specific tooling.
 
 ---
 
-## v1.0.0-rc.1 — Rehearsal
-
-Cut a pre-release tag rather than a `0.17`. It costs nothing and buys
-two things: the `v*` workflows run against a candidate that can still
-be withdrawn, and the launch checklist below is executed once for real
-before it counts. Cut it from `0.16.0` with `just bump major --rc` and
-`just tag`; the Copier Update Check then verifies `v0.16.0 →
-v1.0.0-rc.1` and `v0.15.0 → v1.0.0-rc.1` with the updated project's
-gate.
-
-Scope: **fixes only** — anything that fails the checklist becomes
-`rc.2`. If the checklist passes clean, `1.0.0` is the same commit with a
-version bump. The candidate starts with nothing open: `0.15` and `0.16`
-closed the 2026-09-13 audit before the rc rather than under it.
-
----
-
-## v1.0 Launch Checklist
-
-This is a one-time repository release gate, not a deployment runbook for
-generated projects. Check every item on the release candidate commit before
-deciding whether to release `v1.0.0`.
-
-### Template contract
-
-- [ ] Review the [API Stability & SemVer Policy](docs/guides/api-stability.md)
-    against every change since `v0.9.0`; classify any required consumer
-    action in `CHANGELOG.md`.
-- [ ] Confirm `copier.yml` prompts, `scripts/copier_setup.py.jinja`, and
-    generated metadata still produce a de-branded project.
-- [ ] Generate a clean project from the release candidate **with your
-    own long answers**, not the defaults, and run its full gate. Pass
-    `--vcs-ref=HEAD`: a local git template without it resolves to the
-    latest *tag*, so the smoke test silently exercises the previous
-    release instead of the candidate. A dirty local template is copied
-    as its working tree, untracked files included, so the tree must be
-    clean first. The scaffold smoke job runs the same thing, plus the
-    day-two rehearsal, on every pull request; this is a confirmation
-    with non-default answers, not a first run.
-
-    ```bash
-    git status --porcelain   # must be empty
-    uvx copier copy --trust --vcs-ref=HEAD . ../quoinapi-v1-smoke
-    cd ../quoinapi-v1-smoke
-    uv sync --all-groups
-    just check
-    ```
-
-- [ ] Confirm the generated project contains no QuoinAPI roadmap, release
-    notes, contributor policy, or maintainer identity beyond the answers
-    supplied to Copier — grep the tree for `Quoin` and for the
-    maintainer's name and handle, not only for leaked files.
-- [ ] Verify the `copier update` path from the previous release *before*
-    pushing the tag — the Copier Update Check workflow only runs on `v*`
-    tags, so it reports after the release decision, not before it. Create
-    the candidate tag locally, verify, then let `just tag` push it (it
-    skips a tag that already exists). Both arguments must be real tags:
-    the check compares the tag string against the `_commit` recorded in
-    `.copier-answers.yml`, so `HEAD` or a branch name fails.
-
-    ```bash
-    git tag v1.0.0
-    just verify-template-update v1.0.0-rc.1 v1.0.0 --check
-    just verify-template-update v0.16.0 v1.0.0 --check
-    ```
-
-    Both baselines mirror the workflow: the preceding tag, then the
-    newest final release before it. With `rc.2` cut, use it instead of
-    `rc.1`.
-
-- [ ] Confirm the generated project's `.copier-answers.yml` records the
-    candidate tag after updating from `v0.16.0`.
-
-### Behaviour and quality
-
-- [ ] Run `just check` from a clean checkout and confirm 100% coverage.
-- [ ] Run `just docb`; review the built site for broken links, navigation,
-    API-reference rendering, and the current configuration tables.
-- [ ] Start the local stack with `just dev`; verify `/health`, `/ready`,
-    `/docs`, one authenticated request, and one denied request. Stop
-    the database and confirm `/ready` returns `503`, not `500`.
-- [ ] Open the landing page with the browser console visible and confirm
-    no CSP violation is reported; the copy button must work.
-- [ ] Verify production configuration fails closed when the OAuth issuer,
-    audience, or HTTPS JWKS URI is absent or invalid, or when
-    `QUOIN_ALLOWED_HOSTS` is left at its development default.
-- [ ] Confirm a bare `ENV=production` (no `QUOIN_` prefix) is ignored
-    rather than half-applying the production profile.
-- [ ] Confirm `QUOIN_LOG_LEVEL=WARNING` visibly suppresses the access log
-    in a `just dev` session, and that `just test` output is plain
-    single-line logs rather than JSON-wrapped console lines.
-- [ ] Confirm the regression guards are present and green: the
-    problem-details contract hook and the commit-before-send test
-    (`0.11.0`); the substitution-headroom test and the null-PATCH test
-    (`0.13.0`); the hook's body tests, the tool-pin test, and the
-    Scaffold Smoke Test's day-two step (`0.14.0`); the malformed-header,
-    database-down readiness, forged-`Host`, slow-JWKS, and landing-page
-    CSP tests (`0.15.0`); and the log-profile test and the Python 3.12
-    job (`0.16.0`).
-- [ ] Review the public OpenAPI document and RFC 9457 error examples for
-    intentional endpoint, response, and security-scheme changes only.
-
-### Security and distribution
-
-- [ ] Confirm GitHub Actions remain SHA-pinned with read-only default
-    permissions, `uv` is pinned in the workflows, the Docker base image
-    is digest-pinned, and Dependabot covers Python, Docker, and GitHub
-    Actions dependencies.
-- [ ] Run the CVE scan — it is deliberately not part of `just check`, so
-    nothing else in the release path runs it. Every advisory left in
-    `audit_ignore` needs a current dated justification in the
-    [Dependency Scanning](docs/guides/dependency-scanning.md) guide.
-
-    ```bash
-    just audit
-    just audit-prod
-    ```
-
-- [ ] Confirm the Docker image builds, starts as the non-root `quoin` user,
-    passes its health check, and disables docs and OpenAPI in production.
-- [ ] Review `.env.example`, the Configuration guide, and the Security and
-    Deployment guides together; every supported `QUOIN_*` setting must be
-    documented without committing a credential.
-- [ ] Confirm the security policy names `main` and the latest tag as the
-    supported template versions and provides a private reporting route.
-
-### Release decision
-
-- [ ] Triage every open issue and pull request as release-blocking,
-    explicitly deferred, or post-`v1.0.0` work.
-- [ ] Confirm the **Known Correctness Issues** table below is empty.
-- [ ] Record the final scope and all intentional deferrals in the
-    `CHANGELOG.md` release section.
-- [ ] Obtain maintainer approval that the template contract is stable enough
-    for the `1.x` major-version promise.
-- [ ] Follow the [Release Workflow](docs/guides/release-workflow.md) to bump,
-    merge, tag, and publish the release.
-
-Once complete, move this checklist to the release notes and replace the
-milestone above with the next demand-backed milestone.
-
----
-
 ## Known Correctness Issues
 
-A confirmed bug fits neither the launch checklist above (a one-time
-release gate) nor the backlog below (demand-gated features) — without
-a lane of its own it tends to get triaged as one or the other and
-lost. This table is that lane: add a row when a review or an incident
-confirms a correctness bug that isn't fixed in the same change, and
-remove the row once the fix ships (credit it in `CHANGELOG.md`
-instead). Empty is the steady state, not a gap in review.
+A confirmed bug is neither a milestone nor a backlog item (those are
+demand-gated features) — without a lane of its own it tends to get
+triaged as one or the other and lost. This table is that lane: add a
+row when a review or an incident confirms a correctness bug that isn't
+fixed in the same change, and remove the row once the fix ships
+(credit it in `CHANGELOG.md` instead). Empty is the steady state, not
+a gap in review.
 
 | Issue | Found |
 | :---- | :---- |
@@ -218,10 +82,11 @@ supposed to produce.
 
 ---
 
-## After 1.0
+## Direction
 
-Intent, not commitments — this section exists so that work deferred
-*until* `1.0` isn't confused with work deferred *pending demand*.
+Intent, not commitments — where the template goes now that the surface
+is frozen, as distinct from the backlog below, which is gated on
+demand rather than on time.
 
 - **Boring is the brand.** Strict semver, quarterly minors, security
   patches immediately. The cadence work is already dated: Python 3.12
