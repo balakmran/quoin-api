@@ -1,9 +1,9 @@
 # API Stability & SemVer Policy
 
-QuoinAPI is a Copier **template**: you `copier copy` it once and own
-every line of the generated project, including the `user` module and
-its `/api/v1/users` routes. Those routes are a worked example of a
-complete CRUD module, not a contract this repository promises to keep
+You `copier copy` this **template** once and own every line of the
+generated project, including the `user` module and its
+`/api/v1/users` routes. Those routes are a worked example of a
+complete CRUD module, not a contract the template promises to keep
 stable — rename, reshape, or delete them the moment you generate a
 project. If you want to run your own stability policy for *your*
 endpoints, the mechanism is in the
@@ -14,12 +14,12 @@ URL-versioning scheme.
 This document is about a different surface: the **template itself** —
 the code, settings, and tooling a generated project depends on, and
 that `copier update` must reconcile on every pull. That is the thing
-QuoinAPI can and does make a versioning promise about.
+the template can and does make a versioning promise about.
 
 ## What SemVer means here
 
 Git tags (`vX.Y.Z`) version the template repository, not a published
-package — QuoinAPI is never `pip install`-ed (see
+package — the template is never `pip install`-ed (see
 [Non-goal: no importable core package](#non-goal-no-importable-core-package)
 below).
 
@@ -88,7 +88,8 @@ strict: a break lands in a MAJOR release or it does not land.
   [architecture overview](../architecture/overview.md) documents this
   layering. Keeping the two separate is what lets `copier update`
   diffs stay small.
-- Two CI jobs stand behind this, and neither is run by hand:
+- Two CI jobs in the template repository stand behind this, and
+  neither is run by hand:
   **Scaffold Smoke Test** generates a project on every pull request and
   runs its own `just check`, failing if that gate has to modify what it
   was given, then scaffolds and migrates a module there and gates it
@@ -120,20 +121,20 @@ settings, CLI recipes, and scaffold behaviour instead of routes:
 
 ## Supported versions
 
-Same table as [`SECURITY.md`](../project/security-policy.md#supported-versions):
-`main` and the latest tag are supported; older tags aren't backported
-to. Taking a fix means pulling it in via `copier update` or
-cherry-picking the commit.
+The template supports `main` and its latest tag; older tags aren't
+backported to. Taking a fix means pulling it in via `copier update`
+or cherry-picking the commit.
 
 ## Non-goal: no importable core package
 
-QuoinAPI will not be published as an installable package (no
-`import quoin_core`, no `pip install quoin-api`). The template's
-entire value is that the generated project is 100% the team's code —
-auditable and modifiable without asking permission. Publishing
+The template will not be published as an installable package: there is
+no `import quoin_core`,
+and no `pip install quoin-api`.
+Its entire value is that the generated project is 100% the team's code
+— auditable and modifiable without asking permission. Publishing
 `app/core` as a dependency would flip that: every consumer would then
-need QuoinAPI to maintain backwards compatibility forever, which is a
-different (and heavier) promise than this document makes. If a
+need the template to maintain backwards compatibility forever, which
+is a different (and heavier) promise than this document makes. If a
 generated project ever needs to move off SQLModel, the repository
 pattern already isolates it to `models.py` plus the repositories —
 that migration stays contained regardless of this policy.
@@ -144,8 +145,8 @@ that migration stays contained regardless of this policy.
   RFC 8594 mechanism for your own endpoint-level deprecations.
 - [Release Workflow](release-workflow.md) — how a version bump and
   tag actually ship.
-- [Security Policy](../project/security-policy.md) — supported
-  versions and vulnerability reporting.
+- [Security Policy](../project/security-policy.md) — vulnerability
+  reporting.
 - [Configuration](configuration.md) — the current `QUOIN_*` settings
   table.
 - [Architecture Overview](../architecture/overview.md) — the layer
