@@ -31,7 +31,11 @@ Access the application at [http://localhost:8000](http://localhost:8000) (or via
 !!! note
     The Compose file is a **development** stack: it runs
     `fastapi dev` with the source mounted, `QUOIN_ENV=development`, and
-    the mock OAuth server. Don't use it as a production deployment.
+    the mock OAuth server. For that mock it also sets two dev-only
+    values, `QUOIN_OAUTH_ROLES_CLAIM=aud` and
+    `QUOIN_OAUTH_SUPERUSER_ENABLED=true`, which production must not
+    inherit (see [Environment Variables](#environment-variables)).
+    Don't use it as a production deployment.
 
 ### Stop Containers
 
@@ -184,6 +188,18 @@ QUOIN_POSTGRES_USER=postgres
 QUOIN_POSTGRES_PASSWORD=<strong-password>
 QUOIN_POSTGRES_DB=app_db
 ```
+
+**Don't start from `.env.example`.** It is a development file: two of
+its values exist only for the local mock OAuth server. Leave both unset
+in production so the defaults apply:
+
+| Setting | Development | Production default |
+| :--- | :--- | :--- |
+| `QUOIN_OAUTH_ROLES_CLAIM` | `aud` (where the mock puts roles) | `roles` |
+| `QUOIN_OAUTH_SUPERUSER_ENABLED` | `true` (one token for every endpoint) | `false` |
+
+A production boot with the bypass enabled logs
+`production_superuser_bypass_enabled`.
 
 If `QUOIN_ALLOWED_HOSTS` or an OAuth trust anchor is missing, the app
 exits at startup with a message naming it. See
