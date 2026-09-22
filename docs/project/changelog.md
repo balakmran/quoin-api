@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-22
+
 ### Changed
 
 - **Security**: the superuser bypass is now opt-in —
@@ -37,6 +39,13 @@
 - **Tooling**: uv 0.12.17 in the `Dockerfile` and every workflow.
   Update-safe; upgrade a local uv with `uv self update`.
 
+### Removed
+
+- **Telemetry**: traces no longer carry `deployment.environment`,
+  superseded by `deployment.environment.name` in `0.13.0`. **Action
+  required:** move any dashboard or alert still filtering on the old
+  key.
+
 ### Fixed
 
 - **Config**: a `.env` copied from `.env.example` no longer breaks every
@@ -56,13 +65,6 @@
 - **Web**: the landing page's hero command is `copier copy`, not
   `git clone`, and is `template-only`; a generated project's hero shows
   an "API docs" button instead. Update-safe.
-
-### Removed
-
-- **Telemetry**: traces no longer carry `deployment.environment`,
-  superseded by `deployment.environment.name` in `0.13.0`. **Action
-  required:** move any dashboard or alert still filtering on the old
-  key.
 
 ## [1.0.0-rc.3] - 2026-09-22
 
@@ -1356,7 +1358,8 @@ written down at all.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.3...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.3...v1.0.0
 [1.0.0-rc.3]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.2...v1.0.0-rc.3
 [1.0.0-rc.2]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/balakmran/quoin-api/compare/v0.16.0...v1.0.0-rc.1
