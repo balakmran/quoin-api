@@ -22,7 +22,6 @@
 - **Docs**: the home page screenshot is retaken as 2x WebP, and an
   unreferenced 8.2 MB banner image is dropped (docs images: 8.4 MB to
   186 KB).
-
 - **Config**: `.env.example` is regrouped under section banners with
   one-line comments. Update-safe.
 - **Docs**: the Core reference now documents `app/db/session.py` and
@@ -1348,7 +1347,9 @@ written down at all.
 - Static analysis with `ruff` and `ty`.
 - Documentation with MkDocs.
 
-[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.3...HEAD
+[1.0.0-rc.3]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.2...v1.0.0-rc.3
+[1.0.0-rc.2]: https://github.com/balakmran/quoin-api/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/balakmran/quoin-api/compare/v0.16.0...v1.0.0-rc.1
 [0.16.0]: https://github.com/balakmran/quoin-api/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/balakmran/quoin-api/compare/v0.14.0...v0.15.0
