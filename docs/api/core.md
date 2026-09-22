@@ -37,6 +37,8 @@ the code it describes.
 ## Exceptions
 
 ::: app.core.exceptions
+    options:
+      filters: ["!^_", "!^errors$"]
 
 **Usage:** see the [Error Handling guide](../guides/error-handling.md).
 
