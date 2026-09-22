@@ -4,6 +4,14 @@
 
 ### Changed
 
+- **Project**: the one-time v1 launch checklist is retired from
+  `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
+  findings and `rc.2` carried those six and nothing else. The half of
+  it that is per-release work rather than a one-time gate — both CVE
+  scans, the update-path verification from two real tags, generating
+  with long non-default answers, and the container probe — moved into
+  the `quoin-release` skill, so it runs on every tag instead of once.
+  Update-safe.
 - **Docs**: the API stability guide drops its pre-1.0 caveat. From
   `1.0.0` a break lands in a MAJOR release or it does not land.
   Update-safe.

@@ -17,8 +17,9 @@ Confirm three things with the user (or from the repo state) before touching anyt
 2. **Branch** — you should be on a clean working branch off `main`, not on `main` directly. The changelog/version commit goes through PR review like any other change.
 3. **What's actually shipping** — skim `git log <last-tag>..HEAD` so the changelog reflects reality. The `[Unreleased]` section is often stale or incomplete.
 
-Then run `just audit` — CVE scanning is not in CI, so a release is the
-last checkpoint before shipping vulnerable dependencies. Remediation
+Then run `just audit` **and** `just audit-prod` — CVE scanning is not in CI, so a release is the
+last checkpoint before shipping vulnerable dependencies, and the second is the subset that actually
+reaches production. Every ID left in `audit_ignore` needs a current dated justification. Remediation
 ladder in [docs/guides/dependency-scanning.md](../../../docs/guides/dependency-scanning.md).
 
 ## Workflow
@@ -71,13 +72,48 @@ Example transition:
 ### 4. Commit and merge
 
 ```bash
-git add CHANGELOG.md pyproject.toml app/__init__.py
+git add CHANGELOG.md pyproject.toml app/__init__.py uv.lock
 git commit -m "docs: update changelog for vX.Y.Z"
 ```
 
+`uv.lock` records the project's own version, so `just bump` changes it too. Leave it out and `prek`
+reverts the commit instead of making it: the hook's own formatting conflicts with the unstaged lock.
+
 Push the branch and merge the PR to `main` the normal way. **Do not tag from a feature branch** — the tag must point at the merge commit on `main` so the release reflects what's actually shipped.
 
-### 5. Tag the release
+### 5. Prove the release before the tag is public
+
+A pushed tag cannot be withdrawn, and the checks that would catch a bad one run too late: the Copier
+Update Check only fires **after** the tag, and `just check` never exercises a generated project or
+the image. Create the tag locally, verify, then let step 6 push it (`just tag` skips a tag that
+already exists).
+
+```bash
+git status --porcelain   # must be empty: a dirty template is copied as-is, untracked files included
+git tag vX.Y.Z           # local only
+just verify-template-update <preceding-tag> vX.Y.Z --check
+just verify-template-update <newest-final-release> vX.Y.Z --check
+```
+
+Both arguments must be real tags — the script compares them against the `_commit` recorded in
+`.copier-answers.yml`, so `HEAD` or a branch name fails. `copier update` needs that file, which
+first shipped in `0.10.0`; older baselines cannot be verified because they cannot update at all.
+
+Then generate a project with **long, non-default answers** and run its gate. `--defaults` gives a
+short name that hides every line which overflows once a real settings prefix is substituted, and 30
+characters is the documented budget:
+
+```bash
+uvx copier copy --trust --vcs-ref=HEAD --defaults \
+    --data project_name="Northwind Traders Platform API" . ../rel-smoke
+cd ../rel-smoke && uv sync --all-groups && just check
+```
+
+Finally confirm the image: it builds, starts as the non-root user, and hides its docs in production
+— `/docs`, `/redoc` and `/openapi.json` all `404` under `QUOIN_ENV=production`, while `/health` and
+`/ready` still serve.
+
+### 6. Tag the release
 
 Once the changelog/bump commit is on `main` and you've pulled it locally:
 
@@ -118,6 +154,9 @@ pulled it. If the *release* is wrong rather than the tag, edit it in place with
 - **Forgetting to update the changelog before bumping** — the bump script doesn't check, and you'll end up with a `vX.Y.Z` tag whose changelog entry is empty or wrong. Always do step 1 first.
 - **Tagging from the feature branch** — the tag will point at a commit that isn't on `main`, and the GitHub Release will reflect a tree no one else sees. Always merge first, pull `main`, then `just tag`.
 - **Skipping a section out of section order** — if you add a `### Fixed` block above `### Added`, the reader's eye loses the convention. Reorder before committing.
+- **Polling the container healthcheck too fast.** `HEALTHCHECK` declares `--start-period=10s
+  --interval=30s`, so a tight `docker inspect` loop burns its iterations in under a second and
+  reports `starting` forever. Poll with a real delay, or a healthy image looks broken.
 - **Using `chore:` instead of `docs:` for the release commit** — convention here is `docs: update changelog for vX.Y.Z`. It keeps the release commits trivially greppable.
 
 ## When the user asks for "just bump the version"
