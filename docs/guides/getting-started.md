@@ -39,7 +39,7 @@ confirms the app is up. API docs are at
 [/docs](http://localhost:8000/docs) (Swagger UI) and
 [/redoc](http://localhost:8000/redoc).
 
-![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
+![QuoinAPI Home Page](../assets/images/quoin-api-homepage.webp)
 
 ## Make an Authenticated Request
 

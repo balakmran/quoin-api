@@ -88,7 +88,7 @@ _exclude:
   # template's UI. clean_index() replaces the markup the stylesheet
   # targets, and strip_screenshots() drops the embeds.
   - "docs/stylesheets/home.css"
-  - "docs/assets/images/*.png"
+  - "docs/assets/images/*"
 
 _tasks:
   - "python3 scripts/copier_setup.py"
