@@ -28,6 +28,11 @@
   `just verify-template-update` recipe, and code-block lines that go
   with them are fenced in `<!-- template-only -->` markers and stripped
   during generation. Update-safe.
+- **Tests**: the identity scan in `test_template_substitution.py` reads
+  every tracked file the template ships, matches the brand without
+  regard to case, and checks filenames as well as contents. The old
+  scan read six paths case-sensitively, which is why lowercase class
+  and directory names leaked. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
