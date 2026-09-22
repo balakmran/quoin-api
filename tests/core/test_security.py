@@ -947,11 +947,26 @@ async def test_require_roles_admin_fail() -> None:
         await check(caller=caller)
 
 
+async def test_require_roles_superuser_bypass_is_off_by_default() -> None:
+    """Out of the box, api.superuser is just another role."""
+    caller = ServicePrincipal(subject="svc", roles=["api.superuser"], claims={})
+    with (
+        patch.object(
+            security_module.settings, "OAUTH_SUPERUSER_ENABLED", False
+        ),
+        pytest.raises(ForbiddenError, match=r"very\.specific\.role"),
+    ):
+        await require_roles("very.specific.role")(caller=caller)
+
+
 async def test_require_roles_superuser_bypass() -> None:
-    """Caller with api.superuser bypasses all specific role checks."""
+    """Once enabled, api.superuser bypasses all specific role checks."""
     caller = ServicePrincipal(subject="svc", roles=["api.superuser"], claims={})
     check = require_roles("very.specific.role")
-    result = await check(caller=caller)  # Should bypass and not raise
+    with patch.object(
+        security_module.settings, "OAUTH_SUPERUSER_ENABLED", True
+    ):
+        result = await check(caller=caller)
     assert result is caller
 
 

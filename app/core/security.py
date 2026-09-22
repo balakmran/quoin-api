@@ -477,11 +477,11 @@ def require_roles(*roles: str) -> Callable[..., Any]:
             ],
         ) -> None: ...
 
-    A caller holding ``QUOIN_OAUTH_SUPERUSER_ROLE`` (default
-    ``api.superuser``) bypasses every check. Set
-    ``QUOIN_OAUTH_SUPERUSER_ENABLED=false`` to remove the bypass
-    entirely — worth doing if the IdP is shared and could issue a role
-    by that name to callers that should not hold global authority.
+    With ``QUOIN_OAUTH_SUPERUSER_ENABLED=true`` (off by default), a
+    caller holding ``QUOIN_OAUTH_SUPERUSER_ROLE`` (default
+    ``api.superuser``) bypasses every check. Leave it off wherever
+    the IdP could issue a role by that name to callers that should
+    not hold global authority.
 
     Args:
         *roles: One or more role names that the caller must hold.

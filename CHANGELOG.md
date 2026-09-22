@@ -35,6 +35,13 @@
   8.2 MB banner image is dropped with it, taking the docs build's
   image payload from 8.4 MB to 186 KB.
 
+- **Security**: the superuser bypass is now opt-in —
+  `QUOIN_OAUTH_SUPERUSER_ENABLED` defaults to `false`, and a production
+  boot with it enabled logs `production_superuser_bypass_enabled`.
+  `.env.example` and `docker-compose.yml` keep it on for local
+  development. **Action required:** set it to `true` wherever you rely
+  on the bypass, including a local `.env` that predates the setting.
+
 ### Fixed
 
 - **Security**: `QUOIN_MAX_REQUEST_BODY_BYTES` now also caps a chunked

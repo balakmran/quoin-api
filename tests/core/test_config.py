@@ -234,6 +234,22 @@ def test_production_warns_on_default_database_password() -> None:
     assert events.count("production_default_database_password") == 1
 
 
+def test_production_warns_on_superuser_bypass() -> None:
+    """An enabled superuser bypass warns in production but still boots."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(_prod(OAUTH_SUPERUSER_ENABLED=True))
+    events = [log["event"] for log in cap_logs]
+    assert events.count("production_superuser_bypass_enabled") == 1
+
+
+def test_production_silent_when_superuser_bypass_is_off() -> None:
+    """The default (bypass off) emits no warning."""
+    with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
+        validate_production_settings(_prod())
+    events = [log["event"] for log in cap_logs]
+    assert "production_superuser_bypass_enabled" not in events
+
+
 def test_production_silent_on_a_real_database_password() -> None:
     """A password other than the default emits no warning."""
     with patch.dict(os.environ, {}, clear=True), capture_logs() as cap_logs:
@@ -251,18 +267,18 @@ def test_superuser_bypass_is_configurable() -> None:
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(_env_file=None)
         assert settings.OAUTH_SUPERUSER_ROLE == "api.superuser"
-        assert settings.OAUTH_SUPERUSER_ENABLED is True
+        assert settings.OAUTH_SUPERUSER_ENABLED is False
     with patch.dict(
         os.environ,
         {
             "QUOIN_OAUTH_SUPERUSER_ROLE": "ops.break_glass",
-            "QUOIN_OAUTH_SUPERUSER_ENABLED": "false",
+            "QUOIN_OAUTH_SUPERUSER_ENABLED": "true",
         },
         clear=True,
     ):
         settings = Settings(_env_file=None)
         assert settings.OAUTH_SUPERUSER_ROLE == "ops.break_glass"
-        assert settings.OAUTH_SUPERUSER_ENABLED is False
+        assert settings.OAUTH_SUPERUSER_ENABLED is True
 
 
 def test_default_csp_forbids_inline_scripts() -> None:

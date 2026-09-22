@@ -279,6 +279,7 @@ and test skip the check.
 | `QUOIN_ALLOWED_HOSTS` | Required, must differ from the default | The default rejects every real `Host` with a 400 |
 | `QUOIN_BACKEND_CORS_ORIGINS` | Warns on `localhost` entries | A leftover dev origin in a production allow-list |
 | `QUOIN_POSTGRES_PASSWORD` | Warns if left at the default | A development credential on a production database |
+| `QUOIN_OAUTH_SUPERUSER_ENABLED` | Warns if `true` | One role passing every `require_roles()` check |
 
 `ALLOWED_HOSTS` is a **hard** failure rather than a warning because the
 default fails *closed*: the service is safe but returns 400 to
@@ -290,6 +291,10 @@ bastion. The warning is logged as `production_local_cors_origins`.
 The default database password also only warns, logged as
 `production_default_database_password`. The database belongs to the
 deployer, and a private network may make the default harmless.
+
+An enabled superuser bypass warns as
+`production_superuser_bypass_enabled`, since break-glass access can be
+deliberate.
 
 ### JWKS refresh backoff
 
