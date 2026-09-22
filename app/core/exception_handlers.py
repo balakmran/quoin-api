@@ -169,7 +169,7 @@ async def http_exception_handler(request: Request, exc: Any) -> Response:
     that returns a bare ``{"detail": ...}`` JSON body. Left unregistered
     here, that default would be the one gap in the "every error response
     is ``application/problem+json``" contract the rest of the app
-    upholds (the same class of gap B3 was for the 500 path).
+    upholds.
 
     Registering against the Starlette base class (rather than
     ``fastapi.HTTPException``) also catches ``fastapi.HTTPException`` —
