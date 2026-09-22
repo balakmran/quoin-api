@@ -7,6 +7,10 @@
 - **Web**: the landing page's CSS classes are prefixed `app-`, not
   `quoin-`, so a generated project's markup carries no trace of the
   template. Update-safe.
+- **Docs**: the home page's styling moves from
+  `docs/stylesheets/extra.css` to `docs/stylesheets/home.css`, which a
+  generated project no longer ships -- it styles markup the setup
+  script already replaced. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
