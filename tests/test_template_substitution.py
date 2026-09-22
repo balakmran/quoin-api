@@ -4,8 +4,13 @@ Copier rewrites template identifiers with the adopter's answers. A
 longer answer lengthens every line that carries one -- including
 docstrings and comments, which no formatter reflows -- and any
 identifier the map misses ships the template's name to the adopter.
-This runs the real post-generation substitution over a copy of the tree,
-so `just check` here fails before an adopter's project does.
+This runs the real post-generation setup over a copy of the tree, so
+`just check` here fails before an adopter's project does.
+
+The copy is every tracked file minus the template config's excludes,
+because a narrower scan is how the brand leaked last time: skill
+directories, a stylesheet and two screenshot filenames all sat outside
+the handful of directories this used to read.
 """
 
 import re
@@ -23,14 +28,23 @@ ROOT = Path(__file__).resolve().parent.parent
 SETUP_TEMPLATE = ROOT / "scripts" / "copier_setup.py.jinja"
 COPIER_CONFIG = ROOT / "copier.yml"
 
-# Everything `ruff check .` reads in a generated project.
-LINTED_PATHS = ("alembic", "app", "scripts", "tests", "pyproject.toml")
-
-# Not linted, but shipped: scanned for identity leaks.
-PROSE_PATHS = ("docs",)
-
 # Tool caches written into the tree while the tests run; not source.
 CACHE_DIRS = {".ruff_cache", "__pycache__"}
+
+# The post-generation steps that shape the shipped tree. format_sources()
+# is left out: the lint test below runs the same passes itself.
+SETUP_STEPS = (
+    "run_replacements",
+    "write_clean_changelog",
+    "reset_readme",
+    "clean_index",
+    "clean_zensical",
+    "strip_removed_links",
+    "strip_screenshots",
+    "strip_template_only",
+    "brand_logo",
+    "prune_sync_docs",
+)
 
 # Sized to the lint headroom: prose is written to 80 columns and E501
 # fires past 100, which absorbs a settings prefix of up to 30 characters.
@@ -50,18 +64,21 @@ WORST_CASE_ANSWERS = {
     "google_analytics_id": "",
 }
 
-# The template's brand and the maintainer's identity. Split into pieces so
-# this file, which ships to generated projects, never matches the scan
-# itself -- here or in the scaffold smoke job's equivalent grep.
+# The template's brand and the maintainer's identity. Matched without
+# regard to case: the brand leaked for a release as lowercase CSS class
+# and directory names while a case-sensitive scan read every one of them
+# and passed. Split into pieces so this file never matches itself -- the
+# scaffold smoke job's equivalent grep still reads it in the repo.
 TEMPLATE_IDENTITY = re.compile(
     "|".join(
         (
-            "(?<![A-Za-z])" + "Quo" + "in",
+            "(?<![A-Za-z])" + "quo" + "in",
             "bala" + "kmran",
-            "Bala" + "kumaran",
-            "Mano" + "haran",
+            "bala" + "kumaran",
+            "mano" + "haran",
         )
-    )
+    ),
+    re.IGNORECASE,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -134,20 +151,29 @@ def _text_lines(path: Path) -> list[str]:
         return []
 
 
+def _tracked_files() -> list[str]:
+    """Return every path `git ls-files` reports for the template."""
+    result = subprocess.run(
+        ["git", "ls-files"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.split()
+
+
 @pytest.fixture(scope="module")
 def generated_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A copy of the source tree with worst-case answers substituted."""
+    """A copy of the shipped tree with worst-case answers substituted."""
     root = tmp_path_factory.mktemp("generated")
-    for name in LINTED_PATHS + PROSE_PATHS:
+    for name in _tracked_files():
         source = ROOT / name
-        if source.is_dir():
-            shutil.copytree(
-                source,
-                root / name,
-                ignore=shutil.ignore_patterns(*CACHE_DIRS),
-            )
-        else:
-            shutil.copy2(source, root / name)
+        if not source.is_file() or CACHE_DIRS.intersection(Path(name).parts):
+            continue
+        destination = root / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
     # Copier never ships these, so they may keep the template's name.
     for pattern in _copier_excludes():
@@ -156,12 +182,13 @@ def generated_tree(tmp_path_factory: pytest.TempPathFactory) -> Path:
                 shutil.rmtree(path)
             else:
                 path.unlink()
+    # Copier renders the config away rather than excluding it.
+    (root / COPIER_CONFIG.name).unlink(missing_ok=True)
 
     setup = _load_setup_script(WORST_CASE_ANSWERS, root)
     with redirect_stdout(StringIO()):
-        setup["run_replacements"]()
-        setup["clean_index"]()
-        setup["strip_removed_links"]()
+        for step in SETUP_STEPS:
+            setup[step]()
 
     # Guard against a vacuous pass if the substitution stops matching.
     prefix = WORST_CASE_ANSWERS["env_prefix"].lower()
@@ -197,7 +224,15 @@ def test_generated_sources_carry_no_template_identity(
         and path.name != SETUP_TEMPLATE.name
         and not CACHE_DIRS.intersection(path.parts)
     ]
+    # Filenames are scanned too: a screenshot whose name carried the
+    # brand shipped its old name while the substitution rewrote every
+    # link to it, leaving an embed pointing at nothing.
     leaks = [
+        f"{path.relative_to(generated_tree)}: filename"
+        for path in sources
+        if TEMPLATE_IDENTITY.search(str(path.relative_to(generated_tree)))
+    ]
+    leaks += [
         f"{path.relative_to(generated_tree)}:{lineno}: {line.strip()}"
         for path in sources
         for lineno, line in enumerate(_text_lines(path), start=1)
