@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs**: the API stability guide drops its pre-1.0 caveat. From
+  `1.0.0` a break lands in a MAJOR release or it does not land.
+  Update-safe.
+
 ## [1.0.0-rc.2] - 2026-09-21
 
 The second candidate. The launch checklist ran against `rc.1` and

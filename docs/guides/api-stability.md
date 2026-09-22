@@ -31,10 +31,10 @@ below).
 - **PATCH** — bug fixes, dependency bumps, and doc corrections with no
   behavioural change.
 
-**Pre-1.0 caveat:** QuoinAPI is currently `0.x`. Per standard SemVer, a
-`0.x` MINOR bump may still contain breaking changes to the template
-surface — the CHANGELOG calls these out, but the strict MAJOR-only
-rule below takes full effect starting at `1.0.0`.
+**The `0.x` line is closed.** Before `1.0.0` a MINOR bump could still
+carry a breaking change to the template surface, and the CHANGELOG
+called those out as they happened. From `1.0.0` the rule above is
+strict: a break lands in a MAJOR release or it does not land.
 
 ## The template surface this policy covers
 
@@ -112,7 +112,7 @@ settings, CLI recipes, and scaffold behaviour instead of routes:
 1. **Announce** — call it out in `CHANGELOG.md` and the relevant guide
    (e.g. the settings table in
    [Configuration](configuration.md)); keep it working for at least
-   one MINOR release (one full cycle pre-1.0).
+   one MINOR release.
 2. **Overlap** — old and new behaviour coexist; a deprecated setting
    may log a startup warning instead of failing.
 3. **Remove** — only in a MAJOR release, called out in the
