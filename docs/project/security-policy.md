@@ -75,10 +75,10 @@ reasonable window to ship a fix before disclosing publicly.
 
 ## Deployment scope
 
-The template ships with production hardening installed and documented,
-but a template cannot secure your deployment for you. The following are
-**your responsibility as the deployer** and are out of scope for this
-policy — they are documented in the guides so the assumptions are
+QuoinAPI ships with production hardening installed and documented, but
+shipped defaults cannot secure your deployment for you. The following
+are **your responsibility as the deployer** and are out of scope for
+this policy — they are documented in the guides so the assumptions are
 explicit:
 
 - **Edge rate limiting** — the template assumes an upstream limiter
@@ -96,7 +96,7 @@ explicit:
 
 ## Security posture & receipts
 
-The controls the template does provide, and how they are configured:
+The controls this project ships, and how they are configured:
 
 - [Security guide](../guides/security.md) — CORS hardening, security
   headers, request size caps, trusted hosts, request-ID validation,
