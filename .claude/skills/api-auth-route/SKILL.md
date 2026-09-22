@@ -40,7 +40,7 @@ Roles follow `<domain>.<action>`:
 - Action is one of: `read`, `write`, `delete` (or other verbs if the domain has a meaningful one — e.g. `payments.refund`).
 - **Read and write are not hierarchical.** A caller with `users.write` cannot read users unless they also have `users.read`. If an endpoint conceptually requires both (e.g. PUT that returns the updated record), require both: `require_roles("users.read", "users.write")`.
 
-The bypass: any caller with `api.superuser` in their roles passes every `require_roles()` check. This is for local dev convenience and break-glass, not for production traffic — don't hand out `api.superuser` casually. The role name is `QUOIN_OAUTH_SUPERUSER_ROLE` and the bypass can be removed entirely with `QUOIN_OAUTH_SUPERUSER_ENABLED=false`; read them from `settings`, never hard-code the string.
+The bypass: when `QUOIN_OAUTH_SUPERUSER_ENABLED=true` (off by default; the local `.env` turns it on), any caller with `api.superuser` in their roles passes every `require_roles()` check. This is for local dev convenience and break-glass, not for production traffic — don't hand out `api.superuser` casually. The role name is `QUOIN_OAUTH_SUPERUSER_ROLE`; read both from `settings`, never hard-code the string.
 
 ## The `responses=` block on the router or route
 

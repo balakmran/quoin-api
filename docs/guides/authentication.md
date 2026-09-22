@@ -67,17 +67,19 @@ read/write permissions. Scopes name a resource's bounded context, formatted
 | :--- | :--- | :--- |
 | `users.read` | Read access to a domain | `GET /api/v1/users/` |
 | `users.write` | Mutation access to a domain | `POST /api/v1/users/` |
-| `api.superuser` | **Global Bypass** | *Local testing and master scripts* |
+| `api.superuser` | **Global Bypass** (opt-in) | *Local testing and master scripts* |
 
 Routes declare which role they require via `require_roles(...)`. There is
 no hidden baseline role, so every route documents its own access
 requirement.
 
-The bypass role is a **setting**, not a constant. If your IdP could
-issue a role literally named `api.superuser` to callers who should not
-hold global authority, rename it with `QUOIN_OAUTH_SUPERUSER_ROLE`, or
-remove the bypass altogether with
-`QUOIN_OAUTH_SUPERUSER_ENABLED=false`.
+The bypass is **off by default**. `QUOIN_OAUTH_SUPERUSER_ENABLED=true`
+turns it on, and the generated `.env` does so for local development.
+Enabled in production, it logs `production_superuser_bypass_enabled`
+at startup. The role name is a setting, `QUOIN_OAUTH_SUPERUSER_ROLE`:
+if you enable the bypass and your IdP could issue a role literally
+named `api.superuser` to callers who should not hold global authority,
+rename it.
 
 ### Token Validation
 
@@ -139,9 +141,9 @@ QUOIN_OAUTH_AUDIENCE=api://{your-app-client-id}
 # Claim key — defaults work for Azure AD; adjust for other providers
 QUOIN_OAUTH_ROLES_CLAIM=roles
 
-# Global-bypass role, and the switch that removes the bypass entirely
+# Global-bypass role; the bypass itself is off unless enabled
 QUOIN_OAUTH_SUPERUSER_ROLE=api.superuser
-QUOIN_OAUTH_SUPERUSER_ENABLED=True
+QUOIN_OAUTH_SUPERUSER_ENABLED=false
 
 # Backoff: min seconds between JWKS refetches for an unknown kid
 QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
@@ -157,7 +159,7 @@ QUOIN_OAUTH_JWKS_TTL_SECONDS=3600
 | `QUOIN_OAUTH_AUDIENCE` | Expected `aud` claim | `None` |
 | `QUOIN_OAUTH_ROLES_CLAIM` | Claim key holding app roles | `roles` |
 | `QUOIN_OAUTH_SUPERUSER_ROLE` | Role that bypasses every `require_roles()` check | `api.superuser` |
-| `QUOIN_OAUTH_SUPERUSER_ENABLED` | Whether the bypass applies at all | `true` |
+| `QUOIN_OAUTH_SUPERUSER_ENABLED` | Whether the bypass applies at all | `false` |
 | `QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS` | Min seconds between JWKS refetches triggered by an unknown `kid` | `30.0` |
 | `QUOIN_OAUTH_JWKS_TTL_SECONDS` | Seconds a fetched key set is fresh; a stale set is still served while it refreshes in the background | `3600` |
 
@@ -255,8 +257,8 @@ just dev   # Starts DB + mock OAuth server + API natively
 `scripts/gen_token.py` (run as `just token`) mints signed, valid tokens
 against the mock server, so no real SSO is needed.
 
-**Testing everything with the bypass token.** Because `require_roles`
-honours the `api.superuser` bypass, one token exercises every endpoint:
+**Testing everything with the bypass token.** The local `.env` enables
+the `api.superuser` bypass, so one token exercises every endpoint:
 
 ```bash
 # Generate a master bypass token

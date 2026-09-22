@@ -234,13 +234,13 @@ class Settings(BaseSettings):
     OAUTH_ISSUER: str | None = None
     OAUTH_AUDIENCE: str | None = None
     OAUTH_ROLES_CLAIM: str = "roles"
-    # Role that bypasses every require_roles() check, and the switch
-    # that turns the bypass off for deployments whose IdP might issue
-    # this role name to callers that should not hold global authority.
+    # Role that bypasses every require_roles() check, and the opt-in
+    # switch for it: off unless enabled, since an IdP could issue this
+    # role name to callers that should not hold global authority.
     # A separate flag rather than an empty role name, because
     # `env_ignore_empty` above makes an empty env value mean "unset".
     OAUTH_SUPERUSER_ROLE: str = "api.superuser"
-    OAUTH_SUPERUSER_ENABLED: bool = True
+    OAUTH_SUPERUSER_ENABLED: bool = False
     # Minimum seconds between JWKS refetches triggered by an unknown
     # kid — bounds outbound calls when tokens with garbage kids are
     # sprayed (negative cache / backoff).
@@ -274,7 +274,9 @@ def validate_production_settings(s: Settings = settings) -> None:
     are a smell in production but harmless on their own, and a deployment
     may legitimately keep one for a bastion. The default database
     password is warned about for the same reason: the database belongs
-    to the deployer, and a private network may make it harmless.
+    to the deployer, and a private network may make it harmless. An
+    enabled superuser bypass only warns too, since break-glass access
+    can be deliberate.
 
     Args:
         s: The settings instance to validate (defaults to the module
@@ -292,6 +294,7 @@ def validate_production_settings(s: Settings = settings) -> None:
     _validate_production_hosts(s)
     _warn_on_local_cors_origins(s)
     _warn_on_default_database_password(s)
+    _warn_on_superuser_bypass(s)
 
 
 def _validate_production_oauth(s: Settings) -> None:
@@ -372,4 +375,20 @@ def _warn_on_default_database_password(s: Settings) -> None:
         logger.warning(
             "production_default_database_password",
             hint="Set QUOIN_POSTGRES_PASSWORD to a strong password.",
+        )
+
+
+def _warn_on_superuser_bypass(s: Settings) -> None:
+    """Log a warning if the superuser bypass is enabled in production.
+
+    Args:
+        s: The settings instance to inspect.
+    """
+    if s.OAUTH_SUPERUSER_ENABLED:
+        logger.warning(
+            "production_superuser_bypass_enabled",
+            role=s.OAUTH_SUPERUSER_ROLE,
+            hint="Any token holding this role passes every "
+            "require_roles() check. Unset "
+            "QUOIN_OAUTH_SUPERUSER_ENABLED unless that is intended.",
         )
