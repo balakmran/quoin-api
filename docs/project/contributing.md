@@ -36,7 +36,7 @@ just dev
 
 After running the server, you can visit
 [http://localhost:8000](http://localhost:8000) to see the application's home
-page:
+page.
 
 ![QuoinAPI Home Page](../assets/images/quoin-api-homepage.png)
 

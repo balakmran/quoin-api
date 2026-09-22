@@ -4,6 +4,35 @@
 
 ### Changed
 
+- **Web**: the landing page's CSS classes are prefixed `app-`, not
+  `quoin-`, so a generated project's markup carries no trace of the
+  template. Update-safe.
+- **Docs**: the home page's styling moves from
+  `docs/stylesheets/extra.css` to `docs/stylesheets/home.css`, which a
+  generated project no longer ships -- it styles markup the setup
+  script already replaced. Update-safe.
+- **Docs**: a generated project no longer carries this template's
+  screenshots or its `Q` logo -- the images under
+  `docs/assets/images/` are excluded along with the embeds that
+  referenced them, and the docs logo takes the project's own initial.
+  Fixes the broken image link those embeds produced. Update-safe.
+- **Skills**: the twelve project skills are renamed from `quoin-*` to
+  `api-*`, so a generated project's `.claude/skills/` carries no brand.
+  **Action required after `copier update`:** delete the twelve
+  `.claude/skills/quoin-*` directories by hand -- Copier adds the new
+  ones but never removes the old, and the duplicate pair triggers on
+  the same phrases.
+- **Template**: a generated project no longer receives the files that
+  only maintain the template -- `scripts/verify_template_update.py` and
+  the two tests that already skipped themselves there. Prose, the
+  `just verify-template-update` recipe, and code-block lines that go
+  with them are fenced in `<!-- template-only -->` markers and stripped
+  during generation. Update-safe.
+- **Tests**: the identity scan in `test_template_substitution.py` reads
+  every tracked file the template ships, matches the brand without
+  regard to case, and checks filenames as well as contents. The old
+  scan read six paths case-sensitively, which is why lowercase class
+  and directory names leaked. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
