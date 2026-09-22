@@ -17,12 +17,15 @@ project builds and updates; `0.14.0` the day-two proof. The 2026-09-13
 full audit that followed found no High; `0.15.0` closed its request-path
 findings and `0.16.0` its operational ones.
 
-`1.0.0-rc.1` and `rc.2` rehearsed the release: the launch checklist ran
-against each candidate, `rc.1` turned up six things, and `rc.2` carries
-those six and nothing else. The checklist has served its purpose and is
-retired — its per-release half now lives in the `api-release` skill,
-which runs it on every tag rather than once. The Known Correctness
-Issues table is empty.
+`1.0.0-rc.1` to `rc.3` rehearsed the release: the launch checklist ran
+against each candidate, `rc.1` turned up six things that `rc.2` fixed,
+and `rc.3` debranded generated projects and proved `copier update` from
+two baselines. The checklist has served its purpose and is retired —
+its per-release half now lives in the `api-release` skill, which runs
+it on every tag rather than once. A final review before `1.0.0` closed
+three request-path gaps and made the superuser bypass opt-in, while a
+behaviour change was still cheap. The Known Correctness Issues table
+is empty.
 
 **`0.10.0` was the last feature release before `1.0`.** Everything since
 has been fixes and proof; from `1.0` a feature is an ordinary minor
@@ -65,7 +68,7 @@ not "it would be nice to have".
 | **Idempotency keys (DB-backed store)** | Significant scope (replay logic, TTL semantics, key collision handling). Retry-safe idempotent verbs (`PUT`, `DELETE`) + client-supplied request IDs cover most cases. Build when actually needed. |
 | **OTel Metrics + `/metrics` endpoint** | RED metrics can be derived from the existing OTLP trace stream in the OTel Collector. Direct Prometheus scrape is duplicate plumbing unless a deployer specifically needs it. |
 | **Schemathesis contract testing in CI** | Pays off when external consumers lock against the schema. Adds CI minutes and flaky-test risk before that point. |
-| **Cursor-based pagination** | Premature unless a module hits million-row tables. Offset pagination is sufficient through `1.0`. |
+| **Cursor-based pagination** | Premature unless a module hits million-row tables; offset pagination covers everything short of that. |
 | **Background task worker** | Persistent async task queue for emails, webhooks, and long-running work; evaluate Arq (asyncio-native) vs Dramatiq (broker-agnostic). |
 | **Redis cache layer** | Shared Redis client and caching helpers; replaces DB-backed idempotency store at scale. |
 | **Multi-tenancy pattern** | Tenant-scoped query pattern with an example module. |
