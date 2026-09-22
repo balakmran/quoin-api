@@ -110,7 +110,7 @@
 // CSS never sees.
 const copyBtn = document.getElementById('copy-btn');
 copyBtn?.addEventListener('click', () => {
-  const cmd = document.querySelector('.quoin-cli__cmd');
+  const cmd = document.querySelector('.app-cli__cmd');
   const copyIcon = document.getElementById('copy-icon');
   const checkIcon = document.getElementById('check-icon');
   const label = copyBtn.getAttribute('aria-label');
@@ -127,10 +127,10 @@ copyBtn?.addEventListener('click', () => {
       setTimeout(() => showCheck(false), 1800);
     })
     .catch(() => {
-      copyBtn.classList.add('quoin-cli__copy--error');
+      copyBtn.classList.add('app-cli__copy--error');
       copyBtn.setAttribute('aria-label', 'Copy failed - select the command to copy it');
       setTimeout(() => {
-        copyBtn.classList.remove('quoin-cli__copy--error');
+        copyBtn.classList.remove('app-cli__copy--error');
         copyBtn.setAttribute('aria-label', label);
       }, 1800);
     });
@@ -158,10 +158,10 @@ const syncPill = () => {
   const pill = document.getElementById('status-pill');
   const text = document.getElementById('status-text');
   if (healthOK && readyOK) {
-    pill.className = 'quoin-hero__status quoin-hero__status--ok';
+    pill.className = 'app-hero__status app-hero__status--ok';
     text.textContent = 'ALL SYSTEMS OPERATIONAL';
   } else {
-    pill.className = 'quoin-hero__status quoin-hero__status--error';
+    pill.className = 'app-hero__status app-hero__status--error';
     text.textContent = 'SYSTEM DEGRADED';
   }
 };
