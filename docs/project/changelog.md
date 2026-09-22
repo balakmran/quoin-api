@@ -23,8 +23,16 @@
   unreferenced 8.2 MB banner image is dropped (docs images: 8.4 MB to
   186 KB).
 
+- **Config**: `.env.example` is regrouped under section banners with
+  one-line comments. Update-safe.
+
 ### Fixed
 
+- **Config**: a `.env` copied from `.env.example` no longer breaks every
+  `just` recipe; its CSP and JSON-list values are now quoted for
+  `just`'s parser. It also reads roles from `aud`, as the local mock
+  OAuth server issues them. **Action required:** re-copy `.env` if
+  yours came from `.env.example`.
 - **Security**: `QUOIN_MAX_REQUEST_BODY_BYTES` now also caps a chunked
   body sent without `Content-Length`, which was buffered in full.
   Update-safe.
