@@ -1,5 +1,5 @@
 ---
-name: quoin-hotfix
+name: api-hotfix
 description: Use this skill whenever the user wants to ship a critical fix
   outside the normal release cadence — a hotfix, an emergency patch release,
   or shipping a single urgent bug fix straight to production without
@@ -7,22 +7,22 @@ description: Use this skill whenever the user wants to ship a critical fix
   "we need an emergency patch", "ship just this fix now", "cut a hotfix
   release", "critical bug needs to go out now", or "patch release for the
   security issue". Do NOT use for a normal release with the usual
-  accumulated changes (that is `quoin-release`), or for a bug fix that isn't
-  urgent enough to skip the normal cycle (fix it, let `quoin-pre-pr` and the
-  next `quoin-release` handle it).
+  accumulated changes (that is `api-release`), or for a bug fix that isn't
+  urgent enough to skip the normal cycle (fix it, let `api-pre-pr` and the
+  next `api-release` handle it).
 allowed-tools: Read, Edit, Bash
 model: haiku
 ---
 
 # Hotfixing a QuoinAPI Release
 
-A hotfix is a `quoin-release` cut down to one change and one urgency level:
+A hotfix is a `api-release` cut down to one change and one urgency level:
 branch from `main` (not from in-flight feature work), fix, patch-bump, tag.
 The full ritual and rationale live in
 [docs/guides/release-workflow.md#hotfix-releases](../../../docs/guides/release-workflow.md#hotfix-releases);
 this skill is the fast path. For a normal release with the usual
 accumulated `[Unreleased]` entries, use
-[quoin-release](../quoin-release/SKILL.md) instead — don't use this skill to
+[api-release](../api-release/SKILL.md) instead — don't use this skill to
 smuggle in unrelated changes just because it's faster.
 
 ## Before you start
@@ -66,12 +66,12 @@ just bump patch
 ```
 
 Hotfixes are patch releases by definition — if the fix needs a minor or
-major bump, it's not a hotfix, it's a release; switch to `quoin-release`.
+major bump, it's not a hotfix, it's a release; switch to `api-release`.
 
 ### 5. Update the changelog
 
 Add a `### Fixed` entry under `## [Unreleased]` in `CHANGELOG.md` describing
-the fix's user-visible impact. Then promote it the same way `quoin-release`
+the fix's user-visible impact. Then promote it the same way `api-release`
 does: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and insert a
 fresh empty `## [Unreleased]` above it. **Only include this fix** — don't
 pull in unrelated `[Unreleased]` entries that happen to be sitting there
@@ -91,13 +91,13 @@ reviewed, just fast), pull `main` locally, then:
 just tag
 ```
 
-Same as `quoin-release`: never tag from the hotfix branch — the tag must
+Same as `api-release`: never tag from the hotfix branch — the tag must
 point at the merge commit on `main`.
 
 ## After the tag
 
 Verify the release landed (Actions tab, GitHub Release page,
-`git describe --tags`) — same checklist as `quoin-release`.
+`git describe --tags`) — same checklist as `api-release`.
 
 ## Things that bite
 
@@ -109,4 +109,4 @@ Verify the release landed (Actions tab, GitHub Release page,
 - **Skipping `just check` because it's urgent.** A hotfix that fails in
   production because CI was skipped is worse than a ten-minute delay.
 - **Using a minor/major bump.** If the fix isn't patch-level, it isn't a
-  hotfix — use `quoin-release` and the normal cadence instead.
+  hotfix — use `api-release` and the normal cadence instead.

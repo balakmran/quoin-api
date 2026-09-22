@@ -1,5 +1,5 @@
 ---
-name: quoin-deps-upgrade
+name: api-deps-upgrade
 description: Use this skill whenever the user wants to upgrade dependencies or
   tooling versions in QuoinAPI — Python packages, the Python version itself,
   uv/ruff/ty, or the GitHub Actions pinned in workflows. Triggers include
@@ -7,7 +7,7 @@ description: Use this skill whenever the user wants to upgrade dependencies or
   "upgrade to Python 3.x", "is there a newer version of X", "update uv / ruff /
   ty", or "check the actions for new versions". Do NOT use for adding a single
   new dependency to support a feature (just `uv add` it), or for the release /
-  version-bump flow (that is `quoin-release`).
+  version-bump flow (that is `api-release`).
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
 ---
 
@@ -86,7 +86,7 @@ just check    # format, lint, typecheck, tests at 100%
 just audit    # no known CVEs in the new lock
 ```
 
-Then hand off to [quoin-pre-pr](../quoin-pre-pr/SKILL.md) — it covers the
+Then hand off to [api-pre-pr](../api-pre-pr/SKILL.md) — it covers the
 changelog entry and `just docb` before the PR.
 
 ## Things that bite

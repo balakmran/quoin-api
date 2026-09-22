@@ -49,9 +49,10 @@ to approve the `context7` MCP server on first use.
 Skills are packaged workflows that Claude invokes automatically when your
 request matches, or that you can trigger explicitly with `/skill-name`.
 
-All project skills live in `.claude/skills/`.
+All project skills live in `.claude/skills/`, prefixed `api-` so a
+directory never collides with a skill you already have.
 
-### `quoin-new-module`
+### `api-new-module`
 
 **Triggers on:** "add a product module", "scaffold an orders feature",
 "create a new resource for X"
@@ -61,22 +62,22 @@ models → schemas → repository → service → routes → exceptions → revi
 auto-registered router → generate and review migration → write tests →
 `just check`.
 
-### `quoin-add-endpoint`
+### `api-add-endpoint`
 
 **Triggers on:** "add an endpoint to the user module", "add a GET
 /users/by-email route", "expose a search endpoint on products", "add a
 deactivate action to users"
 
-The single-endpoint counterpart to `quoin-new-module`: adds one route plus
+The single-endpoint counterpart to `api-new-module`: adds one route plus
 its plumbing to a module that already exists, working up the layers
 schema → repository → service → route against the `app/modules/user/`
 reference. Covers the route-ordering gotcha (declare `/count` before
 `/{user_id}`), the `response_model` vs return-type convention, reusing the
 module's `get_<module>_service` dependency, and the required auth/domain-error
-test cases. For a brand-new module use `quoin-new-module`; for a schema change
-behind the endpoint use `quoin-db-migration` first.
+test cases. For a brand-new module use `api-new-module`; for a schema change
+behind the endpoint use `api-db-migration` first.
 
-### `quoin-db-migration`
+### `api-db-migration`
 
 **Triggers on:** "add a column", "add a field to", "make X nullable",
 "change the type of", "add an index on"
@@ -85,7 +86,7 @@ Covers the schema-change loop with a built-in migration review checklist:
 NOT NULL backfills, type narrowing risk, enum change gaps, downgrade
 reversibility, and common autogenerate blind spots.
 
-### `quoin-auth-route`
+### `api-auth-route`
 
 **Triggers on:** "protect this endpoint", "add RBAC", "require the X role",
 "make this admin-only", "who is the caller"
@@ -94,7 +95,7 @@ DDD scope syntax (`domain.action`), `require_roles()` wiring, the auth
 test triple (happy path / 403 / 401), and the configurable superuser
 bypass (`QUOIN_OAUTH_SUPERUSER_ROLE` / `_ENABLED`).
 
-### `quoin-observability`
+### `api-observability`
 
 **Triggers on:** "add a log for this", "log this event", "add a span
 around this", "why isn't this traced", "add context to the logs"
@@ -105,7 +106,7 @@ multi-line context, and when to add a custom span versus relying on
 what's already auto-instrumented (request ID, access log, HTTP/DB spans,
 log/trace correlation — none of which need code in a route or service).
 
-### `quoin-write-tests`
+### `api-write-tests`
 
 **Triggers on:** "write tests for", "add a test", "test this endpoint",
 "I need coverage for"
@@ -115,17 +116,17 @@ Project fixture map (`client`, `read_client`, `admin_client`, `db_session`,
 domain-specific callers for new modules, and common test anti-patterns to
 avoid.
 
-### `quoin-coverage`
+### `api-coverage`
 
 **Triggers on:** "make coverage 100%", "fill the coverage gaps", "cover the
 missing lines", "get this to 100%", or pasting a `pytest --cov` report
 
-The gap-closing counterpart to `quoin-write-tests`: read the `Missing` column,
+The gap-closing counterpart to `api-write-tests`: read the `Missing` column,
 classify each gap (error path / partial branch / dead code / defensive guard),
 write targeted tests with the existing fixtures, and loop on `just test` until
 the target is met. Prefers real tests over `# pragma: no cover`.
 
-### `quoin-pre-pr`
+### `api-pre-pr`
 
 **Triggers on:** "create a PR", "open a pull request", "I'm done with this
 feature", "ready to merge", "ship this"
@@ -135,7 +136,7 @@ migration check, tests at 100% coverage) → update `CHANGELOG.md [Unreleased]`
 with a concise entry → run `just docb` to verify the docs build and commit the
 synced files → create the PR.
 
-### `quoin-deps-upgrade`
+### `api-deps-upgrade`
 
 **Triggers on:** "upgrade the dependencies", "update deps", "bump the GitHub
 Actions", "upgrade to Python 3.x", "is there a newer version of X"
@@ -145,7 +146,7 @@ The version-upgrade ritual for both Python deps and GitHub Actions:
 for pinning changes, sweeping docs/`.env`/Dockerfile/`copier.yml` for stale
 version strings, and verifying with `just check`.
 
-### `quoin-docs-audit`
+### `api-docs-audit`
 
 **Triggers on:** "review the docs for accuracy", "check docs against the
 code", "audit docs/ for stale info", "do the guides match the implementation"
@@ -156,7 +157,7 @@ stale version strings, and broken file references — finishing with `just docb`
 Reports findings before fixing, since a mismatch sometimes means the code
 regressed, not the doc.
 
-### `quoin-release`
+### `api-release`
 
 **Triggers on:** "cut a release", "bump the version", "tag the release",
 "prepare the changelog"
@@ -166,12 +167,12 @@ promote changelog heading → commit and merge to `main` → `just tag`. Covers
 changelog section ordering, tag-from-main-only rule, and what to do if the
 GitHub Actions release workflow fails.
 
-### `quoin-hotfix`
+### `api-hotfix`
 
 **Triggers on:** "hotfix this", "emergency patch", "ship just this fix now",
 "cut a hotfix release", "critical bug needs to go out now"
 
-The `quoin-release` ritual cut down to one urgent fix: branch from `main`
+The `api-release` ritual cut down to one urgent fix: branch from `main`
 (never from in-flight feature work), fix, `just check`, patch-bump only, and
 a changelog entry that carries *only* the hotfixed change — unrelated
 `[Unreleased]` entries wait for the next normal release. Runs on the
@@ -330,7 +331,7 @@ Audits the newest autogenerated Alembic script against the project's
 schema-change checklist — autogen faithfulness, unrelated drift, NOT NULL
 backfills, type narrowing, enum ops, `downgrade()` reversibility, and
 server-vs-Python defaults — and returns an `APPROVE` / `CHANGES NEEDED` /
-`DO NOT APPLY` verdict. It mirrors the `quoin-db-migration` skill's checklist
+`DO NOT APPLY` verdict. It mirrors the `api-db-migration` skill's checklist
 so the riskiest class of change gets a second pass before it lands.
 
 ### `rbac-route-auditor`
@@ -342,7 +343,7 @@ editing routes.
 Scans `app/modules/*/routes.py` for endpoints that are neither protected by
 `require_roles(...)` nor deliberately public (a route in
 `app/modules/system/` marked `include_in_schema=False`). This is the
-single most-repeated warning across the `quoin-*` skills — a route without
+single most-repeated warning across the `api-*` skills — a route without
 `require_roles()` compiles, runs, and returns 200 to anyone, since auth in
 this project is opt-in per route rather than default-deny. Reports findings
 with the exact fix; does not edit files.
@@ -381,7 +382,7 @@ it at production.** Requires the dev DB running (`just db`).
 
 ## Extending the setup
 
-- **New skill:** create `.claude/skills/<name>/SKILL.md`. Follow the
+- **New skill:** create `.claude/skills/api-<name>/SKILL.md`. Follow the
   existing skills as a template. Trigger description is the most important
   part — be specific about what phrases should invoke it.
 - **New hook:** add a script to `.claude/hooks/` and wire it in

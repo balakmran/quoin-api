@@ -1,6 +1,6 @@
 ---
-name: quoin-add-endpoint
-description: Use this skill whenever the user wants to add a single new endpoint (route) to an existing QuoinAPI module — a new operation on a resource that already has its own `app/modules/<name>/` package. Triggers include phrases like "add an endpoint to the user module", "add a GET /users/by-email route", "expose a search endpoint on products", "add a deactivate action to users", "add a bulk-create route", or any request to add one route plus the service/repository/schema plumbing behind it. Do NOT use for scaffolding a brand-new module whose directory doesn't exist yet (that is `quoin-new-module`), changing only the auth/`require_roles` on an existing route (that is `quoin-auth-route`), or altering the DB schema/columns (that is `quoin-db-migration`).
+name: api-add-endpoint
+description: Use this skill whenever the user wants to add a single new endpoint (route) to an existing QuoinAPI module — a new operation on a resource that already has its own `app/modules/<name>/` package. Triggers include phrases like "add an endpoint to the user module", "add a GET /users/by-email route", "expose a search endpoint on products", "add a deactivate action to users", "add a bulk-create route", or any request to add one route plus the service/repository/schema plumbing behind it. Do NOT use for scaffolding a brand-new module whose directory doesn't exist yet (that is `api-new-module`), changing only the auth/`require_roles` on an existing route (that is `api-auth-route`), or altering the DB schema/columns (that is `api-db-migration`).
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
@@ -13,17 +13,17 @@ The reference module to mirror is
 [app/modules/user/](../../../app/modules/user/); read the matching file
 there before writing each layer.
 
-Unlike `quoin-new-module`, you are editing files that already exist. Match
+Unlike `api-new-module`, you are editing files that already exist. Match
 the surrounding code's shape exactly — naming, docstring style, the
 `Annotated[X, Depends(...)]` syntax — rather than inventing a new pattern.
 
 ## Before you start
 
 - Confirm the endpoint belongs in an **existing** module. If the directory
-  doesn't exist yet, stop and use `quoin-new-module` instead.
+  doesn't exist yet, stop and use `api-new-module` instead.
 - Decide whether the operation needs a DB schema change (a new column, a new
   index to support a query). If it does, that is a separate
-  `quoin-db-migration` task — do it first, then come back here.
+  `api-db-migration` task — do it first, then come back here.
 - Make sure the DB is up (`just db`) so tests can run.
 
 ## Workflow
@@ -69,7 +69,7 @@ input, call one service method, return the result. Keep these rules:
 - **Reuse the module's `get_<module>_service` dependency** — don't construct
   the service inline.
 - **Protect it with `require_roles("<domain>.<action>")`** unless it is
-  deliberately public. Pick the role string per `quoin-auth-route` (read and
+  deliberately public. Pick the role string per `api-auth-route` (read and
   write are not hierarchical; require both if the route does both).
 - **Declare the extra error responses** with
   `responses=error_responses(404, 409)` from `app.core.openapi`, so OpenAPI
@@ -96,7 +96,7 @@ Add tests to the module's existing test file. Use the fixtures from
 4. **Domain error paths** the route can produce (404, 409, 400, …).
 
 Tests are integration tests against the real DB with per-test SAVEPOINT
-rollback — prefer them over mocks. See `quoin-write-tests` for fixture detail.
+rollback — prefer them over mocks. See `api-write-tests` for fixture detail.
 
 ### 6. Docs
 
@@ -130,7 +130,7 @@ Format → lint → typecheck → test must all pass before you report done.
 - **Putting business logic or exception raising in the repository** — keep
   that in the service; the repository only talks to the DB.
 - **A query that needs a column or index you haven't added** — that's a
-  schema change; do the `quoin-db-migration` flow first, don't hand-edit the
+  schema change; do the `api-db-migration` flow first, don't hand-edit the
   schema.
 - **Returning the DB model directly without a `response_model`** — leaks
   storage fields into the API contract. Always set `response_model=` to the

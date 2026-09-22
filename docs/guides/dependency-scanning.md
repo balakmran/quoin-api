@@ -63,7 +63,7 @@ than next Monday:
 
 - **After any dependency change** — `uv lock --upgrade`, a new `uv add`,
   or reviewing a Dependabot PR. The
-  [`quoin-deps-upgrade`](ai-setup.md) skill includes this step.
+  [`api-deps-upgrade`](ai-setup.md) skill includes this step.
 - **Before cutting a release** — see the
   [release workflow](release-workflow.md).
 - **Before merging anything you intend to tag.** The weekly run reports

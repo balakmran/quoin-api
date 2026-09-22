@@ -3,7 +3,7 @@
 A description is what makes a skill trigger. When its YAML fails to parse the
 loader falls back to the file's heading, and the trigger phrases never reach
 the model — silently, because the skill still *appears* in the listing. That
-happened to `quoin-pre-pr`, which advertised itself as "Pre-PR Checklist" for
+happened to `api-pre-pr`, which advertised itself as "Pre-PR Checklist" for
 several releases.
 
 The usual cause is a colon inside an unquoted description ("Do NOT use for:

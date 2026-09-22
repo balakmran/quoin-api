@@ -6,7 +6,7 @@ description: Reviews a freshly generated Alembic migration script for QuoinAPI
   to "review this migration", "check the migration script", or "is this
   migration safe". Focuses only on the newest file(s) in `alembic/versions/`
   and the model change that produced them. Do NOT use for writing the model
-  change itself (that is the `quoin-db-migration` skill) or for reviewing
+  change itself (that is the `api-db-migration` skill) or for reviewing
   general application code (use the pr-review-toolkit agents).
 tools: Read, Grep, Glob, Bash
 model: sonnet
