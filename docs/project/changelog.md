@@ -38,6 +38,9 @@
   template's own code. Its header is replaced at generation with a
   starter the adopter owns; the reporting, deployment-scope, and
   posture sections are kept. Update-safe.
+- **Docs**: the API stability guide names the template rather than
+  itself, so a generated project's copy no longer reads as though that
+  project were the template. Update-safe.
 - **Project**: the one-time v1 launch checklist is retired from
   `ROADMAP.md`. It ran against both candidates; `rc.1` produced six
   findings and `rc.2` carried those six and nothing else. The half of
