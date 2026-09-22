@@ -100,12 +100,13 @@ want the findings without the traceback, or are auditing something the test
 does not cover.
 
 ```bash
-# Every app/core module has a section in the Core reference. Sections are
-# anchored by their `**Source:**` link, not by the heading, because a heading
-# rarely matches the filename (config.py -> "Configuration").
-for f in app/core/*.py; do
-  b=$(basename "$f"); [ "$b" = "__init__.py" ] && continue
-  grep -q "app/core/$b" docs/api/core.md || echo "undocumented: app/core/$b"
+# Every app/core module, plus app/db/session.py and app/http/client.py, has
+# a section in the Core reference. Sections are anchored by their
+# `**Source:**` link, not by the heading, because a heading rarely matches
+# the filename (config.py -> "Configuration").
+for f in app/core/*.py app/db/session.py app/http/client.py; do
+  [ "$(basename "$f")" = "__init__.py" ] && continue
+  grep -q "\*\*Source:\*\* \[$f\]" docs/api/core.md || echo "undocumented: $f"
 done
 
 # Every feature module has a reference page and a nav entry.
@@ -121,11 +122,12 @@ for f in $(git ls-files 'docs/*.md' 'docs/**/*.md'); do
   grep -q "${f#docs/}" zensical.toml || echo "orphan page: $f"
 done
 
-# Every domain exception is in both tables that list them.
+# Every domain exception is in the hand-written error-handling table. The
+# Core reference half needs no grep: `::: app.core.exceptions` renders every
+# class, so a literal-name search of core.md reports all of them missing.
 grep -oE "^class [A-Za-z]+\([A-Za-z]*Error\)" app/core/exceptions.py |
   sed -E 's/^class ([A-Za-z]+).*/\1/' | while read -r c; do
   grep -q "\b$c\b" docs/guides/error-handling.md || echo "missing from error-handling.md: $c"
-  grep -q "\b$c\b" docs/api/core.md || echo "missing from core.md: $c"
 done
 
 # Every middleware class is described somewhere.

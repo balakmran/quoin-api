@@ -30,6 +30,10 @@ by all feature modules:
 - **[Versioning](core.md#versioning)** — Endpoint deprecation signalling
 - **[OpenAPI](core.md#openapi)** — Schema generation, tags, and shared
   error responses
+- **[Database Session](core.md#database-session)** — The engine and
+  the per-request `SessionDep` (`app/db/`)
+- **[Outbound HTTP Client](core.md#outbound-http-client)** — The shared
+  `ResilientHTTPClient` (`app/http/`)
 
 ### Feature Modules
 

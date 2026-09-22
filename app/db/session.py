@@ -1,3 +1,22 @@
+"""The async database engine and the per-request session.
+
+``create_app()`` builds one engine and session factory at startup and
+keeps them on ``app.state``. Routes depend on ``SessionDep``, which
+opens a session for the request, commits it before the response is
+sent, and rolls it back if the handler raises, so a whole request is
+one transaction.
+
+Pool sizing and recycling come from the ``DB_POOL_*`` settings; the
+Configuration guide lists them.
+
+Usage:
+    from app.db.session import SessionDep
+
+
+    def get_widget_service(session: SessionDep) -> WidgetService:
+        return WidgetService(WidgetRepository(session))
+"""
+
 from collections.abc import AsyncGenerator
 from typing import Annotated
 

@@ -27,11 +27,18 @@ _EXCEPTION_CLASS = re.compile(r"^class ([A-Za-z]+)\([A-Za-z]*Error\)", re.M)
 _MIDDLEWARE_CLASS = re.compile(r"^class ([A-Za-z]+Middleware)\b", re.M)
 
 
+#: Infrastructure outside `app/core/` that modules import directly.
+#: `app/db/base.py` is left out: it only registers models for Alembic.
+_SHARED_MODULES = ("db/session.py", "http/client.py")
+
+
 def _core_modules() -> list[Path]:
-    """Return every importable module under `app/core/`."""
-    return sorted(
+    """Return every module the Core reference must document."""
+    core = (
         p for p in (ROOT / "app" / "core").glob("*.py") if p.stem != "__init__"
     )
+    shared = (ROOT / "app" / rel for rel in _SHARED_MODULES)
+    return sorted([*core, *shared])
 
 
 def _feature_modules() -> list[Path]:
@@ -73,9 +80,13 @@ def _rendered(path: Path) -> str:
     return body
 
 
-@pytest.mark.parametrize("module", _core_modules(), ids=lambda p: p.name)
+@pytest.mark.parametrize(
+    "module",
+    _core_modules(),
+    ids=lambda p: p.relative_to(ROOT / "app").as_posix(),
+)
 def test_core_module_has_a_reference_section(module: Path) -> None:
-    """Every `app/core` module is documented in the Core reference.
+    """Every shared-infrastructure module is in the Core reference.
 
     Sections are matched on their closing `**Source:**` link rather than
     their heading, because a heading rarely matches the filename (`config.py`
@@ -83,12 +94,12 @@ def test_core_module_has_a_reference_section(module: Path) -> None:
     bare mention of the path keeps a passing reference in someone else's
     prose from counting as documentation.
     """
-    link = rf"\*\*Source:\*\* \[app/core/{re.escape(module.name)}\]"
+    path = module.relative_to(ROOT).as_posix()
+    link = rf"\*\*Source:\*\* \[{re.escape(path)}\]"
 
     assert re.search(link, _read(CORE_REFERENCE)), (
-        f"app/core/{module.name} has no section in docs/api/core.md. Add "
-        f"one ending in `**Source:** [app/core/{module.name}](...)`, and "
-        f"list it in docs/api/overview.md."
+        f"{path} has no section in docs/api/core.md. Add one ending in "
+        f"`**Source:** [{path}](...)`, and list it in docs/api/overview.md."
     )
 
 
