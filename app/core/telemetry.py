@@ -12,6 +12,7 @@ service. Set ``QUOIN_OTEL_ENABLED=False`` to disable it entirely.
 """
 
 import os
+from collections.abc import Sequence
 
 import httpx2
 import structlog
@@ -24,7 +25,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
@@ -41,7 +42,7 @@ logger = structlog.get_logger(__name__)
 class SafeConsoleSpanExporter(ConsoleSpanExporter):
     """ConsoleSpanExporter that suppresses I/O errors on shutdown."""
 
-    def export(self, spans) -> SpanExportResult:
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         """Export spans to console, suppressing errors if stream is closed."""
         try:
             return super().export(spans)
@@ -50,7 +51,7 @@ class SafeConsoleSpanExporter(ConsoleSpanExporter):
             return SpanExportResult.SUCCESS
 
 
-def log_formatter_oneline(span) -> str:
+def log_formatter_oneline(span: ReadableSpan) -> str:
     """Format span as a single-line JSON string."""
     return span.to_json(indent=None) + os.linesep
 
