@@ -76,6 +76,19 @@ _exclude:
   # their project never reads.
   - ".github/workflows/scaffold-smoke.yml"
   - ".github/workflows/copier-update.yml"
+  # Template-maintenance tooling. A generated project is not a
+  # template: the script verifies `copier update` between two tags of
+  # this repo, and both tests already skip themselves once the setup
+  # script is gone. The `just verify-template-update` recipe and the
+  # prose around it are fenced `# template-only` and stripped instead.
+  - "scripts/verify_template_update.py"
+  - "tests/test_template_substitution.py"
+  - "tests/test_copier_update_workflow.py"
+  # The home page's own styling, and every screenshot of this
+  # template's UI. clean_index() replaces the markup the stylesheet
+  # targets, and strip_screenshots() drops the embeds.
+  - "docs/stylesheets/home.css"
+  - "docs/assets/images/*.png"
 
 _tasks:
   - "python3 scripts/copier_setup.py"
