@@ -2,6 +2,54 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Web**: the landing page's bento grid gains the four tiles the docs
+  home page already had -- Secure by Default, Docs Built-In, Ship on
+  Day One, and the Claude Code tile -- and adopts the docs wording on
+  the tiles both pages share. Update-safe.
+- **Template**: the Ship on Day One tile pitches the Copier template,
+  so it is fenced `template-only` and stripped from a generated
+  project. The Claude Code tile beside it is full width by default and
+  narrowed by a `template-only` stylesheet, so both grids close to
+  three rows without a half-empty row either way. Update-safe.
+- **Web**: System Status moves out of the bento grid into a compact
+  pill directly under the hero, above the grid, so the live health and
+  readiness of the instance is visible without scrolling on a phone and
+  reads in one glance rather than spanning the grid's width. The tiles
+  say what the project is; the pill reports what this instance is
+  doing. Update-safe.
+
+- **Web**: the hero drops its status banner and version badge. The
+  banner restated what the live probes below it already report, and
+  the badge used the same green as the healthy state, so green now
+  means only "healthy". The version moves to the footer and the live
+  probes lose their pill, reading as a caption under the buttons
+  rather than a fourth rounded box. Update-safe.
+
+- **Docs**: the getting-started guide's home page screenshot is
+  retaken against the redesigned landing page and ships as WebP at
+  twice the pixel density -- 2880x1970, and smaller than the 1x PNG it
+  replaces. The contributing guide drops its copy of the same
+  screenshot; the prose around it stands on its own. An unreferenced
+  8.2 MB banner image is dropped with it, taking the docs build's
+  image payload from 8.4 MB to 186 KB.
+
+### Fixed
+
+- **Web**: the landing page's hero command no longer overflows a phone
+  screen, which cut off the copy button. The hero's call-to-action box
+  was sized by the command's unwrapped width, so every `max-width`
+  below it resolved against a value wider than the viewport; the
+  command now shrinks and scrolls inside its pill. Update-safe.
+- **Web**: the landing page's hero command is the `copier copy` line
+  the docs home page leads with, not `git clone` -- cloning the
+  template gets you the template, not a project. The command and the
+  Get started button are fenced `template-only`; a generated project's
+  hero instead offers a single "API docs" button pointing at its own
+  Swagger UI, and no longer prints its source-repo URL at its public
+  root. Update-safe.
+
 ## [1.0.0-rc.3] - 2026-09-22
 
 ### Changed
