@@ -1,15 +1,9 @@
 ---
 name: api-hotfix
-description: Use this skill whenever the user wants to ship a critical fix
-  outside the normal release cadence — a hotfix, an emergency patch release,
-  or shipping a single urgent bug fix straight to production without
-  bundling it with other in-flight work. Triggers include "hotfix this",
-  "we need an emergency patch", "ship just this fix now", "cut a hotfix
-  release", "critical bug needs to go out now", or "patch release for the
-  security issue". Do NOT use for a normal release with the usual
-  accumulated changes (that is `api-release`), or for a bug fix that isn't
-  urgent enough to skip the normal cycle (fix it, let `api-pre-pr` and the
-  next `api-release` handle it).
+description: Use when an urgent fix must ship on its own, outside the normal
+  release cadence, as an emergency patch release. Not for a normal release of
+  accumulated changes (`api-release`), or a fix that can wait for the next
+  release (fix it and let `api-pre-pr` and `api-release` handle it).
 allowed-tools: Read, Edit, Bash
 model: haiku
 ---

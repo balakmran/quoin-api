@@ -1,14 +1,11 @@
 ---
 name: rbac-route-auditor
-description: Scans QuoinAPI route files for endpoints missing RBAC
-  protection. Invoke right after adding or editing routes in
-  `app/modules/*/routes.py`, or whenever the user asks to "check auth
-  coverage", "audit routes for missing require_roles", "did I forget auth on
-  this endpoint", or "is every route protected". Focuses only on route
-  declarations — not the correctness of a chosen role string (that is a
-  human/`api-auth-route` judgment call) or non-route auth code. Do NOT use
-  for writing or changing RBAC on a single known route (that is the
-  `api-auth-route` skill) or for general code review (use the
+description: Scans QuoinAPI route files for endpoints missing RBAC protection.
+  Use when the user asks for an auth-coverage check or a sweep of every route,
+  or before a PR that adds routes across several modules. Covers only route
+  declarations, not whether a chosen role string is right (a judgment call for
+  `api-auth-route`) or non-route auth code. Not for changing RBAC on one known
+  route (the `api-auth-route` skill) or general code review (the
   pr-review-toolkit agents).
 tools: Read, Grep, Glob, Bash
 model: sonnet

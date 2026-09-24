@@ -1,13 +1,10 @@
 ---
 name: api-pre-pr
-description: Use this skill whenever the user is about to open a pull request,
-  says a feature is done, asks to create a PR, or says "ready to merge",
-  "ship this", "open a PR", "create a pull request", "I'm done with this
-  feature", or any phrase that signals the work is complete and heading for
-  review. Always run this checklist before creating the PR — do not skip
-  straight to `gh pr create`. Do NOT use for mid-development commits, the
-  release tagging flow (that is `api-release`), or hotfix branches where
-  the changelog entry was already written.
+description: Use when work is finished and heading for review — the user asks
+  to open a PR, says a feature is done, or is ready to merge. Run this
+  checklist before creating the PR, not after. Not for mid-development
+  commits, the release flow (`api-release`), or hotfix branches whose
+  changelog entry is already written.
 allowed-tools: Read, Edit, Bash
 model: haiku
 ---
@@ -39,21 +36,15 @@ If `## [Unreleased]` has no `### Added` / `### Changed` / `### Fixed` section
 yet, create the appropriate one. Section order within a release:
 Added → Changed → Deprecated → Removed → Fixed → Security.
 
-Keep entries **concise and high-level** — one or two sentences per bullet,
-covering what changed and why it matters, not how it was implemented. Prefix
-each bullet with a bold sub-label (`**API**`, `**Tooling**`, `**Docs**`,
-`**Dependencies**`, …). Leave implementation detail — version-number tables,
-PEP/RFC citations, internal mechanics, file-level notes — to the commit and
-the guides; the changelog is a scannable summary, not a design doc.
-
-Example of the target register:
+Keep entries to one or two lines per bullet: what changed, and anything an
+adopter must do. Prefix each bullet with a bold sub-label (`**API**`,
+`**Tooling**`, `**Docs**`, `**Dependencies**`, …). Rationale, mechanics, and
+file-level notes belong in the commit and `docs/guides/`. Example:
 
 ```markdown
-- **Tooling**: lowered `requires-python` from `>=3.14` to `>=3.12` and
-  added a CI matrix across 3.12–3.14 to widen adoption.
+- **Tooling**: uv 0.12.17 in the `Dockerfile` and every workflow.
+  Update-safe; upgrade a local uv with `uv self update`.
 ```
-
-not a multi-paragraph bullet enumerating every touched file or fixed edge case.
 
 If `[Unreleased]` already has an accurate entry for this work, skip ahead.
 

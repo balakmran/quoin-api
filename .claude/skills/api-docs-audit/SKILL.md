@@ -1,16 +1,10 @@
 ---
 name: api-docs-audit
-description: Use this skill whenever the user wants to verify that QuoinAPI's
-  documentation still matches the code — a docs-accuracy sweep, in either
-  direction. Triggers include "review the docs for accuracy", "check docs
-  against the code", "audit docs/ for stale info", "are the docs still
-  correct", "do the guides match the implementation", "find outdated
-  documentation", plus the coverage direction — "is everything documented",
-  "what's missing from the docs", "does every module have a reference page",
-  "find undocumented code". Do NOT use for fixing a broken docs build (that is
-  `just docb`), writing a brand-new guide for a feature you just shipped (do
-  that inline per the CLAUDE.md docs-coverage rule), or syncing root docs into
-  `docs/project/` (that is `just docb` too).
+description: Use when checking QuoinAPI's documentation against the code, in
+  both directions — docs that no longer match the code, and code that no page
+  documents. Not for fixing a broken docs build or syncing root docs into
+  `docs/project/` (both are `just docb`), or writing the guide for a feature
+  you just shipped (do that inline, per CLAUDE.md).
 allowed-tools: Read, Edit, Grep, Glob, Bash, WebFetch
 ---
 

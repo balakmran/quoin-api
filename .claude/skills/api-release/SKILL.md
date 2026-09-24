@@ -1,6 +1,9 @@
 ---
 name: api-release
-description: Use this skill whenever the user wants to cut a release, ship a version, bump the version, tag a release, publish a new version, prepare a changelog entry, or do anything that ends with a `vX.Y.Z` git tag on this QuoinAPI project. Triggers include phrases like "release 0.7.0", "cut a patch release", "ship a new version", "bump the minor version", "tag the release", "prepare the changelog for release", or "let's release". Do NOT use for editing the changelog mid-development without releasing, hotfix/emergency-patch releases (that is `api-hotfix`), or generating release notes for an already-tagged version.
+description: Use when cutting a QuoinAPI release — anything that ends in a
+  `vX.Y.Z` tag, including release candidates, the version bump, and promoting
+  the changelog. Not for editing the changelog mid-development, hotfix
+  releases (`api-hotfix`), or writing notes for an already-tagged version.
 allowed-tools: Read, Edit, Bash
 model: haiku
 ---
@@ -37,7 +40,7 @@ Open `CHANGELOG.md`. The top-most section is `## [Unreleased]`. Make sure it acc
 5. Fixed
 6. Security
 
-This order is non-negotiable — it matches Keep a Changelog and the project's prior releases. Don't invent new section names.
+This is Keep a Changelog's order, used by every prior release; don't invent new section names.
 
 Each entry is a bullet describing user-visible impact, not the diff. Group related bullets under a bold sub-label when it helps scanning (see prior releases for the `**Security**:`, `**Developer Experience**:` style).
 
