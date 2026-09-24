@@ -111,7 +111,7 @@ async def products_admin_client(client, caller_products_admin):
 
 ## What to test
 
-For a new module, aim for **≥95% coverage** with these cases:
+Coverage must reach **100%** (`fail_under = 100`). Cover these cases:
 
 | Layer | What to cover |
 |---|---|
@@ -132,7 +132,6 @@ uv run pytest tests/modules/product/test_routes.py::test_create -v  # one test
 ## Things that bite
 
 - **Mocking `AsyncSession`.** Resist it. The project's session fixture is exactly what production uses; mocking it usually hides the bug you'd catch otherwise. Mock external HTTP only (Stripe, etc.).
-- **Forgetting `@pytest.mark.asyncio`.** The test will be collected but never awaited — appears to "pass" while testing nothing. Easy to miss.
 - **Asserting on raw SQL ordering.** Postgres does not guarantee row order without `ORDER BY`. If you compare lists, sort them or assert as sets.
 - **Reusing one `db_session` across multiple "phases".** The SAVEPOINT covers the whole test; if you commit inside the test, you defeat the rollback. Call `await db_session.flush()` (not `.commit()`) when you need an INSERT to be visible to a subsequent query in the same test.
 - **Hitting `/users/` instead of `/api/v1/users/`.** The prefix is applied centrally; routes in modules declare only `/users`. The HTTP path includes `/api/v1`.

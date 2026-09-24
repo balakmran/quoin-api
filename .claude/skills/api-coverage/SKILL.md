@@ -74,8 +74,6 @@ don't silently paper over a gap that a real test could close.
   but show as a partial branch (`BrPart`) until *both* outcomes of its
   conditional are exercised. Add the missing input, don't just re-assert the
   happy path.
-- **`async def` paths need `@pytest.mark.asyncio`.** Without it the test is
-  collected but never awaited — coverage won't move and nothing actually ran.
 - **Mocking the DB hides the gap.** The SAVEPOINT fixture is what production
   uses; mocking `AsyncSession` makes a line look covered while the real path
   stays untested. Use the fixtures.

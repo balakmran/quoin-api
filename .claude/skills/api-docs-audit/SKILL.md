@@ -43,9 +43,7 @@ Start from what a page claims and check it against the code.
    - Settings in code but missing from the table → add them.
    - Settings in the table but gone from code → remove them.
    - Defaults that disagree → fix the doc.
-   Also cross-check `.env.example` carries the same surface. This is the one
-   check that has always run both ways, and it is the one surface that has
-   never had a coverage gap — which is the whole argument for Direction 2.
+   Also cross-check `.env.example` carries the same surface.
 
 2. **Endpoint lists vs routers.** Where a guide enumerates routes, confirm they
    exist in `app/modules/*/routes.py` and `app/api.py`, all under `/api/v1/`.
@@ -217,9 +215,8 @@ docstring describes.
 Two things to check on those pages:
 
 - **A module with no module-level docstring** renders a section that
-  opens straight into its first class. Ten modules had none before the
-  reference was generated; `ast.get_docstring(ast.parse(src))` finds any
-  that regress.
+  opens straight into its first class; `ast.get_docstring(ast.parse(src))`
+  finds any.
 <!-- template-only -->
 
 - **`QUOIN_` in a docstring.** Copier substitutes a longer prefix into
@@ -231,20 +228,15 @@ Two things to check on those pages:
 
 ## Things that bite
 
-- **Auditing in one direction only.** This is what a 2026-09 sweep got wrong:
-  every check but the settings table started from a doc and validated it
-  against the code, which can only find statements that are *wrong*. It is
-  structurally blind to what is *absent* — four `app/core` modules
-  (`security`, `schemas`, `lifecycle`, `openapi`) and the whole `system`
-  module had no reference at all, and nothing flagged it, because no page
-  mentioned them. Run Direction 2 as commands before reading a single page.
-- **Skipping `docs/api/` and `docs/architecture/`.** The same sweep scoped
-  itself to `docs/guides/` and `README.md`, which is where the gaps were not.
-- **Forgetting this file is documentation too.** Nothing audits the auditor.
-  When a page it names by heading gets restructured, the check silently
-  points at something that no longer exists — this file spent a sweep
-  looking for a README section that had been renamed. After restructuring a
-  page this skill names, re-read the checks that mention it.
+- **Auditing in one direction only.** A check that starts from a doc can
+  only find statements that are *wrong*; it cannot see a module no page
+  mentions. Run Direction 2 as commands before reading a single page.
+- **Skipping `docs/api/` and `docs/architecture/`.** That is where
+  undocumented modules hide.
+- **Forgetting this file is documentation too.** When a page it names by
+  heading gets restructured, the check silently points at something that no
+  longer exists. After restructuring a page this skill names, re-read the
+  checks that mention it.
 - **Editing `docs/project/*` directly.** Those are generated; your change will
   be overwritten on the next `just docb`. Edit the root source file.
 - **Configuring a Markdown extension inline.** Options belong in their
