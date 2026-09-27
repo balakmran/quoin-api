@@ -1,27 +1,15 @@
 # Creating a Module
 
-This guide walks through adding a new feature module end-to-end,
-following the same patterns used by the existing `user` module.
-
-> All feature modules live in `app/modules/<name>/` and follow a
-> strict layered structure. Never skip layers — services call
-> repositories, routes call services, never the reverse.
+Build a `product` module end to end: table, migration, schemas,
+repository, service, and routes, following the `user` module. Layers
+only call downward: routes call services, services call repositories.
 
 !!! tip "Scaffold first"
-    Run `just new product` before following the steps below. This creates
-    the module directory, its `app/api.py` registration, and its
-    reference page at `docs/api/product.md` (added to the Reference
-    nav), with every file
-    as a minimally-working stub that passes `just check` immediately: a
-    router with the pluralized prefix, `ProductRepository` /
-    `ProductService` classes, a `ProductBase(SQLModel)` schema, a
-    `ProductNotFoundError` example, and two skeleton tests: one asserts
-    the router prefix, one wires the stub layers together so coverage
-    stays at 100%. Only `models.py` is left empty (a real table needs a
-    migration — see step below). Fill in each layer by replacing the
-    placeholder shapes.
-
----
+    Run `just new product` before the steps below. It creates the
+    module package, its `app/api.py` registration, a reference page at
+    `docs/api/product.md`, and skeleton tests, all passing `just check`
+    from the start. Only `models.py` is empty, because a real table needs
+    a migration. Replace each stub as you go.
 
 ## Module Structure
 
@@ -37,8 +25,6 @@ app/modules/<name>/
 ├── service.py        # Business logic
 └── routes.py         # FastAPI endpoints
 ```
-
----
 
 ## Step-by-Step: Adding a `product` Module
 
@@ -162,7 +148,7 @@ class ProductRead(ProductBase):
 
 ```python
 # app/modules/product/exceptions.py
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import NotFoundError
 
 
 class ProductNotFoundError(NotFoundError):
@@ -171,14 +157,6 @@ class ProductNotFoundError(NotFoundError):
     def __init__(self, product_id: str) -> None:
         """Initialize ProductNotFoundError."""
         super().__init__(message=f"Product with ID '{product_id}' not found")
-
-
-class DuplicateProductNameError(ConflictError):
-    """Raised when a product name already exists."""
-
-    def __init__(self, name: str) -> None:
-        """Initialize DuplicateProductNameError."""
-        super().__init__(message=f"Product '{name}' already exists")
 ```
 
 ### 5. Implement the Repository
@@ -218,12 +196,6 @@ class ProductRepository:
     async def get(self, product_id: uuid.UUID) -> Product | None:
         """Get a product by ID."""
         return await self.session.get(Product, product_id)
-
-    async def get_by_name(self, name: str) -> Product | None:
-        """Get a product by name."""
-        statement = select(Product).where(Product.name == name)
-        result = await self.session.exec(statement)  # type: ignore
-        return result.scalars().first()
 
     async def list(self, params: PageParams) -> tuple[list[Product], int]:
         """List products for one page, plus the total count.
@@ -423,66 +395,29 @@ async def delete_product(
     await service.delete_product(product_id)
 ```
 
-### 8. Review the Router Export
+### 8. Review the Scaffolded Wiring
 
-```python
-# app/modules/product/__init__.py
-from app.modules.product.routes import router
+`just new product` already exports `router` from
+`app/modules/product/__init__.py` and includes it in `v1_router` in
+`app/api.py`. Check both, but don't add a second import or
+`include_router()` call.
 
-__all__ = ["router"]
-```
+### 9. Import the Model for Migrations
 
-`just new product` creates this export automatically. Keep it in place so
-`app/api.py` can import the module-level router.
-
-### 9. Confirm API Registration
-
-`just new product` also registers the module router in `app/api.py`:
-
-```python
-# app/api.py
-from app.modules.product import router as product_router
-from app.modules.user import router as user_router
-
-v1_router = APIRouter()
-v1_router.include_router(user_router)
-v1_router.include_router(product_router)
-```
-
-Review this file after scaffolding, but do not add a second manual import
-or `include_router()` call.
-
-### 10. Import the Model for Migrations
-
-Ensure Alembic can discover the model by importing it in
-`app/db/base.py`. This file is imported by `alembic/env.py` and is
-the single place where all models are registered for schema
-autogeneration:
+Alembic finds tables through `app/db/base.py`, which `alembic/env.py`
+imports. `just new` doesn't touch it, so add the model yourself:
 
 ```python
 # app/db/base.py
-from sqlmodel import SQLModel  # noqa
-
 from app.modules.user.models import User  # noqa
-from app.modules.product.models import Product  # noqa — Add this line
+from app.modules.product.models import Product  # noqa
 ```
-
----
 
 ## Testing
 
-Add tests mirroring the module structure:
-
-```
-tests/modules/product/
-├── conftest.py          # Fixtures (product_create, sample_product)
-├── test_models.py       # Pydantic validation
-├── test_repository.py   # Database operations (uses db_session)
-├── test_service.py      # Business logic
-└── test_routes.py       # API integration tests (uses client)
-```
-
-Minimal route test to get started:
+`just new` creates `tests/modules/product/` with `test_routes.py` and
+`test_service.py`. Drive the module through its routes first; they
+exercise every layer against the real database:
 
 ```python
 # tests/modules/product/test_routes.py
@@ -492,9 +427,7 @@ async def test_create_product(client: AsyncClient) -> None:
         json={"name": "Widget", "price": 9.99},
     )
     assert response.status_code == 201
-    data = response.json()
-    assert data["name"] == "Widget"
-    assert "id" in data
+    assert response.json()["name"] == "Widget"
 
 
 async def test_get_product_not_found(client: AsyncClient) -> None:
@@ -502,24 +435,22 @@ async def test_get_product_not_found(client: AsyncClient) -> None:
     assert response.status_code == 404
 ```
 
----
+Once the routes call `require_roles()`, switch to `read_client` and
+`admin_client`. See [Testing](testing.md) for the fixtures.
 
 ## Checklist
 
 - [ ] `models.py` — SQLModel table defined
 - [ ] Migration generated and applied (`just migrate-gen`, `just migrate-up`)
 - [ ] `schemas.py` — Create, Update, Read schemas
-- [ ] `exceptions.py` — Domain exceptions inherit from `QuoinError`
+- [ ] `exceptions.py` — Domain exceptions inherit from core ones
 - [ ] `repository.py` — CRUD operations only, no business logic
 - [ ] `service.py` — Business logic only, raises domain exceptions
 - [ ] `routes.py` — FastAPI router, calls service via dependency
-- [ ] `__init__.py` — Exports `router`
-- [ ] `app/api.py` — Auto-registration reviewed under `v1_router`
+- [ ] `__init__.py` and `app/api.py` — scaffolded wiring reviewed
 - [ ] `app/db/base.py` — Model imported so Alembic can detect schema changes
 - [ ] Tests written in `tests/modules/<name>/`
 - [ ] `just check` passes
-
----
 
 ## See Also
 
