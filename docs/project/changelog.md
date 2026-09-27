@@ -4,6 +4,21 @@
 
 ## [1.0.0] - 2026-09-22
 
+### Upgrading to 1.0
+
+Every **Action required** item from 1.0.0-rc.1 through 1.0.0. The
+entries below give the detail.
+
+- Set `QUOIN_OAUTH_SUPERUSER_ENABLED=true` wherever you rely on the
+  superuser bypass, including an older local `.env`.
+- Give each migration that converts a plain `datetime` field of your
+  own to `timestamptz` a `USING` clause naming the stored timezone.
+- Move dashboards and alerts from `deployment.environment` to
+  `deployment.environment.name`.
+- Re-copy `.env` if yours came from `.env.example`.
+- After `copier update`, delete the old `.claude/skills/quoin-*`
+  directories (from 1.0.0-rc.3).
+
 ### Changed
 
 - **Security**: the superuser bypass is now opt-in —
