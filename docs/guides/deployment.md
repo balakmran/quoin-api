@@ -1,178 +1,54 @@
 # Deployment
 
-This guide covers how to deploy the QuoinAPI application using Docker.
+Build one image, give it production settings, run migrations as a
+separate job, and put it behind a proxy that rate-limits. This page
+covers each step and how the app drains on shutdown.
 
-## Docker Deployment
+## Local Docker Stack
 
-The project includes a production-ready `Dockerfile` and `docker-compose.yml`
-for containerized deployment.
+`just up` builds the image and starts the app, Postgres, and the mock
+OAuth server; `just down` stops them. The app is at
+[http://localhost:8000](http://localhost:8000) (or
+`http://api.quoin-api.orb.local` under OrbStack).
 
----
+!!! warning "Compose is a development stack"
+    It runs `fastapi dev` with the source mounted, and sets
+    `QUOIN_OAUTH_ROLES_CLAIM=aud` and
+    `QUOIN_OAUTH_SUPERUSER_ENABLED=true` for the mock OAuth server.
+    Don't deploy it; production must not inherit those values.
 
-## Local Docker Development
-
-Run the entire stack (application, PostgreSQL, and a mock OAuth server)
-locally using Docker Compose:
-
-```bash
-just up
-```
-
-This command:
-
-- Builds the application Docker image
-- Starts the PostgreSQL and mock OAuth containers
-- Starts the application container
-- Configures networking between containers
-
-Access the application at [http://localhost:8000](http://localhost:8000) (or via
-`http://api.quoin-api.orb.local` if using OrbStack).
-
-!!! note
-    The Compose file is a **development** stack: it runs
-    `fastapi dev` with the source mounted, `QUOIN_ENV=development`, and
-    the mock OAuth server. For that mock it also sets two dev-only
-    values, `QUOIN_OAUTH_ROLES_CLAIM=aud` and
-    `QUOIN_OAUTH_SUPERUSER_ENABLED=true`, which production must not
-    inherit (see [Environment Variables](#environment-variables)).
-    Don't use it as a production deployment.
-
-### Stop Containers
-
-To stop and remove all containers:
-
-```bash
-just down
-```
-
----
-
-## Production Deployment
-
-### Building the Production Image
-
-Build the Docker image manually for production:
+## Production Image
 
 ```bash
 docker build -t quoin-api:latest .
 ```
 
-The `Dockerfile` uses a **multi-stage build**:
+The [`Dockerfile`](https://github.com/balakmran/quoin-api/blob/main/Dockerfile)
+is a two-stage build: `uv sync --no-dev --frozen` in a builder, then a
+slim final image with the virtualenv, `app/`, and the Alembic files. Base
+images are pinned by tag and digest. It runs as the non-root `appuser`
+(uid 1001), starts with `fastapi run`, and has a `HEALTHCHECK` that polls
+`/health`.
 
-```dockerfile
-# Stage 1: Builder — install dependencies only
-# Images pinned by version tag AND digest for reproducible builds
-FROM python:3.14-slim-bookworm@sha256:9ab8d9... AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.12.17@sha256:10787c... /uv /bin/uv
-WORKDIR /app
-COPY pyproject.toml uv.lock* README.md ./
-RUN uv sync --no-dev --frozen
-
-# Stage 2: Final — lean production image
-FROM python:3.14-slim-bookworm@sha256:9ab8d9...
-WORKDIR /app
-COPY --from=builder /app/.venv /app/.venv
-COPY app/ app/
-COPY alembic/ alembic/
-COPY alembic.ini .
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app"
-# Non-root user for security
-RUN addgroup --system --gid 1001 appuser && \
-    adduser --system --uid 1001 --ingroup appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-# Liveness probe hitting /health via the stdlib (no curl in slim)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).status == 200 else 1)"]
-CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-The `HEALTHCHECK` lets Docker/Compose report container health (and
-orchestrators gate traffic on it). Inspect it with:
+The image ships no `.env`; settings come from the container
+environment:
 
 ```bash
-docker inspect --format '{{.State.Health.Status}}' quoin-api
+docker run -d --name quoin-api -p 8000:8000 \
+  --env-file production.env quoin-api:latest
 ```
-
-### Running in Production
-
-The image runs `fastapi run` and ships no `.env` file, so settings come
-from the container environment. Point it at a managed PostgreSQL and
-your OAuth provider, passing the settings listed under
-[Environment Variables](#environment-variables):
-
-```bash
-docker run -d \
-  --name quoin-api \
-  -p 8000:8000 \
-  --env-file production.env \
-  quoin-api:latest
-```
-
-Production refuses to boot without an explicit `QUOIN_ALLOWED_HOSTS`
-and the three OAuth trust anchors.
 
 **Apply migrations before the new version takes traffic.** The image
-does not run them on start. Run them as a one-off job from the same
-image, so a rollout with several replicas doesn't race:
-
-```bash
-docker run --rm --env-file production.env \
-  quoin-api:latest alembic upgrade head
-```
-
-See [Database Migrations](database-migrations.md#production-deployments)
-for the Kubernetes form and zero-downtime ordering.
-
----
-
-## Behind a load balancer or reverse proxy
-
-When the service runs behind a load balancer, ingress, or reverse proxy
-(the usual production topology), the TCP peer is the proxy, not the
-client. To recover the real client IP, scheme, and host, the app must
-trust the `X-Forwarded-*` / `Forwarded` headers the proxy sets — but
-**only from the proxy**, because any client can forge those headers.
-
-Proxy-header trust is therefore **off by default**. Enable it
-explicitly for the deployment, scoping trust to the proxy's address:
-
-```bash
-# Trust forwarded headers only from the proxy's IP(s). Never use "*"
-# unless the app is unreachable except through the proxy.
-docker run -d \
-  --name quoin-api \
-  -p 8000:8000 \
-  -e FORWARDED_ALLOW_IPS=10.0.0.0/8 \
-  quoin-api:latest \
-  fastapi run app/main.py --host 0.0.0.0 --port 8000 --proxy-headers
-```
-
-- `--proxy-headers` tells the underlying uvicorn server to honour the
-  forwarded headers.
-- `FORWARDED_ALLOW_IPS` (a uvicorn environment variable) restricts
-  which source addresses are trusted; set it to the proxy's IP or CIDR,
-  never a blanket `*` on an internet-reachable socket — that lets any
-  caller spoof their apparent client IP (and thus your access logs and
-  any IP-based logic).
-
-If you terminate TLS at the edge, also ensure the proxy forwards
-`X-Forwarded-Proto: https` so the app builds correct absolute URLs.
-
----
+doesn't run them on start; run them as a one-off job, as described in
+[Database Migrations](database-migrations.md#production-deployments).
 
 ## Environment Variables
 
-Configure the application using environment variables. See
-[Configuration Guide](configuration.md) for all available options.
-
-**Production Essentials:**
+Every setting is listed in the [Configuration guide](configuration.md).
+The production essentials:
 
 ```bash
-# Application
 QUOIN_ENV=production
-QUOIN_OTEL_ENABLED=true
 QUOIN_ALLOWED_HOSTS=["api.example.com"]   # required; default is rejected
 QUOIN_BACKEND_CORS_ORIGINS=["https://app.example.com"]
 
@@ -181,179 +57,100 @@ QUOIN_OAUTH_JWKS_URI=https://idp.example.com/.well-known/jwks.json
 QUOIN_OAUTH_ISSUER=https://idp.example.com/
 QUOIN_OAUTH_AUDIENCE=api://your-api
 
-# Database
 QUOIN_POSTGRES_HOST=db
-QUOIN_POSTGRES_PORT=5432
 QUOIN_POSTGRES_USER=postgres
 QUOIN_POSTGRES_PASSWORD=<strong-password>
 QUOIN_POSTGRES_DB=app_db
 ```
 
-**Don't start from `.env.example`.** It is a development file: two of
-its values exist only for the local mock OAuth server. Leave both unset
-in production so the defaults apply:
+If `QUOIN_ALLOWED_HOSTS` or a trust anchor is missing, the app exits at
+startup naming it. See
+[Security](security.md#what-else-production-refuses-to-boot-without).
+
+**Don't start from `.env.example`.** Two of its values exist only for
+the mock OAuth server. Leave both unset in production so the defaults
+apply:
 
 | Setting | Development | Production default |
 | :--- | :--- | :--- |
 | `QUOIN_OAUTH_ROLES_CLAIM` | `aud` (where the mock puts roles) | `roles` |
 | `QUOIN_OAUTH_SUPERUSER_ENABLED` | `true` (one token for every endpoint) | `false` |
 
-A production boot with the bypass enabled logs
+A production boot with the bypass on logs
 `production_superuser_bypass_enabled`.
 
-If `QUOIN_ALLOWED_HOSTS` or an OAuth trust anchor is missing, the app
-exits at startup with a message naming it. See
-[Security](security.md#what-else-production-refuses-to-boot-without).
+## Behind a load balancer or reverse proxy
 
-> **Security Warning**: Never commit `.env` files with production credentials to
-> version control!
+Behind a proxy, the TCP peer is the proxy, so the real client IP,
+scheme, and host arrive in `X-Forwarded-*` headers, which any client can
+forge. Trust them **only from the proxy**. It's off by default; turn it
+on with uvicorn's `--proxy-headers` and scope it with
+`FORWARDED_ALLOW_IPS`:
 
----
+```bash
+docker run -d --name quoin-api -p 8000:8000 \
+  -e FORWARDED_ALLOW_IPS=10.0.0.0/8 \
+  quoin-api:latest \
+  fastapi run app/main.py --host 0.0.0.0 --port 8000 --proxy-headers
+```
+
+Never set `FORWARDED_ALLOW_IPS=*` on a socket the internet can reach;
+any caller could then spoof their IP in your logs. If TLS ends at the
+proxy, make it send `X-Forwarded-Proto: https`.
 
 ## Health Checks
 
-The application includes dedicated endpoints for health and readiness
-monitoring:
+| Endpoint | Returns 200 when | Returns 503 when |
+| :--- | :--- | :--- |
+| `/health` | The process is up: `{"status": "healthy"}` | — |
+| `/ready` | The database answers: `{"status": "ready"}` | The database is down, or shutdown has begun |
 
-### Health Probe
-
-The `/health` endpoint checks if the application process is running:
-
-```bash
-curl http://localhost:8000/health
-```
-
-Expected response:
-
-```json
-{
-  "status": "healthy"
-}
-```
-
-### Readiness Probe
-
-The `/ready` endpoint checks if the application is ready to accept traffic
-(e.g., database is connected):
-
-```bash
-curl http://localhost:8000/ready
-```
-
-Expected response (HTTP 200 OK):
-
-```json
-{
-  "status": "ready"
-}
-```
-
-It returns an HTTP 503 error if the database is unavailable, or once
-graceful shutdown has begun (see below) so orchestrators stop routing
-new traffic to the draining instance.
-
-Use these endpoints for:
-
-- **Docker health checks** - the image ships a `HEALTHCHECK` directive
-  that polls `/health` (see the Dockerfile above)
-- **Load balancer probes** - Kubernetes liveness/readiness
-- **Monitoring systems** - Uptime tracking
+Point liveness probes at `/health` and readiness probes at `/ready`.
 
 !!! warning "Keep probes off the public internet"
-    `/ready` runs an unauthenticated `SELECT 1` against the database on
-    every hit. That is harmless from an in-cluster orchestrator, but if
-    the endpoint is internet-routable it becomes a free DB-load
-    amplification lever. Restrict `/health` and `/ready` to the internal
-    network (ingress allowlist, separate probe port, or a
-    `NetworkPolicy`) rather than exposing them publicly.
-
----
+    `/ready` runs an unauthenticated `SELECT 1` on every hit. Exposed
+    publicly, that's free database load for anyone. Restrict both
+    probes to the internal network.
 
 ## Edge rate limiting
 
-QuoinAPI does **not** ship an in-process rate limiter — the template
-*assumes rate limiting is enforced at the edge* (API gateway, ingress,
-CDN, or WAF) in front of the service. Budget for this in your
-deployment: without an upstream limiter, the API has no protection
-against request floods. This is a deliberate design choice — edge
-limiting is more robust and horizontally consistent than a per-process
-counter.
-
----
+QuoinAPI has no in-process rate limiter. It assumes your API gateway,
+ingress, CDN, or WAF limits requests, which is more robust and
+consistent across replicas than a per-process counter. Without one, the
+API has no protection against request floods.
 
 ## Graceful Shutdown
 
-On shutdown the application drains in-flight requests before releasing
-resources. The sequence in the lifespan handler is:
+On shutdown the lifespan handler:
 
-1. The readiness probe flips to **503** (`is_shutting_down`), so load
-   balancers and Kubernetes stop routing new traffic to the instance.
-2. In-flight requests are awaited until the in-flight counter reaches
-   zero, bounded by `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default `30.0`
-   seconds; `<=0` skips the wait). A clean drain logs `shutdown_drained`;
-   a timeout logs `shutdown_drain_timeout` with the residual count.
-3. The database engine is disposed — only after the drain — so no
-   in-flight request loses its connection mid-query.
+1. flips `/ready` to **503**, so load balancers stop sending traffic;
+2. waits for in-flight requests to finish, up to
+   `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` (default `30.0`; `0` or less skips it),
+   logging `shutdown_drained` or `shutdown_drain_timeout`;
+3. disposes the database engine, only after the drain.
 
-The in-flight gauge is maintained by `InFlightRequestMiddleware`, which
-brackets every HTTP request that reaches a handler. The `/health` and
-`/ready` probe paths are excluded so orchestrator polling never keeps
-the gauge from reaching zero. WebSocket connections are outside the
-gauge and are not drained.
+`InFlightRequestMiddleware` counts requests, skipping the probe paths.
+WebSockets aren't counted or drained.
 
-### Relationship to the uvicorn server
-
-The server matters here. `fastapi run` (uvicorn) **already drains
-connection-level in-flight requests before it runs the lifespan
-shutdown**: on `SIGTERM` it stops accepting new connections, waits for
-open connections to finish their responses (bounded by
-`--timeout-graceful-shutdown`), and only then triggers the lifespan
-shutdown where the steps above execute. In that default setup the
-application-level drain is largely a **safety net** rather than the
-primary drain mechanism.
-
-The application-level drain still earns its place:
-
-- **Server-agnostic behaviour** — the same drain semantics hold under
-  uvicorn, Gunicorn with uvicorn workers, Hypercorn, or any ASGI
-  server, without per-launcher graceful-timeout flags.
-- **Safe engine disposal ordering** — the engine is guaranteed disposed
-  *after* in-flight work completes, so a request never has its database
-  connection torn out from under it.
-- **A single, app-controlled timeout** — `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`
-  is the one knob, with structured `shutdown_drained` /
-  `shutdown_drain_timeout` logs for observability.
-- **Explicit readiness signalling** — the 503 flip is what actually
-  removes the instance from a load balancer's rotation; uvicorn's
-  connection drain does not change what `/ready` reports.
+`fastapi run` (uvicorn) already waits for open connections before the
+lifespan shutdown, so this drain is mostly a safety net. It still gives
+the same behaviour under any ASGI server, one timeout setting, and the
+readiness flip that actually takes the instance out of rotation.
 
 ### Kubernetes wiring
 
-For zero-downtime rollouts, give the orchestrator room to react to the
-readiness flip and the drain:
-
-- Set `terminationGracePeriodSeconds` greater than or equal to
-  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` so the pod is not force-killed
-  mid-drain.
-- Keep the server's `--timeout-graceful-shutdown` greater than or equal
-  to `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`. If it is shorter, uvicorn cancels
-  in-flight tasks before the lifespan drain runs; cancellation still
-  releases the in-flight counter (via the `finally` in
-  `InFlightRequestMiddleware`), so the drain reports immediate success —
-  but those requests were terminated, not gracefully finished.
-- Point the readiness probe at `/ready`; once it returns 503 the
-  Endpoints controller removes the pod from Service rotation. Readiness
-  probes poll at `periodSeconds` and need `failureThreshold` consecutive
-  failures first, so with the Kubernetes defaults (10s x 3) new traffic
-  can still arrive for up to ~30s after `/ready` begins failing. Size
-  `terminationGracePeriodSeconds` to cover both this probe delay and the
-  drain timeout.
-
----
+- Set `terminationGracePeriodSeconds` to at least
+  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT` plus the readiness probe's reaction
+  time. With default probes (every 10s, 3 failures), traffic can arrive
+  for about 30s after `/ready` starts failing.
+- Keep uvicorn's `--timeout-graceful-shutdown` at least
+  `QUOIN_SHUTDOWN_DRAIN_TIMEOUT`. If it's shorter, uvicorn cancels the
+  requests first and the drain reports success over requests that were
+  killed.
 
 ## See Also
 
-- [Release Workflow](release-workflow.md) — Version management and tagging
-- [Observability](observability.md) — Setting up logs and traces
-- [Troubleshooting](troubleshooting.md) — Common deployment issues
-- [Dockerfile](https://github.com/balakmran/quoin-api/blob/main/Dockerfile) — Production image configuration
+- [Database Migrations](database-migrations.md) — rolling out schema
+  changes without downtime
+- [Security](security.md) — what production refuses to boot without
+- [Observability](observability.md) — logs and traces in production
