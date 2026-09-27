@@ -1,13 +1,9 @@
 ---
 name: api-deps-upgrade
-description: Use this skill whenever the user wants to upgrade dependencies or
-  tooling versions in QuoinAPI — Python packages, the Python version itself,
-  uv/ruff/ty, or the GitHub Actions pinned in workflows. Triggers include
-  "upgrade the dependencies", "update deps", "bump the GitHub Actions",
-  "upgrade to Python 3.x", "is there a newer version of X", "update uv / ruff /
-  ty", or "check the actions for new versions". Do NOT use for adding a single
-  new dependency to support a feature (just `uv add` it), or for the release /
-  version-bump flow (that is `api-release`).
+description: Use when upgrading QuoinAPI's Python packages, the Python
+  version, uv/ruff/ty, or the GitHub Actions pinned in workflows, or when
+  checking whether newer versions exist. Not for adding one dependency for a
+  feature (just `uv add` it) or the release version bump (`api-release`).
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob, WebFetch, WebSearch
 ---
 
@@ -59,7 +55,7 @@ Pinned by commit SHA in every file under `.github/workflows/`.
    in the `Dockerfile` *and* the `setup-uv` `version:` in every workflow —
    Dependabot bumps only the Dockerfile. `tests/test_tool_pins.py` fails
    until they match. Rerun `just audit`: it is a uv preview command.
-3. Mind the runner/toolchain matrix (e.g. Node 24 support) when a bump requires
+4. Mind the runner/toolchain matrix (e.g. Node 24 support) when a bump requires
    a newer runtime.
 
 ## Stale-reference sweep (the step that gets forgotten)

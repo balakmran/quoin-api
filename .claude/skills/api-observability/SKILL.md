@@ -1,16 +1,10 @@
 ---
 name: api-observability
-description: Use this skill whenever the user wants to add or change logging,
-  metrics, or tracing in QuoinAPI — adding a structured log line, binding
-  request context, adding a custom OpenTelemetry span, or reasoning about
-  what's already auto-instrumented. Triggers include "add a log for this",
-  "log this event", "add a span around this", "why isn't this traced", "add
-  context to the logs", "how do I correlate logs and traces", or any request
-  that touches `structlog`/`opentelemetry` usage in `app/modules/*` or
-  `app/core/`. Do NOT use for changing the logging/tracing *configuration*
-  itself (`app/core/logging.py`, `app/core/telemetry.py`) — that's a
-  core-infra change, not a per-feature one — or for outbound HTTP resilience
-  (retries, circuit breaking), which is `docs/guides/outbound-http.md`.
+description: Use when adding or changing structured logs or OpenTelemetry
+  spans in QuoinAPI feature code, or reasoning about what is already
+  auto-instrumented. Not for changing the logging or tracing configuration in
+  `app/core/logging.py` or `app/core/telemetry.py`, or for outbound HTTP
+  resilience (`docs/guides/outbound-http.md`).
 allowed-tools: Read, Edit, Grep, Glob, Bash
 ---
 

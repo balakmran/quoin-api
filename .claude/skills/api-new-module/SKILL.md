@@ -1,6 +1,10 @@
 ---
 name: api-new-module
-description: Use this skill whenever the user wants to add a new feature module, domain, or resource to the QuoinAPI codebase. Triggers include phrases like "add a product module", "scaffold an orders feature", "create a new resource for X", "set up a payments module", "I want to add a new domain for Y", or any request that implies creating a fresh `app/modules/<name>/` package with its own model, schemas, service, repository, routes, and tests. Do NOT use for adding fields/columns to an existing model (that is a migration task), editing an existing module, or adding a single new endpoint to a module that already exists — only for greenfield modules where the directory doesn't yet exist.
+description: Use when creating a new QuoinAPI feature module — a new domain or
+  resource that needs its own `app/modules/<name>/` package with model,
+  schemas, service, repository, routes, and tests. Not for changing an
+  existing module, adding a column (`api-db-migration`), or adding one
+  endpoint to an existing module (`api-add-endpoint`).
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -16,7 +20,7 @@ A QuoinAPI feature is a self-contained DDD module under `app/modules/<name>/` wi
 
 ## Workflow
 
-Work top-to-bottom. Each step has a reason — don't skip layers, and don't leave a step half-done before moving on.
+Work top-to-bottom; each layer builds on the one before it.
 
 ### 1. Scaffold the skeleton
 
@@ -114,7 +118,7 @@ Use the pre-built fixtures from `tests/conftest.py`:
 | `db_session` | Direct DB setup/assertions |
 | `caller_read` / `caller_admin` | The `ServicePrincipal` for those clients |
 
-Aim for **≥95% coverage** on the new module. Cover the happy path, the auth-denied path, and the domain error paths (404, 409, 400 etc.).
+Coverage must reach **100%** — `just check` fails below it. Cover the happy path, the auth-denied path, and the domain error paths (404, 409, 400 etc.).
 
 ### 12. Run the full check suite
 
@@ -122,17 +126,7 @@ Aim for **≥95% coverage** on the new module. Cover the happy path, the auth-de
 just check
 ```
 
-This runs format → lint → typecheck → test. Fix anything that fails before reporting the task complete. Don't skip this — the project's contract is that `just check` is green at every commit.
-
-## Conventions to keep in mind throughout
-
-These bite people often enough that they're worth restating here rather than buried in docs:
-
-- **100% type hints.** When you need to suppress a type error, write the bare `# type: ignore` — never `# type: ignore[arg-type]` or any other MyPy-style tag. The project uses `ty` (Pyright engine), which rejects unrecognized tag names.
-- **80-character line limit** for both Python and Markdown. Tables and code blocks are exempt. Lint tolerates up to 100 only so a generated project's longer settings prefix fits in prose; write to 80 regardless.
-- **Async-first.** Every DB call, repository method, and service method is `async def`. If you find yourself writing a sync function in a module, stop and reconsider.
-- **Google-style docstrings** on public functions and classes. The Ruff config enforces this.
-- **No raw `HTTPException`** in service or repository code — raise a domain exception and let the global handler translate it.
+This runs format → lint → typecheck → test; the task is done when it is green.
 
 ## When something doesn't fit the template
 

@@ -1,6 +1,10 @@
 ---
 name: api-write-tests
-description: Use this skill whenever the user wants to write, add, or modify tests in the QuoinAPI codebase — for routes, services, repositories, or any other module-level code. Triggers include phrases like "write tests for", "add a test", "test this endpoint", "I need coverage for", "write a unit test", "write an integration test", "test the create_user flow", or any request that involves creating files under `tests/`. Also use when the user asks how to mock the database, how to inject an authenticated caller, or why their test is leaking state — those are questions about the project's specific test fixtures. Do NOT use for configuring pytest itself, debugging the test runner, or running the existing suite without writing new tests.
+description: Use when writing or changing tests in QuoinAPI — route, service,
+  repository, or other module-level tests under `tests/` — or when asked how
+  the test fixtures handle the database, auth, or state isolation. Not for
+  pytest configuration, debugging the test runner, or running the existing
+  suite.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -10,7 +14,8 @@ QuoinAPI's test infrastructure is **integration-first against a real Postgres**,
 
 ## Prerequisites
 
-- **Postgres must be running** (`just db`). Tests connect to a real DB.
+- **Tests connect to a real Postgres.** `just test` starts it if needed; a
+  bare `uv run pytest` needs `just db` first.
 - **Tests live in `tests/modules/<module>/`**, mirroring the `app/modules/<module>/` layout.
 - **All endpoints are under `/api/v1/`** — write paths as `/api/v1/users/`, not `/users/`.
 
@@ -111,7 +116,7 @@ async def products_admin_client(client, caller_products_admin):
 
 ## What to test
 
-For a new module, aim for **≥95% coverage** with these cases:
+Coverage must reach **100%** (`fail_under = 100`). Cover these cases:
 
 | Layer | What to cover |
 |---|---|
@@ -132,7 +137,6 @@ uv run pytest tests/modules/product/test_routes.py::test_create -v  # one test
 ## Things that bite
 
 - **Mocking `AsyncSession`.** Resist it. The project's session fixture is exactly what production uses; mocking it usually hides the bug you'd catch otherwise. Mock external HTTP only (Stripe, etc.).
-- **Forgetting `@pytest.mark.asyncio`.** The test will be collected but never awaited — appears to "pass" while testing nothing. Easy to miss.
 - **Asserting on raw SQL ordering.** Postgres does not guarantee row order without `ORDER BY`. If you compare lists, sort them or assert as sets.
 - **Reusing one `db_session` across multiple "phases".** The SAVEPOINT covers the whole test; if you commit inside the test, you defeat the rollback. Call `await db_session.flush()` (not `.commit()`) when you need an INSERT to be visible to a subsequent query in the same test.
 - **Hitting `/users/` instead of `/api/v1/users/`.** The prefix is applied centrally; routes in modules declare only `/users`. The HTTP path includes `/api/v1`.

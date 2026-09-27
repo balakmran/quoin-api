@@ -1,13 +1,12 @@
 ---
 name: migration-reviewer
 description: Reviews a freshly generated Alembic migration script for QuoinAPI
-  against the project's schema-change checklist. Invoke right after
-  `just migrate-gen` and before `just migrate-up`, or whenever the user asks
-  to "review this migration", "check the migration script", or "is this
-  migration safe". Focuses only on the newest file(s) in `alembic/versions/`
-  and the model change that produced them. Do NOT use for writing the model
-  change itself (that is the `api-db-migration` skill) or for reviewing
-  general application code (use the pr-review-toolkit agents).
+  against the project's schema-change checklist. Use when the user asks for a
+  migration review, or when a generated script drops something, changes a
+  type, or adds a NOT NULL column to an existing table. Covers only the newest
+  file(s) in `alembic/versions/` and the model change that produced them. Not
+  for writing the model change (the `api-db-migration` skill) or general code
+  review (the pr-review-toolkit agents).
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
