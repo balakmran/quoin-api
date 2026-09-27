@@ -7,7 +7,8 @@
 - **Docs**: the long guides are trimmed to what's specific to this
   project, Troubleshooting is a symptom index, and the architecture
   overview is a map. Configuration moves to Reference, and AI-Assisted
-  Development and Troubleshooting to Getting Started. Update-safe.
+  Development and Troubleshooting to Getting Started, which now opens
+  with `copier copy` rather than a clone. Update-safe.
 
 ## [1.0.0] - 2026-09-22
 
