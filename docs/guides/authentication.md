@@ -1,21 +1,11 @@
 # Authentication
 
-This guide covers QuoinAPI's OAuth 2.0 / 2.1 authentication system for
-service-to-service API access.
-
----
-
-## Overview
-
-QuoinAPI uses **Bearer token authentication** based on the OAuth 2.0 Client
-Credentials grant. There are no user sessions, cookies, or passwords. Every
-API call is authenticated by validating a signed JWT issued by your
-authorization server.
-
-The security core is **provider-agnostic**: it works with any OIDC-compliant
-server (Azure AD, Okta, Auth0, Keycloak) via standard JWKS discovery.
-
----
+Every API call carries a Bearer JWT from your OAuth server, obtained with
+the Client Credentials grant; there are no sessions, cookies, or
+passwords. QuoinAPI validates the token against the server's JWKS, then
+checks the route's required role. Any OIDC-compliant provider works
+(Azure AD, Okta, Auth0, Keycloak), under OAuth 2.0 or 2.1 alike: 2.1's
+changes apply to authorization servers, not to an API like this one.
 
 ## Concepts
 
@@ -107,8 +97,6 @@ Every request to a protected endpoint runs the following checks natively:
     adjust `_REQUIRED_CLAIMS` in `app/core/security.py`. Do not remove
     `exp`.
 
----
-
 ## Flow
 
 ```mermaid
@@ -126,31 +114,7 @@ sequenceDiagram
     QA-->>CS: 200 OK
 ```
 
----
-
 ## Configuration
-
-Add the following to your `.env` file:
-
-```bash
-# OAuth 2.0 — required for authentication
-QUOIN_OAUTH_JWKS_URI=https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys
-QUOIN_OAUTH_ISSUER=https://login.microsoftonline.com/{tenant}/v2.0
-QUOIN_OAUTH_AUDIENCE=api://{your-app-client-id}
-
-# Claim key — defaults work for Azure AD; adjust for other providers
-QUOIN_OAUTH_ROLES_CLAIM=roles
-
-# Global-bypass role; the bypass itself is off unless enabled
-QUOIN_OAUTH_SUPERUSER_ROLE=api.superuser
-QUOIN_OAUTH_SUPERUSER_ENABLED=false
-
-# Backoff: min seconds between JWKS refetches for an unknown kid
-QUOIN_OAUTH_JWKS_MIN_REFRESH_SECONDS=30.0
-
-# Seconds a fetched key set is fresh before a background refresh
-QUOIN_OAUTH_JWKS_TTL_SECONDS=3600
-```
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
@@ -184,130 +148,54 @@ QUOIN_OAUTH_JWKS_TTL_SECONDS=3600
     Production IdPs (Azure AD, Auth0, Keycloak) use `roles` — the
     default value.
 
----
-
 ## Protecting Routes
 
-Routes declare their own required roles explicitly using `require_roles()`.
-There is no implicit baseline — every route self-documents its access
-requirement.
-
-### General Usage
+Every route names its own required role with `require_roles()`; there is
+no implicit baseline, so a route without it is open to any caller.
 
 ```python
 from typing import Annotated
+
 from fastapi import APIRouter, Depends
+
 from app.core.security import ServicePrincipal, require_roles
 
 router = APIRouter()
 
 
-# Read — any caller with users.read OR api.superuser
 @router.get("/")
 async def list_users(
     caller: Annotated[ServicePrincipal, Depends(require_roles("users.read"))],
 ): ...
-
-
-# Write — any caller with users.write OR api.superuser
-@router.post("/")
-async def create_user(
-    caller: Annotated[ServicePrincipal, Depends(require_roles("users.write"))],
-): ...
 ```
 
----
-
-## Dependency Graph
-
-```
-HTTPBearer()
-    └── get_token_claims()        # Validates JWT, returns raw claims
-            └── get_current_caller()  # Parses ServicePrincipal (no role check)
-                    └── require_roles("users.read")   # Domain checks
-```
-
----
-
-## OAuth 2.1 Compatibility
-
-QuoinAPI is compatible with both OAuth 2.0 and OAuth 2.1 for
-service-to-service calls. The Client Credentials grant is **unchanged**
-between the two specifications.
-
-The key differences in OAuth 2.1 (implicit grant removal, PKCE requirement,
-refresh token rotation) apply to **authorization servers** — not resource
-servers like QuoinAPI. Your token validation code does not change.
-
----
+The dependency chain is `HTTPBearer` → `get_token_claims` (validates the
+JWT) → `get_current_caller` (builds the `ServicePrincipal`) →
+`require_roles` (checks the role). Depend on `get_current_caller`
+directly when a route needs the caller but no role.
 
 ## Local Testing & Tokens
 
-For local development and testing, QuoinAPI provides two mechanisms.
-
-### Layer 1 — The `mock-oauth2-server` stack
-
-The integration testing layer. `mock-oauth2-server` runs as a Docker service
-alongside the database, issuing real RS256 JWTs from a real JWKS endpoint.
+`just dev` starts `mock-oauth2-server` beside the database. It issues
+real RS256 JWTs from a real JWKS endpoint, and `just token` mints them,
+so no real SSO is needed. The local `.env` enables the superuser bypass,
+so one token reaches every endpoint:
 
 ```bash
-just dev   # Starts DB + mock OAuth server + API natively
-```
-
-`scripts/gen_token.py` (run as `just token`) mints signed, valid tokens
-against the mock server, so no real SSO is needed.
-
-**Testing everything with the bypass token.** The local `.env` enables
-the `api.superuser` bypass, so one token exercises every endpoint:
-
-```bash
-# Generate a master bypass token
 just token --roles="api.superuser"
 ```
 
-**Testing Explicit Constraints**:
-If you want to ensure your `users.read` role is blocked from write endpoints:
+To check a role is refused, mint a narrower token and try a write:
 
 ```bash
-# 1. Get a standard token strictly limited to `users.read`
 TOKEN=$(just token --roles="users.read")
-
-# 2. Call a protected Read endpoint (e.g. fetching users) -> 200 OK
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/
-
-# 3. Attempt to mutate (which requires `users.write`) -> 403 Forbidden
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/users/   # 200
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"email":"bad@caller.com", "full_name": "Eve"}' \
-  http://localhost:8000/api/v1/users/
+  -d '{"email":"bad@caller.com"}' http://localhost:8000/api/v1/users/        # 403
 ```
 
-### Layer 2 — `dependency_overrides` natively in tests
-
-The fast layer used by the automated test suite: no containers and no
-tokens. Tests inject a pre-built `ServicePrincipal` through FastAPI's
-dependency overrides:
-
-```python
-# tests/conftest.py — shared fixtures (already configured)
-@pytest.fixture
-def caller_read() -> ServicePrincipal:
-    return ServicePrincipal(
-        subject="test-service-read",
-        roles=["users.read"],
-        claims={},
-    )
-```
-
-Use in tests:
-
-```python
-async def test_get_resource(read_client: AsyncClient) -> None:
-    response = await read_client.get("/api/v1/users/")
-    assert response.status_code == 200
-```
-
----
+The test suite skips tokens entirely; see [Testing](#testing).
 
 ## Error Responses
 
@@ -318,32 +206,6 @@ All error responses use `Content-Type: application/problem+json`
 | :--- | :--- |
 | `401 Unauthorized` | No token, malformed token or header, expired token, invalid signature |
 | `403 Forbidden` | Valid token, but missing required role |
-
-Example 401:
-
-```json
-{
-  "type": "urn:quoin:error:unauthorized_error",
-  "title": "Unauthorized",
-  "status": 401,
-  "detail": "Unauthorized",
-  "instance": "/api/v1/users/"
-}
-```
-
-Example 403:
-
-```json
-{
-  "type": "urn:quoin:error:forbidden_error",
-  "title": "Forbidden",
-  "status": 403,
-  "detail": "Forbidden",
-  "instance": "/api/v1/users/"
-}
-```
-
----
 
 ## Testing
 
