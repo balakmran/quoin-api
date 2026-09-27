@@ -1,6 +1,9 @@
 # Configuration
 
-The application is configured using **environment variables** and **[Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/)**. This ensures strict type validation for all configuration options.
+Every setting is a `QUOIN_`-prefixed environment variable, validated
+at startup by
+[Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/).
+The [Key Settings](#key-settings) table lists them all.
 
 ## Environment-Based Configuration
 
@@ -225,8 +228,6 @@ lifespan. It uses `SQLModel` (a wrapper around SQLAlchemy) with the async
   `SQLModel` definition in Python.
 - **Migrations**: Use `just migrate-gen "message"` to generate migration
   scripts.
-
----
 
 ## Testing
 
