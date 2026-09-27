@@ -1,11 +1,10 @@
 # Security
 
-QuoinAPI ships several middleware layers that cover the most common
-production security hardening steps out of the box. All of them are
-configurable via `QUOIN_*` environment variables and safe to run in
-development with their default values.
-
----
+The middleware stack handles the usual production hardening: CORS,
+security headers, a body-size limit, a host allowlist, and request-ID
+sanitising. Production also refuses to boot without its trust anchors.
+Every layer is set through `QUOIN_*` variables, and the defaults are
+safe for development.
 
 ## CORS Hardening
 
@@ -70,8 +69,6 @@ QUOIN_BACKEND_CORS_ALLOW_METHODS=["GET","POST","PUT","DELETE","OPTIONS"]
 QUOIN_BACKEND_CORS_ALLOW_HEADERS=["Authorization","Content-Type"]
 QUOIN_BACKEND_CORS_ALLOW_CREDENTIALS=true
 ```
-
----
 
 ## Security Headers
 
@@ -174,8 +171,6 @@ the HSTS preload list — it is hard to reverse:
 QUOIN_SECURITY_HSTS_PRELOAD=true
 ```
 
----
-
 ## Request Size Limit
 
 `RequestSizeLimitMiddleware` rejects requests whose body exceeds the
@@ -211,8 +206,6 @@ QUOIN_MAX_REQUEST_BODY_BYTES=10485760
     it arrives and cut off at the cap. uvicorn itself sets no body
     limit, so this middleware is the only one in the process.
 
----
-
 ## Trusted Hosts
 
 `TrustedHostMiddleware` rejects any request whose `Host` header is not in
@@ -234,8 +227,6 @@ looks like every other error; see
 QUOIN_ALLOWED_HOSTS=["api.example.com","*.internal.example.com"]
 ```
 
----
-
 ## Request ID validation
 
 `RequestIDMiddleware` propagates an inbound `X-Request-ID` into the log
@@ -245,8 +236,6 @@ attacker-controlled content in the response header, the inbound value is
 accepted only if it matches `^[A-Za-z0-9._-]{1,64}$`. Anything longer or
 containing other characters is discarded and a fresh UUID is generated
 instead.
-
----
 
 ## OAuth trust anchors & fail-fast
 
@@ -324,8 +313,6 @@ rather than a mislabeled `401`, since the outage is our upstream
 failing and not the caller's token; a genuine JWKS HTTP error response
 (such as a `404`) still maps to `401`.
 
----
-
 ## Database credential redaction
 
 `QUOIN_POSTGRES_PASSWORD` is a `SecretStr`, and the assembled
@@ -333,8 +320,6 @@ failing and not the caller's token; a genuine JWKS HTTP error response
 neither the password nor the credential-bearing URL is emitted by
 `settings.model_dump()`, the OpenAPI schema, or a future config-dump
 endpoint.
-
----
 
 ## Middleware ordering
 
@@ -353,44 +338,27 @@ InFlightRequestMiddleware
 UnhandledErrorMiddleware   ← innermost, closest to the router
 ```
 
-SecurityHeaders and RequestID sit outermost so that error responses
-manufactured by inner layers — 504s from `TimeoutMiddleware`, 413s from
-`RequestSizeLimitMiddleware`, 400s from `TrustedHostMiddleware` — still
-bubble back through them and carry security headers and an
-`X-Request-ID` echo instead of arriving at the client bare.
+Why each position matters:
 
-`TrustedHostMiddleware` sits outside `CORSMiddleware` deliberately:
-Starlette's `CORSMiddleware` answers a CORS preflight (`OPTIONS`)
-request itself, without ever calling the wrapped app. If CORS were
-outer, a forged `Host` header on a preflight request would never reach
-`TrustedHostMiddleware` at all. With `TrustedHostMiddleware` outer,
-Host validation applies to every request, preflight included; a
-rejected (400) request never reaches CORS and so doesn't carry CORS
-headers, but it does get the outer SecurityHeaders/RequestID treatment.
-`CORSMiddleware` still wraps `TimeoutMiddleware`/`RequestSizeLimitMiddleware`,
-so their 504/413 responses do carry CORS headers.
+- **`SecurityHeaders` and `RequestID` outermost** — errors made by inner
+  layers (504 timeout, 413 too large, 400 bad host) still pass back
+  through them and get security headers and an `X-Request-ID`.
+- **`AccessLog` inside `RequestID`, outside the limits** — every line
+  has a `request_id`, and 504s, 413s, and 500s log their real status.
+- **`TrustedHost` outside `CORS`** — `CORSMiddleware` answers preflight
+  `OPTIONS` requests itself, so an inner host check would never see a
+  forged `Host` on a preflight.
+- **`CORS` outside the limits** — 504 and 413 responses carry CORS
+  headers.
+- **`UnhandledError` innermost** — it catches an escaping exception
+  before it unwinds past the stack; see
+  [Error Handling](error-handling.md#catch-all-for-uncaught-exceptions).
 
-`TrustedHostMiddleware` is QuoinAPI's own, not Starlette's: its `400`
-is `application/problem+json` like every other error, so a wrong
-`QUOIN_ALLOWED_HOSTS` looks like any other failure. Patterns are exact
-hosts, `*.example.com`, or `*`; Starlette's `www.` redirect is not
-kept. A CORS preflight rejected by `CORSMiddleware` (disallowed origin,
-method, or header) is still Starlette's `text/plain` `400`, the one
-exception: only the browser reads it.
-
-`UnhandledErrorMiddleware` is innermost for the same reason, inverted:
-it catches an escaping exception *before* it unwinds past the stack, so
-the 500 it builds travels back out through CORS, `SecurityHeaders`, and
-`RequestID` like any other response. A handler registered against bare
-`Exception` cannot do this — Starlette moves it to
-`ServerErrorMiddleware`, outside everything. See the
-[error handling guide](error-handling.md#catch-all-for-uncaught-exceptions).
-
-`AccessLogMiddleware` sits inside `RequestID` (so the `request_id`
-contextvar is already bound) but outside the timeout and size limits, so
-504s, 413s, and 500s are logged with their real status and duration.
-
----
+`TrustedHostMiddleware` is QuoinAPI's own, so its 400 is problem
+details like every other error. Patterns are exact hosts,
+`*.example.com`, or `*`. The only non-problem-details error is a
+preflight `CORSMiddleware` rejects: Starlette's `text/plain` 400, read
+only by the browser.
 
 ## Testing
 
