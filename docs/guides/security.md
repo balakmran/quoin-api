@@ -174,7 +174,7 @@ QUOIN_SECURITY_HSTS_PRELOAD=true
 ## Request Size Limit
 
 `RequestSizeLimitMiddleware` rejects requests whose body exceeds the
-configured cap. It returns a `413 Content Too Large` RFC 9457 Problem Details response:
+configured cap, with a `413 Content Too Large` problem details response:
 
 ```json
 {
@@ -370,11 +370,10 @@ its headers.
 
 `configure_middlewares` is a plain function, and `app.user_middleware`
 after calling it is the assembled list, so the stack can be inspected
-directly rather than inferred from a live request. `tests/core/test_middlewares.py` uses
-it to assert every layer is **present** — and it is worth being precise
-that presence is all it asserts. The ordering above is not currently
-pinned by a test; it is held by this table and by the behaviour tests
-that would fail if a layer moved.
+directly rather than inferred from a live request.
+`tests/core/test_middlewares.py` uses it to assert every layer is
+**present**, and only that. No test pins the ordering above; the
+behaviour tests would fail if a layer moved.
 
 Those behaviour tests carry the rest: CORS present when enabled and
 absent when disabled, the Host allowlist applied, an unsafe
