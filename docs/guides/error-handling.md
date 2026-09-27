@@ -1,10 +1,22 @@
 # Error Handling
 
-This guide explains the error handling architecture in QuoinAPI,
-including custom domain exceptions, module-level exceptions, global
-exception handlers, and best practices for error management.
+Services raise domain exceptions; global handlers turn every one of them
+into an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
+`application/problem+json` response. You never build an error response
+by hand, and you never raise `HTTPException` outside a route.
 
-## Exception Quick Reference
+```mermaid
+graph LR
+    A[Service or repository] -->|raises| B[Module exception]
+    B -->|subclass of| C[QuoinError]
+    C -->|caught by| D[Global handler]
+    D -->|returns| E[application/problem+json]
+```
+
+## Exceptions
+
+Import from `app.core.exceptions`. All inherit from `QuoinError`, which
+carries a `message`, a `status_code`, and optional `headers`.
 
 | Exception                     | Status | Use Case                                  |
 | :---------------------------- | :----: | :---------------------------------------- |
@@ -14,21 +26,54 @@ exception handlers, and best practices for error management.
 | `NotFoundError`               | 404    | Resource not found                        |
 | `ConflictError`               | 409    | Resource conflict (e.g., duplicate email) |
 | `QuoinRequestValidationError` | 422    | Pydantic validation errors (internal)     |
-| `InternalServerError`         | 500    | Unexpected server errors                  |
-| `BadGatewayError`             | 502    | Upstream returned an invalid response      |
-| `ServiceUnavailableError`     | 503    | Required dependency unreachable           |
+| `InternalServerError`         | 500    | A failure in your own code                |
+| `BadGatewayError`             | 502    | Upstream returned an invalid response     |
+| `ServiceUnavailableError`     | 503    | Required dependency unreachable; retry later |
 | `GatewayTimeoutError`         | 504    | Request exceeded the configured timeout   |
 
-All inherit from `QuoinError`. Import from `app.core.exceptions`.
+### Module exceptions
 
----
+Each module subclasses these in its own `exceptions.py`, with a message
+that carries the relevant IDs:
 
-## Error Response Format (RFC 9457)
+```python
+# app/modules/user/exceptions.py
+from app.core.exceptions import ConflictError, NotFoundError
 
-All errors return `Content-Type: application/problem+json` with a
-[RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Details
-body. The one exception is a CORS preflight that `CORSMiddleware`
-rejects, a `text/plain` `400` only the browser reads:
+
+class UserNotFoundError(NotFoundError):
+    def __init__(self, user_id: str) -> None:
+        super().__init__(message=f"User with ID '{user_id}' not found")
+
+
+class DuplicateEmailError(ConflictError):
+    def __init__(self, email: str) -> None:
+        super().__init__(message=f"Email '{email}' is already registered")
+```
+
+No handler registration is needed. The response `type` is derived from
+the class name, so `UserNotFoundError` becomes
+`urn:quoin:error:user_not_found_error`.
+
+### Raising them
+
+```python
+async def get_user(self, user_id: uuid.UUID) -> User:
+    user = await self.repository.get(user_id)
+    if not user:
+        raise UserNotFoundError(user_id=str(user_id))
+    return user
+```
+
+A service-level check such as "does this email exist?" is a fast path,
+not a guarantee: two concurrent requests can both pass it. The
+repository closes the race by catching the `IntegrityError` at
+`flush()`, confirming it came from the email uniqueness index, and
+raising `DuplicateEmailError`. Any other `IntegrityError` propagates
+unchanged. That is why a duplicate is always a 409, never a 500, even
+under concurrent writes.
+
+## Response Format
 
 ```json
 {
@@ -42,27 +87,20 @@ rejects, a `text/plain` `400` only the browser reads:
 
 | Field      | Description                                            |
 | :--------- | :----------------------------------------------------- |
-| `type`     | URN identifying the problem type (machine-readable)    |
+| `type`     | `urn:quoin:error:<snake_case_class_name>`              |
 | `title`    | Standard HTTP reason phrase for the status code        |
 | `status`   | HTTP status code (mirrors the response status)         |
-| `detail`   | Human-readable explanation of this specific occurrence |
+| `detail`   | The exception's message                                |
 | `instance` | Request path where the error occurred                  |
 | `errors`   | Per-field array; only present on 422 responses         |
 
-### type URN convention
-
-`type` is derived automatically from the exception class name:
-
-```
-urn:quoin:error:<snake_case_class_name>
-```
-
-Examples: `NotFoundError` → `urn:quoin:error:not_found_error`,
-`DuplicateEmailError` → `urn:quoin:error:duplicate_email_error`.
+The only response that isn't problem details is a CORS preflight that
+`CORSMiddleware` rejects: a `text/plain` 400 that only the browser
+reads.
 
 ### Validation errors (422)
 
-Validation errors include an `errors` array (RFC 9457 extension):
+Request parsing failures add an `errors` array:
 
 ```json
 {
@@ -82,417 +120,75 @@ Validation errors include an `errors` array (RFC 9457 extension):
 }
 ```
 
-Each error is passed through `jsonable_encoder` before serialising —
-Pydantic's documented `field_validator` idiom (raise `ValueError` or
-`AssertionError`) puts the raised exception object itself under
-`ctx.error`, which is not JSON-serializable on its own — and is trimmed
-of two things Pydantic's own `exc.errors()` includes: `url` (a link into
-Pydantic's docs, not useful to an API client) is dropped, and `input`
-is truncated to 200 characters so a validation error never echoes an
-unbounded amount of client-supplied data back into the response.
+Each entry is JSON-encoded safely (a raising `field_validator` puts an
+exception object in `ctx.error`), Pydantic's `url` is dropped, and
+`input` is cut to 200 characters so a response never echoes unbounded
+client data.
 
----
-
-## Architecture Overview
-
-The application uses a **module-level exception** pattern where
-business logic errors are represented by custom exception classes that
-extend core `QuoinError` classes. These exceptions are automatically
-caught by global handlers and converted to RFC 9457 responses.
-
-```mermaid
-graph LR
-    A[Service Layer] -->|raises| B[Module Exception]
-    B -->|inherits from| C[QuoinError]
-    C -->|caught by| D[Global Handler]
-    D -->|returns| E[application/problem+json]
-```
-
----
-
-## Exception Hierarchy
-
-All application exceptions inherit from
-[`QuoinError`](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py):
-
-```python
-from app.core.exceptions import QuoinError
-
-
-class QuoinError(Exception):
-    """Base exception for all application errors."""
-
-    def __init__(
-        self,
-        message: str,
-        status_code: int = 500,
-        headers: dict[str, str] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
-        self.headers = headers
-```
-
-### Built-in Core Exception Classes
-
-| Exception                     | Status Code | Use Case                                  |
-| :---------------------------- | :---------- | :---------------------------------------- |
-| `BadRequestError`             | 400         | Invalid request data or parameters        |
-| `UnauthorizedError`           | 401         | Missing or invalid Bearer token           |
-| `ForbiddenError`              | 403         | Insufficient permissions                  |
-| `NotFoundError`               | 404         | Resource not found                        |
-| `ConflictError`               | 409         | Resource conflict (e.g., duplicate email) |
-| `QuoinRequestValidationError` | 422         | Pydantic validation errors                |
-| `InternalServerError`         | 500         | Unexpected server errors                  |
-| `BadGatewayError`             | 502         | Upstream returned an invalid response     |
-| `ServiceUnavailableError`     | 503         | Required dependency unreachable           |
-| `GatewayTimeoutError`         | 504         | Request exceeded the configured timeout   |
-
-!!! tip "503 vs 500"
-    Use `ServiceUnavailableError` when a required external dependency
-    (database, cache, downstream API) is unreachable and the request
-    cannot be retried locally. Use `InternalServerError` for unexpected
-    failures within your own code. The distinction matters for callers:
-    503 signals "retry later", 500 signals "something is broken here".
-
----
+Only `RequestValidationError` and `QuoinRequestValidationError` map to
+422. A bare `pydantic.ValidationError` means an internal model failed,
+which is a server bug, so it becomes a 500.
 
 ## Request Timeouts
 
-`TimeoutMiddleware` enforces a per-request wall-clock limit using an
-`anyio` cancel scope. If a request takes longer than the configured
-limit, the middleware cancels it and returns a 504 RFC 9457 response:
-
-```json
-{
-  "type": "urn:quoin:error:gateway_timeout_error",
-  "title": "Gateway Timeout",
-  "status": 504,
-  "detail": "Request exceeded 30.0s timeout",
-  "instance": "/api/v1/users/"
-}
-```
-
-The timeout is configurable via `QUOIN_REQUEST_TIMEOUT_SECONDS`
-(default: `30.0`; set to `0` or negative to disable):
-
-```bash
-# .env
-QUOIN_REQUEST_TIMEOUT_SECONDS=10.0
-```
-
-`anyio.fail_after()` is used instead of `asyncio.wait_for()` because
-cancel scopes reliably propagate cancellation through nested async
-calls, avoiding the race condition where `wait_for` can leave a
-coroutine running after the deadline.
-
----
-
-## Module-Level Exceptions
-
-Each module defines domain-specific exceptions that inherit from core
-exceptions and provide rich context:
-
-```python
-# app/modules/user/exceptions.py
-from app.core.exceptions import ConflictError, NotFoundError
-
-
-class UserNotFoundError(NotFoundError):
-    """Raised when a user cannot be found."""
-
-    def __init__(self, user_id: str) -> None:
-        super().__init__(message=f"User with ID '{user_id}' not found")
-
-
-class DuplicateEmailError(ConflictError):
-    """Raised when attempting to create a user with an existing email."""
-
-    def __init__(self, email: str) -> None:
-        super().__init__(message=f"Email '{email}' is already registered")
-```
-
-The `type` URN in error responses is derived automatically from the
-class name, so `UserNotFoundError` produces
-`urn:quoin:error:user_not_found_error` without any additional
-configuration.
-
-### Benefits of Module-Level Exceptions
-
-1. **Rich Context**: Exceptions include relevant IDs, values, and
-   details
-2. **Type Safety**: Each exception is a distinct type for better error
-   handling
-3. **Discoverability**: Clearly defined in each module's
-   `exceptions.py`
-4. **Maintainability**: Easier to track and update error messages
-
----
-
-## Usage in Services
-
-**Always raise module-specific exceptions in service layers**, not
-HTTP exceptions:
-
-```python
-from app.modules.user.exceptions import DuplicateEmailError, UserNotFoundError
-
-
-class UserService:
-    async def create_user(self, user_create: UserCreate) -> User:
-        existing = await self.repository.get_by_email(user_create.email)
-        if existing:
-            raise DuplicateEmailError(email=user_create.email)
-        return await self.repository.create(user_create)
-
-    async def get_user(self, user_id: uuid.UUID) -> User:
-        user = await self.repository.get(user_id)
-        if not user:
-            raise UserNotFoundError(user_id=str(user_id))
-        return user
-```
-
-!!! warning
-    Never raise `HTTPException` from services. Services should be
-    HTTP-agnostic.
-
-The `get_by_email` pre-check above is a friendly fast path, not the
-uniqueness guarantee — two concurrent requests can both pass it before
-either flushes. The repository closes that race by catching the
-resulting `IntegrityError` at flush time (the actual commit happens
-later, in `get_session`'s unit-of-work boundary) and inspecting the
-failed constraint before translating it:
-
-```python
-class UserRepository:
-    async def create(self, user_create: UserCreate) -> User:
-        db_user = User.model_validate(user_create)
-        self.session.add(db_user)
-        try:
-            await self.session.flush()
-        except IntegrityError as exc:
-            if not _is_email_uniqueness_violation(exc):
-                raise
-            raise DuplicateEmailError(email=user_create.email) from exc
-        await self.session.refresh(db_user)
-        return db_user
-```
-
-`_is_email_uniqueness_violation` checks `exc.orig.constraint_name`
-against the unique index on `lower(email)`, so an `IntegrityError`
-from an unrelated constraint propagates unchanged instead of being
-mislabeled as a duplicate email. `UserRepository.update` follows the
-same pattern. This is why the route always returns 409, never a bare
-500, even under concurrent writes to the same email.
-
-`UserRepository.delete` is a **soft delete** — it stamps a `deleted_at`
-tombstone rather than issuing a hard `DELETE`, so it cannot raise a
-foreign-key `IntegrityError` and needs no such translation. See the
-[Soft Delete guide](soft-delete.md).
-
----
+`TimeoutMiddleware` cancels a request that runs past
+`QUOIN_REQUEST_TIMEOUT_SECONDS` (default `30.0`; `0` or less disables
+it) and returns a 504 `gateway_timeout_error`. It uses an `anyio` cancel
+scope, which reliably cancels nested async calls where
+`asyncio.wait_for` can leave a coroutine running.
 
 ## Global Exception Handlers
 
-The
-[`quoin_exception_handler`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
-automatically converts `QuoinError` exceptions to RFC 9457 responses:
+`add_exception_handlers(app)` in
+[`app/core/exception_handlers.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py)
+registers the handlers from `create_app()`:
 
-```python
-async def quoin_exception_handler(request: Request, exc: Any) -> Response:
-    problem = ProblemDetail(
-        type=_problem_type(exc),
-        title=_problem_title(exc.status_code),
-        status=exc.status_code,
-        detail=exc.message,
-        instance=request.url.path,
-    )
-    return Response(
-        content=problem.model_dump_json(exclude_none=True),
-        status_code=exc.status_code,
-        media_type="application/problem+json",
-        headers=exc.headers,
-    )
-```
+- `quoin_exception_handler` — any `QuoinError`, using its status,
+  message, and headers
+- `validation_exception_handler` — the 422s above
+- `unhandled_exception_handler` — the final fallback, below
 
-The `validation_exception_handler` handles Pydantic validation errors
-and includes the `errors` array:
-
-```python
-async def validation_exception_handler(request: Request, exc: Any) -> Response:
-    # _sanitize_validation_errors runs exc.errors() through
-    # jsonable_encoder (so a raising field_validator's ctx.error can't
-    # crash serialisation) and drops/truncates the url/input fields.
-    errors = _sanitize_validation_errors(exc.errors())
-    problem = ProblemDetail(
-        type="urn:quoin:error:validation_error",
-        title=_problem_title(422),  # "Unprocessable Content" per RFC 9110
-        status=422,
-        detail="Request validation failed",
-        instance=request.url.path,
-        errors=errors,
-    )
-    return Response(
-        content=problem.model_dump_json(exclude_none=True),
-        status_code=422,
-        media_type="application/problem+json",
-    )
-```
-
-This handler is registered only for `RequestValidationError` (request
-body/query/path parsing) and `QuoinRequestValidationError` — **not**
-for a bare `pydantic.ValidationError`. A bare `ValidationError` means
-an *internal* model failed to validate (a server bug, not a client
-mistake), so it deliberately falls through to the catch-all handler
-below and comes back as a 500, not a misleading 422.
+A handler you add for a third-party exception must type `exc` as `Any`.
 
 ### Catch-all for uncaught exceptions
 
-**Any** error not caught by a more specific handler — a bare `KeyError`,
-or a non-transport `httpx2` error such as `httpx2.InvalidURL` /
-`httpx2.TooManyRedirects` that escapes the outbound HTTP client — still
-returns an RFC 9457 `application/problem+json` 500 instead of
-Starlette's default `text/plain` `Internal Server Error`:
+Anything no specific handler catches, such as a bare `KeyError` or an
+`httpx2.InvalidURL` escaping the outbound client, still returns a
+problem details 500 with `detail` set to `"Internal Server Error"`. The
+real message and traceback go to the log as `unhandled_exception`, never
+to the client.
 
-```json
-{
-  "type": "urn:quoin:error:internal_server_error",
-  "title": "Internal Server Error",
-  "status": 500,
-  "detail": "Internal Server Error",
-  "instance": "/api/v1/users/"
-}
-```
-
-Two layers produce that response, and which one runs matters:
+Two layers produce that 500:
 
 | Layer | Handles | Why it exists |
 | :--- | :--- | :--- |
-| `UnhandledErrorMiddleware` (`app/core/middlewares.py`) | Anything raised by a route or by the layers inside it — nearly every uncaught exception | Registered innermost, so its 500 travels back out through CORS, `SecurityHeaders`, and `RequestID` and arrives with those headers attached |
-| `unhandled_exception_handler` (`app/core/exception_handlers.py`) | Exceptions raised *by a middleware itself*, and non-HTTP scopes | Registered against the base `Exception` type, as a final fallback |
+| `UnhandledErrorMiddleware` (`app/core/middlewares.py`) | Anything raised by a route or the layers inside it | Innermost, so its 500 passes back out through CORS, `SecurityHeaders`, and `RequestID` and gets their headers |
+| `unhandled_exception_handler` | Exceptions raised by a middleware itself, and non-HTTP scopes | A final fallback registered on `Exception` |
 
-The middleware exists because a handler registered against bare
-`Exception` is not enough on its own: Starlette moves it to
-`ServerErrorMiddleware`, the outermost layer, so by the time it runs the
-exception has already unwound past every other middleware without any of
-them seeing a response go out. The 500 it builds therefore carries no
-`X-Request-ID`, no security headers, and no CORS headers. Catching the
-exception innermost instead — before it escapes the stack — is what lets
-those headers be applied the normal way.
+The middleware is needed because Starlette runs an `Exception` handler
+in its outermost layer, after the exception has unwound past every other
+middleware, so that 500 would carry no request ID, security, or CORS
+headers. Exactly one layer logs each exception.
 
-Both layers log the full exception (type, traceback, request path) via
-structlog, but **never leak the internal exception message or stack to
-the client** — the `detail` is always the generic `"Internal Server
-Error"`. Exactly one of them logs per exception: the middleware stays
-silent when the response has already started streaming, because then the
-exception necessarily reaches the outer handler, which logs it there.
-
-Prefer raising an explicit `QuoinError` subclass over relying on this
-fallback; it exists as a safety net, not a substitute for deliberate
-error handling.
-
-```python
-async def unhandled_exception_handler(request: Request, exc: Any) -> Response:
-    logger.exception(
-        "unhandled_exception",
-        exc_type=type(exc).__name__,
-        path=request.url.path,
-    )
-    problem = ProblemDetail(
-        type="urn:quoin:error:internal_server_error",
-        title=_problem_title(500),
-        status=500,
-        detail="Internal Server Error",
-        instance=request.url.path,
-    )
-    return _problem_response(problem, 500)
-```
-
-These handlers are registered in
-[`main.py`](https://github.com/balakmran/quoin-api/blob/main/app/main.py):
-
-```python
-from app.core.exception_handlers import add_exception_handlers
-
-app = FastAPI(...)
-add_exception_handlers(app)
-```
-
----
-
-## Creating Custom Module Exceptions
-
-For new modules, create an `exceptions.py` file with domain-specific
-errors:
-
-```python
-# app/modules/billing/exceptions.py
-from app.core.exceptions import BadRequestError, NotFoundError
-
-
-class PaymentFailedError(BadRequestError):
-    """Raised when payment processing fails."""
-
-    def __init__(self, payment_id: str, reason: str) -> None:
-        super().__init__(message=f"Payment '{payment_id}' failed: {reason}")
-
-
-class InvoiceNotFoundError(NotFoundError):
-    """Raised when an invoice cannot be found."""
-
-    def __init__(self, invoice_id: str) -> None:
-        super().__init__(message=f"Invoice with ID '{invoice_id}' not found")
-```
-
-The resulting error responses will automatically use the derived URN
-type — no handler registration needed:
-
-```json
-{
-  "type": "urn:quoin:error:payment_failed_error",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "Payment 'pay_abc' failed: card declined",
-  "instance": "/api/v1/billing/pay_abc/charge"
-}
-```
-
----
+Treat the catch-all as a safety net. Raise a `QuoinError` subclass
+whenever you know what went wrong.
 
 ## Logging
 
-All `QuoinError` exceptions are automatically logged with structured
-logging before the response is sent. The level follows who has to act on
-it: `error` (with traceback) for 5xx, `warning` for 401 and 403, and
-`info` for every other 4xx. See
+Every `QuoinError` is logged as `quoin_error` before the response goes
+out: `error` with traceback for 5xx, `warning` for 401 and 403, `info`
+for other 4xx. See
 [Error Response Levels](observability.md#error-response-levels).
-
-```json
-{
-  "event": "quoin_error",
-  "message": "User with ID 'f47ac10b' not found",
-  "status_code": 404,
-  "path": "/api/v1/users/f47ac10b",
-  "level": "info"
-}
-```
-
----
 
 ## OpenAPI Documentation
 
-Error responses are declared with two helpers from
-`app.core.openapi`, so every module documents the same shapes without
-hand-copied boilerplate.
+Two helpers in `app.core.openapi` declare error responses so every
+module documents the same shapes.
 
-`DEFAULT_ERROR_RESPONSES` covers the codes *any* authenticated
-endpoint can return — 401, 403, 422, and 500 — and belongs on the
-module router:
+`DEFAULT_ERROR_RESPONSES` covers what any authenticated endpoint can
+return (401, 403, 422, 500). Put it on the module router:
 
 ```python
-from app.core.openapi import DEFAULT_ERROR_RESPONSES
-
 router = APIRouter(
     prefix="/users",
     tags=["users"],
@@ -500,114 +196,58 @@ router = APIRouter(
 )
 ```
 
-`error_responses(*codes)` covers the codes a *specific* route can
-raise. Pass `descriptions` when the route can say something more
-useful than the generic reason phrase:
+`error_responses(*codes)` adds what a specific route can raise, with
+optional better descriptions:
 
 ```python
-from app.core.openapi import error_responses
-
 @router.get(
     "/{user_id}",
     response_model=UserRead,
     responses=error_responses(404, descriptions={404: "User not found"}),
 )
-async def get_user(...) -> User:
-    ...
+async def get_user(...) -> User: ...
 ```
 
-Per-route responses merge with the router's, so a route only declares
-what the router does not already cover.
+Mistakes fail loudly: an unknown code raises `KeyError`, and a
+`descriptions` key that matches no requested code raises `ValueError`.
+400 isn't in the default set, since most routes never raise it; add
+`error_responses(400)` where one does.
 
-Both failure modes are loud rather than silent: requesting a code with
-no entry in `_ERROR_DESCRIPTIONS` raises `KeyError`, and passing a
-`descriptions` key that matches none of the requested codes raises
-`ValueError`. The latter matters because a typo (`490` for `409`, or a
-string `"404"`) would otherwise ship the generic reason phrase the
-caller was trying to replace, with nothing to notice it.
+Two details of the generated schema:
 
-`400` is deliberately **not** in the default set. `BadRequestError`
-exists, but most routes never raise it, and documenting it everywhere
-would describe errors those routes cannot return. Opt in with
-`error_responses(400)` on the routes that do.
-
-### Why the media type is patched after generation
-
-FastAPI always files a `responses` model under `application/json`,
-and the declarative `content` override does not replace that key — it
-adds an empty `application/problem+json` entry *alongside* the real
-`application/json` schema, which is worse than leaving it alone.
-
-So `set_openapi_generator` runs `_use_problem_media_type` over the
-finished schema and relabels the media type to
-`application/problem+json`, matching what the handlers actually send.
-It only rewrites responses whose schema references `ProblemDetail`,
-so a non-problem error body is never mislabelled, and success
-responses and bodyless 204s are untouched.
-
-### The 422 override
-
-Declaring 422 in `DEFAULT_ERROR_RESPONSES` replaces FastAPI's
-built-in `HTTPValidationError` model. This matters: the validation
-handler returns RFC 9457 with an `errors` array, so the default model
-would describe a payload this API never sends. Because every router
-overrides it, `HTTPValidationError` and `ValidationError` drop out of
-`components.schemas` entirely.
-
----
+- FastAPI files every response model under `application/json`, so
+  `_use_problem_media_type` relabels responses that reference
+  `ProblemDetail` as `application/problem+json` after generation.
+- Declaring 422 replaces FastAPI's `HTTPValidationError` model, which
+  describes a payload this API never sends.
 
 ## Testing
 
-Test error handling at the service level:
+Assert on the domain exception in service tests, and on the whole
+problem details body in route tests:
 
 ```python
-import pytest
-from app.modules.user.exceptions import UserNotFoundError
+async def test_create_user_duplicate_email(admin_client: AsyncClient):
+    payload = {"email": "test@example.com", "full_name": "Test User"}
+    await admin_client.post("/api/v1/users/", json=payload)
 
-
-async def test_get_user_not_found(user_service):
-    with pytest.raises(UserNotFoundError) as exc_info:
-        await user_service.get_user(uuid.uuid4())
-
-    assert "not found" in str(exc_info.value.message)
-    assert exc_info.value.status_code == 404
-```
-
-For integration tests, validate the full RFC 9457 response:
-
-```python
-async def test_create_user_duplicate_email(client):
-    await client.post(
-        "/api/v1/users/",
-        json={
-            "email": "test@example.com",
-            "full_name": "Test User",
-        },
-    )
-
-    response = await client.post(
-        "/api/v1/users/",
-        json={
-            "email": "test@example.com",
-            "full_name": "Another User",
-        },
-    )
+    response = await admin_client.post("/api/v1/users/", json=payload)
 
     body = response.json()
     assert response.status_code == 409
     assert response.headers["content-type"] == "application/problem+json"
     assert body["type"] == "urn:quoin:error:duplicate_email_error"
-    assert body["status"] == 409
-    assert "test@example.com" in body["detail"]
     assert body["instance"] == "/api/v1/users/"
 ```
 
----
+The `client` fixture also checks every 4xx and 5xx response against
+this contract automatically; see
+[Testing](testing.md#fixtures).
 
 ## See Also
 
-- [Core Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py) — Source code
-- [Exception Handlers](https://github.com/balakmran/quoin-api/blob/main/app/core/exception_handlers.py) — Handler implementation
-- [ProblemDetail Schema](https://github.com/balakmran/quoin-api/blob/main/app/core/schemas.py) — RFC 9457 response model
-- [User Module Exceptions](https://github.com/balakmran/quoin-api/blob/main/app/modules/user/exceptions.py) — Example module exceptions
+- [Observability](observability.md) — where error logs go
+- [Optimistic Concurrency](optimistic-concurrency.md) — the 409 and 412
+  paths for conflicting writes
+- [app/core/exceptions.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py) — the exception classes
 - [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) — Problem Details for HTTP APIs
