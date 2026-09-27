@@ -48,7 +48,7 @@ minimally-working stubs that pass `just check` (100% coverage) as-is:
   so the page and its nav entry are scaffolded rather than left to you.
   Its Routes section is the one part to write by hand.
 - `models.py` — a documented **empty** stub; a real table needs a
-  migration (step 10), so define the model, then `just migrate-gen`.
+  migration and an `app/db/base.py` import (step 10).
 
 Fill each layer in below, replacing the placeholder shapes.
 
@@ -88,11 +88,24 @@ __all__ = ["router"]
 
 ### 9. Review the `app/api.py` registration
 
-`just new <module>` adds the import and
+`just new <module>` adds the router import
+(`from app.modules.<module> import router as <module>_router`) and
 `v1_router.include_router(<module>_router)` next to the existing modules.
 Review the generated wiring, but don't add a duplicate manual registration.
+It does **not** register the model — that's step 10.
 
-### 10. Generate and apply the migration
+### 10. Register the model, then generate and apply the migration
+
+`alembic/env.py` only sees models imported in `app/db/base.py`, and
+`just new` doesn't add one. Without it, autogenerate emits an empty
+migration. Add the import first:
+
+```python
+# app/db/base.py
+from app.modules.<module>.models import <Model>  # noqa
+```
+
+Then generate the migration:
 
 ```bash
 just migrate-gen "add <module> model"
