@@ -114,7 +114,7 @@ Use the pre-built fixtures from `tests/conftest.py`:
 | `db_session` | Direct DB setup/assertions |
 | `caller_read` / `caller_admin` | The `ServicePrincipal` for those clients |
 
-Aim for **≥95% coverage** on the new module. Cover the happy path, the auth-denied path, and the domain error paths (404, 409, 400 etc.).
+Coverage must reach **100%** — `just check` fails below it. Cover the happy path, the auth-denied path, and the domain error paths (404, 409, 400 etc.).
 
 ### 12. Run the full check suite
 

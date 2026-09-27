@@ -79,11 +79,9 @@ synced files** — they are checked-in build artifacts, not gitignored.
 
 If `just docb` fails, fix the docs issue before continuing.
 
-**If this PR changed a dependency version or `requires-python`,** update the
-matching Shields badge in **both** `README.md` and
-`docs/guides/getting-started.md` (FastAPI/SQLModel/Python/`PostgreSQL-<major>`).
-The two badge blocks are duplicated and drift apart otherwise — see the
-[api-docs-audit](../api-docs-audit/SKILL.md) skill for the full parity check.
+**If this PR changed `requires-python` or the Postgres major version,**
+update the matching Shields badge in `README.md` — the only badge block. See
+[api-docs-audit](../api-docs-audit/SKILL.md) for which badges carry versions.
 
 ## 4. Create the PR
 
