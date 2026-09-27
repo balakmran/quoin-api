@@ -11,7 +11,11 @@ repo_url = "https://github.com/balakmran/quoin-api"
 repo_name = "balakmran/quoin-api"
 nav = [
     { "Home" = "index.md" },
-    { "Getting Started" = "guides/getting-started.md" },
+    { "Getting Started" = [
+        "guides/getting-started.md",
+        { "AI-Assisted Development" = "guides/ai-setup.md" },
+        { "Troubleshooting" = "guides/troubleshooting.md" },
+    ]},
     { "Build" = [
         "guides/build.md",
         { "Creating a Module" = "guides/creating-a-module.md" },
@@ -31,13 +35,10 @@ nav = [
         "guides/ship.md",
         { "Testing" = "guides/testing.md" },
         { "Quality Checks" = "guides/quality-checks.md" },
-        { "AI-Assisted Development" = "guides/ai-setup.md" },
-        { "Configuration" = "guides/configuration.md" },
         { "Security" = "guides/security.md" },
         { "Dependency Scanning" = "guides/dependency-scanning.md" },
         { "Deployment" = "guides/deployment.md" },
         { "Observability" = "guides/observability.md" },
-        { "Troubleshooting" = "guides/troubleshooting.md" },
     ]},
     { "Architecture" = [
         "architecture/overview.md",
@@ -46,6 +47,7 @@ nav = [
     { "Reference" = [
         "api/overview.md",
         { "Conventions" = "api/conventions.md" },
+        { "Configuration" = "guides/configuration.md" },
         { "Core" = "api/core.md" },
         { "User" = "api/user.md" },
         { "System" = "api/system.md" },
@@ -56,10 +58,12 @@ nav = [
         { "API Stability & SemVer" = "guides/api-stability.md" },
         { "Release Notes" = "project/changelog.md" },
         { "Roadmap" = "project/roadmap.md" },
-        { "Release Workflow" = "guides/release-workflow.md" },
-        { "Contributing" = "project/contributing.md" },
         { "Security Policy" = "project/security-policy.md" },
         { "License" = "project/license.md" },
+        { "Maintaining" = [
+            { "Release Workflow" = "guides/release-workflow.md" },
+            { "Contributing" = "project/contributing.md" },
+        ]},
     ]},
 ]
 extra_css = [

@@ -7,10 +7,6 @@ production and someone is on call for it".
   database, with per-test rollback
 - [Quality Checks](quality-checks.md) — the format, lint, typecheck,
   and migration-drift gate behind `just check`
-- [AI-Assisted Development](ai-setup.md) — the Claude Code skills,
-  subagents, and hooks that hold an assistant to that same gate
-- [Configuration](configuration.md) — every `QUOIN_` setting, its
-  default, and which environment file supplies it
 - [Security](security.md) — the middleware stack, response headers,
   host allowlist, and what production refuses to boot without
 - [Dependency Scanning](dependency-scanning.md) — audit runtime
@@ -19,5 +15,6 @@ production and someone is on call for it".
   production
 - [Observability](observability.md) — structured logs and OpenTelemetry
   traces that correlate by request and caller
-- [Troubleshooting](troubleshooting.md) — symptoms, causes, and fixes
-  for the failures you'll actually hit
+
+Every setting named in these guides is listed in
+[Configuration](configuration.md), under Reference.
