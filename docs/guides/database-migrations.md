@@ -47,7 +47,7 @@ migration, down to a changed index or server default, fails the gate.
 Alembic sees only tables on `SQLModel.metadata`. `alembic/env.py`
 imports `app/db/base.py`, and that file imports each module's models.
 `just new <module>` does not add the import; add it yourself (see
-[Creating a Module](creating-a-module.md#10-import-the-model-for-migrations)).
+[Creating a Module](creating-a-module.md#9-import-the-model-for-migrations)).
 The database URL comes from `settings.DATABASE_URL`.
 
 ## Zero-Downtime Migrations
