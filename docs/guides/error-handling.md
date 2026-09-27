@@ -247,7 +247,7 @@ this contract automatically; see
 ## See Also
 
 - [Observability](observability.md) — where error logs go
-- [Optimistic Concurrency](optimistic-concurrency.md) — the 409 and 412
-  paths for conflicting writes
+- [Optimistic Concurrency](optimistic-concurrency.md) — adding `412`
+  responses for conflicting writes
 - [app/core/exceptions.py](https://github.com/balakmran/quoin-api/blob/main/app/core/exceptions.py) — the exception classes
 - [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) — Problem Details for HTTP APIs
