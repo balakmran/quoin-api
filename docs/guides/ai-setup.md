@@ -1,23 +1,13 @@
 # AI-Assisted Development
 
-QuoinAPI ships with a first-class Claude Code setup. This guide covers
-everything that was configured — 12 skills, 2 subagents, 6 hooks, 5
-plugins, and 2 MCP servers — so you can take full advantage of it and
-extend it as the project evolves.
-
----
-
-## Overview
-
-The setup is layered: Claude Code reads conventions from `CLAUDE.md` on every
-turn, loads on-demand workflow skills when they match your request, fires
-hooks automatically to enforce quality and safety, delegates focused
-reviews to subagents, and connects to live documentation and the dev
-database via MCP servers.
+QuoinAPI ships a Claude Code setup that holds an assistant to the same
+gate you work under: 12 skills, 2 subagents, 6 hooks, 5 plugins, and 2
+MCP servers. It activates the first time you open the project in Claude
+Code; approve the `context7` MCP server when prompted.
 
 ```
 CLAUDE.md              ← always-on conventions
-.claude/skills/        ← workflow skills, loaded when triggered
+.claude/skills/        ← workflow skills, loaded when a request matches
 .claude/agents/        ← project subagents, own context and toolset
 .claude/hooks/         ← enforcement scripts
 .claude/settings.json  ← hook wiring + enabled plugins
@@ -25,374 +15,111 @@ CLAUDE.md              ← always-on conventions
 prek.toml              ← git-level quality gates
 ```
 
----
-
-## First-time setup
-
-`just setup` handles everything:
-
-```bash
-just setup   # installs deps + prek commit hooks + prek pre-push hook
-```
-
-The pre-push hook runs the full pytest suite. **PostgreSQL must be running**
-when you push (`just db`). Use `git push --no-verify` in emergencies only.
-
-The Claude Code plugins, skills, and MCP server activate automatically the
-first time you open the project in a Claude Code session. You will be prompted
-to approve the `context7` MCP server on first use.
-
----
+`just setup` installs the git hooks. The pre-push hook runs the full
+test suite, so Postgres must be up (`just db`) when you push.
 
 ## Skills
 
-Skills are packaged workflows that Claude invokes automatically when your
-request matches, or that you can trigger explicitly with `/skill-name`.
+Claude loads a skill when your request matches its trigger, or you call
+it with `/<skill-name>`. Each lives in `.claude/skills/<name>/SKILL.md`;
+the `api-` prefix keeps them from colliding with your own skills.
 
-All project skills live in `.claude/skills/`, prefixed `api-` so a
-directory never collides with a skill you already have.
-
-### `api-new-module`
-
-**Triggers on:** "add a product module", "scaffold an orders feature",
-"create a new resource for X"
-
-Walks through the full DDD module scaffold: `just new <module>` →
-models → schemas → repository → service → routes → exceptions → review
-auto-registered router → generate and review migration → write tests →
-`just check`.
-
-### `api-add-endpoint`
-
-**Triggers on:** "add an endpoint to the user module", "add a GET
-/users/by-email route", "expose a search endpoint on products", "add a
-deactivate action to users"
-
-The single-endpoint counterpart to `api-new-module`: adds one route plus
-its plumbing to a module that already exists, working up the layers
-schema → repository → service → route against the `app/modules/user/`
-reference. Covers the route-ordering gotcha (declare `/count` before
-`/{user_id}`), the `response_model` vs return-type convention, reusing the
-module's `get_<module>_service` dependency, and the required auth/domain-error
-test cases. For a brand-new module use `api-new-module`; for a schema change
-behind the endpoint use `api-db-migration` first.
-
-### `api-db-migration`
-
-**Triggers on:** "add a column", "add a field to", "make X nullable",
-"change the type of", "add an index on"
-
-Covers the schema-change loop with a built-in migration review checklist:
-NOT NULL backfills, type narrowing risk, enum change gaps, downgrade
-reversibility, and common autogenerate blind spots.
-
-### `api-auth-route`
-
-**Triggers on:** "protect this endpoint", "add RBAC", "require the X role",
-"make this admin-only", "who is the caller"
-
-DDD scope syntax (`domain.action`), `require_roles()` wiring, the auth
-test triple (happy path / 403 / 401), and the configurable superuser
-bypass (`QUOIN_OAUTH_SUPERUSER_ROLE` / `_ENABLED`).
-
-### `api-observability`
-
-**Triggers on:** "add a log for this", "log this event", "add a span
-around this", "why isn't this traced", "add context to the logs"
-
-Structured logging (Structlog) and tracing (OpenTelemetry) conventions:
-keyword-argument log fields, event-name style, `bind_contextvars` for
-multi-line context, and when to add a custom span versus relying on
-what's already auto-instrumented (request ID, access log, HTTP/DB spans,
-log/trace correlation — none of which need code in a route or service).
-
-### `api-write-tests`
-
-**Triggers on:** "write tests for", "add a test", "test this endpoint",
-"I need coverage for"
-
-Project fixture map (`client`, `read_client`, `admin_client`, `db_session`,
-`caller_read`, `caller_admin`), SAVEPOINT isolation behaviour, adding
-domain-specific callers for new modules, and common test anti-patterns to
-avoid.
-
-### `api-coverage`
-
-**Triggers on:** "make coverage 100%", "fill the coverage gaps", "cover the
-missing lines", "get this to 100%", or pasting a `pytest --cov` report
-
-The gap-closing counterpart to `api-write-tests`: read the `Missing` column,
-classify each gap (error path / partial branch / dead code / defensive guard),
-write targeted tests with the existing fixtures, and loop on `just test` until
-the target is met. Prefers real tests over `# pragma: no cover`.
-
-### `api-pre-pr`
-
-**Triggers on:** "create a PR", "open a pull request", "I'm done with this
-feature", "ready to merge", "ship this"
-
-Four-step pre-PR checklist: run `just check` (format, lint, typecheck,
-migration check, tests at 100% coverage) → update `CHANGELOG.md [Unreleased]`
-with a concise entry → run `just docb` to verify the docs build and commit the
-synced files → create the PR.
-
-### `api-deps-upgrade`
-
-**Triggers on:** "upgrade the dependencies", "update deps", "bump the GitHub
-Actions", "upgrade to Python 3.x", "is there a newer version of X"
-
-The version-upgrade ritual for both Python deps and GitHub Actions:
-`uv lock --upgrade` (`exclude-newer` ships commented out), checking release notes
-for pinning changes, sweeping docs/`.env`/Dockerfile for stale version
-strings, and verifying with `just check`.
-
-### `api-docs-audit`
-
-**Triggers on:** "review the docs for accuracy", "check docs against the
-code", "audit docs/ for stale info", "do the guides match the implementation"
-
-A periodic docs↔code drift sweep over `docs/guides/` and `README.md`: settings
-table vs `config.py`, endpoint lists vs routers, `just` recipes vs `justfile`,
-stale version strings, and broken file references — finishing with `just docb`.
-Reports findings before fixing, since a mismatch sometimes means the code
-regressed, not the doc.
-
-### `api-release`
-
-**Triggers on:** "cut a release", "bump the version", "tag the release",
-"prepare the changelog"
-
-Five-step release ritual: curate `[Unreleased]` → `just bump <part>` →
-promote changelog heading → commit and merge to `main` → `just tag`. Covers
-changelog section ordering, tag-from-main-only rule, and what to do if the
-GitHub Actions release workflow fails.
-
-### `api-hotfix`
-
-**Triggers on:** "hotfix this", "emergency patch", "ship just this fix now",
-"cut a hotfix release", "critical bug needs to go out now"
-
-The `api-release` ritual cut down to one urgent fix: branch from `main`
-(never from in-flight feature work), fix, `just check`, patch-bump only, and
-a changelog entry that carries *only* the hotfixed change — unrelated
-`[Unreleased]` entries wait for the next normal release. Runs on the
-`haiku` model since it's a deterministic checklist, not a judgment call.
-
----
+| Skill | Use it to |
+| :--- | :--- |
+| `api-new-module` | Scaffold a new module end to end: `just new`, every layer, migration, tests |
+| `api-add-endpoint` | Add one route to an existing module, working up schema → repository → service → route |
+| `api-db-migration` | Change a column, index, or table, with a migration review checklist |
+| `api-auth-route` | Add or change `require_roles()` on a route, plus the 200/403/401 test triple |
+| `api-observability` | Add logs or spans, and know what is already instrumented |
+| `api-write-tests` | Write route, service, or repository tests with the project fixtures |
+| `api-coverage` | Close gaps in a coverage report with real tests, not pragmas |
+| `api-pre-pr` | Run `just check`, update the changelog, run `just docb`, then open the PR |
+| `api-deps-upgrade` | Upgrade Python packages, Python itself, the Astral tools, or pinned Actions |
+| `api-docs-audit` | Find docs that disagree with the code, and code no page documents |
+| `api-release` | Cut a release: curate the changelog, `just bump`, `just tag` |
+| `api-hotfix` | Ship one urgent fix as a patch release, branched from `main` |
 
 ## Hooks
 
-### Stop hook — quality gate (automatic)
+| Hook | When | What it does |
+| :--- | :--- | :--- |
+| Quality gate | End of a turn with a dirty tree | Runs `just format && just lint && just typecheck`; a failure blocks the turn. Tests wait for push |
+| Config drift | End of a dirty turn | Warns when `app/core/config.py` changed but `.env.example` and `docs/guides/configuration.md` didn't |
+| Migration reminder | End of a dirty turn | Warns when a `models.py` changed but no migration was added |
+| `HTTPException` check | End of a dirty turn | Warns when a changed `service.py` or `repository.py` mentions `HTTPException` |
+| Auto-format | After each edit | Runs `ruff format` on the edited `.py` file |
+| Sensitive-file guard | Before each edit or write-like `Bash` command | Refuses the files below |
 
-Configured in `.claude/settings.json`. Fires at the end of every Claude turn
-where the working tree is dirty.
+The three warnings never block, since a hit can be a false positive.
 
-Runs `just format && just lint && just typecheck`. If any step fails, the
-turn is blocked and Claude sees the output — it must fix the issue before
-responding. Turns with no code changes (Q&A, doc reads) are skipped.
+The guard refuses:
 
-Tests are deliberately excluded here — too slow per turn. Tests are gated
-at push time instead (see below).
-
-### Stop hook — config-drift warning (automatic)
-
-Script at `.claude/hooks/config-drift.sh`. Also fires at the end of a dirty
-turn. If `app/core/config.py` changed but neither `.env.example` nor
-`docs/guides/configuration.md` did, it emits a **non-blocking** reminder to
-keep the settings surface and its docs in sync. It never blocks the turn —
-not every config edit adds or renames a setting — so treat it as advisory.
-
-### Stop hook — migration reminder (automatic)
-
-Script at `.claude/hooks/migration-reminder.sh`. Also fires at the end of a
-dirty turn. If a `app/modules/*/models.py` changed but no new script was added
-under `alembic/versions/`, it emits a **non-blocking** reminder to run
-`just migrate-gen`. Like the config-drift hook it is advisory — some
-`models.py` edits (a docstring, a non-mapped attribute) need no migration.
-
-### Stop hook — `HTTPException` check (automatic)
-
-Script at `.claude/hooks/http-exception-check.sh`. Also fires at the end of a
-dirty turn. If a changed `app/modules/*/service.py` or `repository.py`
-references `HTTPException`, it emits a **non-blocking** reminder that service
-and repository code must raise a domain exception instead (the global
-handler only translates domain exceptions). Advisory, not blocking — a hit
-can be a false positive, e.g. a comment.
-
-### PostToolUse hook — auto-format Python (automatic)
-
-Configured in `.claude/settings.json`. Fires after any
-`Edit` / `Write` / `MultiEdit` tool call.
-
-When the edited file is a `.py` file, it runs `ruff format` on just that
-file, so formatting stays clean mid-turn instead of accumulating drift until
-the Stop hook runs at the end. It never blocks — it only reformats — and is a
-no-op for non-Python files.
-
-### PreToolUse hook — block sensitive files (automatic)
-
-Script at `.claude/hooks/block-sensitive.sh`. Fires before any
-`Edit` / `Write` / `MultiEdit` tool call, and before `Bash` commands that
-look like writes to the same files. The `Bash` check matches command text,
-so a command that merely names one of these paths next to an interpreter
-or a redirect is refused too — reword it rather than working around the
-guard.
-
-Refuses edits to:
-
-| File pattern | Reason |
-|---|---|
-| `.env`, `.env.*` (except `.env.example`) | Credential leak risk |
-| `uv.lock` | Must change via `uv add` / `uv remove` / `uv sync` |
+| File | Why |
+| :--- | :--- |
+| `.env`, `.env.*` (except `.env.example`, `.env.test`) | Credential leak risk |
+| `uv.lock` | Changes through `uv add` / `uv remove` / `uv lock` |
 | `alembic/versions/*.py` | Applied migrations must not be rewritten |
-| `docs/project/*.md` | Generated by `just docb` from a root file — edit the root, not the synced copy |
+| `docs/project/*.md` | Synced by `just docb`; edit the root file |
 
-### prek git hooks (automatic on commit / push)
+It matches `Bash` command text, so a command that only names one of
+these paths next to a redirect or interpreter is refused too. Reword the
+command rather than working around it.
 
-Configured in `prek.toml`, installed by `just setup`.
-
-| Event | What runs |
-|---|---|
-| `git commit` | ruff format, ruff check --fix, ty check |
-| `git push` | full pytest suite (requires Postgres running) |
-
----
+Outside Claude, `prek` runs ruff and `ty` on `git commit`, and the full
+test suite on `git push`.
 
 ## Plugins
 
-Enabled in `.claude/settings.json`. Activate on session start.
+Enabled in `.claude/settings.json`:
 
-### `commit-commands`
-
-Provides a `commit` skill that structures git commits following the
-project's Conventional Commits convention. Claude uses it automatically
-when asked to commit.
-
-### `pr-review-toolkit`
-
-**Invoke:** `/review-pr` (or `/review-pr <aspect>` to target one lens)
-
-Six specialized agents run in parallel against the current branch diff:
-
-| Agent | Focuses on |
-|---|---|
-| `code-reviewer` | Project guidelines, CLAUDE.md conventions |
-| `comment-analyzer` | Code comment quality |
-| `pr-test-analyzer` | Test coverage gaps |
-| `silent-failure-hunter` | Swallowed exceptions, bare `except`, missing error propagation |
-| `type-design-analyzer` | Type correctness and design |
-| `code-simplifier` | Clarity and maintainability |
-
-The `silent-failure-hunter` is particularly relevant here: the project's
-exception contract (always raise domain exceptions, never swallow errors)
-is exactly what it checks.
-
-### `security-guidance`
-
-Automatic — no invocation needed. A `PreToolUse` hook that scans file
-edits for security patterns (command injection, XSS, hardcoded secrets,
-unsafe deserialization) and injects a contextual warning into Claude's
-context when a risk is detected.
-
-### `claude-md-management`
-
-Two tools:
-
-**`/revise-claude-md`** — run at the end of a productive session. Reviews
-the conversation, extracts codebase learnings, and proposes targeted
-updates to `CLAUDE.md`.
-
-**`claude-md-improver` skill** — triggered by "audit CLAUDE.md",
-"check project memory". Scans all `CLAUDE.md` files, scores quality, and
-proposes improvements.
-
-### `claude-code-setup`
-
-Provides the `claude-automation-recommender` skill, which analyses the
-codebase and suggests new Claude Code automations (hooks, skills, MCP
-servers, plugins). Use it periodically or after adding a new major
-dependency.
-
----
+- **`commit-commands`** — Conventional Commits for the `commit` skill.
+- **`pr-review-toolkit`** — `/review-pr` runs six reviewers in parallel:
+  code, comments, tests, silent failures, type design, and
+  simplification. The silent-failure reviewer checks exactly the
+  "raise a domain exception, never swallow" rule.
+- **`security-guidance`** — warns during edits that look like injection,
+  XSS, hard-coded secrets, or unsafe deserialization.
+- **`claude-md-management`** — `/revise-claude-md` turns a session's
+  learnings into `CLAUDE.md` updates.
+- **`claude-code-setup`** — suggests new hooks, skills, and MCP servers
+  for the codebase.
 
 ## Subagents
 
-Project-local agents live in `.claude/agents/`. They run with their own
-context and a restricted toolset, separate from the `pr-review-toolkit`
-plugin agents above.
+Project agents in `.claude/agents/` run with their own context and a
+restricted toolset. Neither edits files.
 
-### `migration-reviewer`
-
-**Invoke:** "review this migration", "is this migration safe", or run it after
-`just migrate-gen` and before `just migrate-up`.
-
-Audits the newest autogenerated Alembic script against the project's
-schema-change checklist — autogen faithfulness, unrelated drift, NOT NULL
-backfills, type narrowing, enum ops, `downgrade()` reversibility, and
-server-vs-Python defaults — and returns an `APPROVE` / `CHANGES NEEDED` /
-`DO NOT APPLY` verdict. It mirrors the `api-db-migration` skill's checklist
-so the riskiest class of change gets a second pass before it lands.
-
-### `rbac-route-auditor`
-
-**Invoke:** "check auth coverage", "audit routes for missing
-require_roles", "is every route protected", or run it right after adding or
-editing routes.
-
-Scans `app/modules/*/routes.py` for endpoints that are neither protected by
-`require_roles(...)` nor deliberately public (a route in
-`app/modules/system/` marked `include_in_schema=False`). This is the
-single most-repeated warning across the `api-*` skills — a route without
-`require_roles()` compiles, runs, and returns 200 to anyone, since auth in
-this project is opt-in per route rather than default-deny. Reports findings
-with the exact fix; does not edit files.
-
----
+- **`migration-reviewer`** — checks the newest Alembic script against
+  the schema-change checklist and returns `APPROVE`, `CHANGES NEEDED`,
+  or `DO NOT APPLY`. Run it between `just migrate-gen` and
+  `just migrate-up`.
+- **`rbac-route-auditor`** — finds routes with neither
+  `require_roles()` nor a deliberate public marking. Auth is opt-in per
+  route, so a missing check returns 200 to anyone.
 
 ## MCP servers
 
-Configured in `.mcp.json` (committed — the whole team gets them).
+Configured in `.mcp.json`, so the whole team gets them.
 
-### context7
-
-Fetches **live SDK documentation** at query time. Eliminates the "Claude
-wrote SQLAlchemy 1.4 syntax" class of failure for libraries with breaking
-API changes in Claude's training window.
-
-Active for: FastAPI, SQLModel, SQLAlchemy 2.x async, Alembic, Pydantic v2,
-OpenTelemetry, structlog. No explicit invocation needed — Claude fetches docs
-automatically when working with these libraries.
-
-### postgres (read-only)
-
-Runs `@modelcontextprotocol/server-postgres` via `npx`, which executes every
-query inside a `READ ONLY` transaction — so Claude can introspect the live
-schema (tables, columns, indexes, constraints) before editing a model or
-reviewing a migration, but cannot mutate data. Connects to the local **dev**
-DB by default (`postgresql://postgres:postgres@localhost:5432/app_db`);
-override with the `QUOIN_MCP_DATABASE_URI` environment variable. **Never point
-it at production.** Requires the dev DB running (`just db`).
-
-> Chosen over `crystaldba/postgres-mcp` (`uvx`) because that package's
-> `pglast` dependency has no Python 3.14 wheel and fails to build in this
-> repo's toolchain. The npx reference server is build-free and read-only.
-
----
+- **context7** — fetches current docs for FastAPI, SQLModel, SQLAlchemy,
+  Alembic, Pydantic, OpenTelemetry, and structlog, so generated code
+  matches today's APIs.
+- **postgres** — read-only access to the local dev database, for
+  inspecting the live schema before a model change. It defaults to
+  `postgresql://postgres:postgres@localhost:5432/app_db`; override with
+  `QUOIN_MCP_DATABASE_URI`. Needs `just db`. **Never point it at
+  production.**
 
 ## Extending the setup
 
-- **New skill:** create `.claude/skills/api-<name>/SKILL.md`. Follow the
-  existing skills as a template. Trigger description is the most important
-  part — be specific about what phrases should invoke it.
-- **New hook:** add a script to `.claude/hooks/` and wire it in
-  `.claude/settings.json`. Pipe-test before committing.
-- **New subagent:** create `.claude/agents/<name>.md` with a `description`
-  (when to invoke) and a restricted `tools` list.
-- **New plugin:** add to `enabledPlugins` in `.claude/settings.json`.
-- **New MCP server:** add to `.mcp.json`. Commit so the team gets it.
-
-For broader automation ideas, run the `claude-automation-recommender`
-skill (say "recommend Claude automations for this project").
+- **Skill** — add `.claude/skills/api-<name>/SKILL.md`. The trigger
+  description matters most: name the phrases that should invoke it.
+- **Hook** — add a script to `.claude/hooks/` and wire it in
+  `.claude/settings.json`.
+- **Subagent** — add `.claude/agents/<name>.md` with a `description` and
+  a restricted `tools` list.
+- **Plugin or MCP server** — add it to `enabledPlugins` or `.mcp.json`
+  and commit.
 
 ## See Also
 
