@@ -128,16 +128,6 @@ just check
 
 This runs format → lint → typecheck → test; the task is done when it is green.
 
-## Conventions to keep in mind throughout
-
-These bite people often enough that they're worth restating here rather than buried in docs:
-
-- **100% type hints.** When you need to suppress a type error, write the bare `# type: ignore` — never `# type: ignore[arg-type]` or any other MyPy-style tag. The project uses `ty` (Pyright engine), which rejects unrecognized tag names.
-- **80-character line limit** for both Python and Markdown. Tables and code blocks are exempt. Lint tolerates up to 100 only so a generated project's longer settings prefix fits in prose; write to 80 regardless.
-- **Async-first.** Every DB call, repository method, and service method is `async def`. If you find yourself writing a sync function in a module, stop and reconsider.
-- **Google-style docstrings** on public functions and classes. The Ruff config enforces this.
-- **No raw `HTTPException`** in service or repository code — raise a domain exception and let the global handler translate it.
-
 ## When something doesn't fit the template
 
 The seven-file structure handles 95% of features. If your module genuinely needs more (e.g. a `tasks.py` for background jobs, a `events.py` for domain events), add the file alongside the others — don't fight the template. But check first whether the work actually belongs in an existing layer; "I need a helpers file" is usually a sign the service is doing too much.

@@ -55,7 +55,7 @@ Pinned by commit SHA in every file under `.github/workflows/`.
    in the `Dockerfile` *and* the `setup-uv` `version:` in every workflow —
    Dependabot bumps only the Dockerfile. `tests/test_tool_pins.py` fails
    until they match. Rerun `just audit`: it is a uv preview command.
-3. Mind the runner/toolchain matrix (e.g. Node 24 support) when a bump requires
+4. Mind the runner/toolchain matrix (e.g. Node 24 support) when a bump requires
    a newer runtime.
 
 ## Stale-reference sweep (the step that gets forgotten)

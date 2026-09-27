@@ -5,7 +5,6 @@ description: Use when cutting a QuoinAPI release — anything that ends in a
   the changelog. Not for editing the changelog mid-development, hotfix
   releases (`api-hotfix`), or writing notes for an already-tagged version.
 allowed-tools: Read, Edit, Bash
-model: haiku
 ---
 
 # Releasing QuoinAPI

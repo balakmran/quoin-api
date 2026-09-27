@@ -115,17 +115,6 @@ just check
 
 Format → lint → typecheck → test must all pass before you report done.
 
-## Conventions to keep in mind
-
-- **100% type hints**; suppress with a bare `# type: ignore` only — never a
-  MyPy-style tag like `# type: ignore[arg-type]` (the project uses `ty`).
-- **80-char line limit** for Python and Markdown (tables/code blocks exempt).
-  Lint tolerates up to 100 only so generated projects' longer settings
-  prefix fits; write to 80 regardless.
-- **Async-first** — every repository and service method is `async def`.
-- **Google-style docstrings** on the new public functions.
-- **No raw `HTTPException`** in service or repository code.
-
 ## Things that bite
 
 - **Adding the route but forgetting `require_roles()`** — the route then

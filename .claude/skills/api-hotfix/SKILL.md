@@ -5,7 +5,6 @@ description: Use when an urgent fix must ship on its own, outside the normal
   accumulated changes (`api-release`), or a fix that can wait for the next
   release (fix it and let `api-pre-pr` and `api-release` handle it).
 allowed-tools: Read, Edit, Bash
-model: haiku
 ---
 
 # Hotfixing a QuoinAPI Release
@@ -67,18 +66,22 @@ major bump, it's not a hotfix, it's a release; switch to `api-release`.
 Add a `### Fixed` entry under `## [Unreleased]` in `CHANGELOG.md` describing
 the fix's user-visible impact. Then promote it the same way `api-release`
 does: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and insert a
-fresh empty `## [Unreleased]` above it. **Only include this fix** — don't
-pull in unrelated `[Unreleased]` entries that happen to be sitting there
-from other in-progress work; those ship in the next normal release.
+fresh empty `## [Unreleased]` above it.
+
+The tag ships everything merged to `main`, so every entry already in
+`[Unreleased]` belongs in this release too. If one of them must not ship
+yet, or is more than a patch-level change, stop and ask the user before
+tagging.
 
 ### 6. Commit, merge, tag
 
 ```bash
-git add CHANGELOG.md pyproject.toml app/__init__.py
+git add CHANGELOG.md pyproject.toml app/__init__.py uv.lock
 git commit -m "fix: <short description of the critical fix>"
 ```
 
-Push the branch, merge to `main` (through PR review — a hotfix still gets
+`just bump` also changes `uv.lock`; leave it out and `prek` rejects the
+commit. Push the branch, merge to `main` (through PR review — a hotfix still gets
 reviewed, just fast), pull `main` locally, then:
 
 ```bash
@@ -97,9 +100,9 @@ Verify the release landed (Actions tab, GitHub Release page,
 
 - **Branching from a feature branch instead of `main`.** Pulls in unreviewed
   work alongside the fix — always branch from `main`.
-- **Bundling unrelated `[Unreleased]` entries into the hotfix changelog
-  section.** Only the fix being hotfixed belongs in that release; everything
-  else waits for the next normal release.
+- **Leaving merged `[Unreleased]` entries out of the hotfix section.** The
+  tag ships them anyway, so the changelog would hide what the release
+  contains.
 - **Skipping `just check` because it's urgent.** A hotfix that fails in
   production because CI was skipped is worse than a ten-minute delay.
 - **Using a minor/major bump.** If the fix isn't patch-level, it isn't a
