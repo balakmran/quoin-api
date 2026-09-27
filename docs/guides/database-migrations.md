@@ -1,277 +1,69 @@
 # Database Migrations
 
-This guide explains how to manage database schema changes using Alembic,
-the migration tool for SQLAlchemy and SQLModel.
-
----
-
-## Overview
-
-The application uses [Alembic](https://alembic.sqlalchemy.org/) to manage
-database schema migrations. All schema changes must be defined as SQLModel
-classes and captured in versioned migration scripts.
-
-!!! warning
-    **Never modify the database schema manually.** Always generate
-    migrations from code changes.
-
----
+Every schema change starts in a SQLModel class and ships as a reviewed
+[Alembic](https://alembic.sqlalchemy.org/) script. Never change the
+schema by hand. This page covers the everyday loop, then how to change a
+live table without downtime.
 
 ## Workflow
 
-```mermaid
-graph LR
-    A[Update SQLModel] --> B[Generate Migration]
-    B --> C[Review SQL]
-    C --> D[Apply Migration]
-    D --> E[Commit to Git]
-```
+1. **Change the model** in `app/modules/<module>/models.py`, for example
+   `phone: str | None = Field(default=None, max_length=20)`.
+2. **Generate the script:**
 
----
+   ```bash
+   just migrate-gen "add phone to users"
+   ```
 
-## Creating Migrations
+   Name the change, not the act: "create orders table", not "update
+   database". `migrate-gen` then runs
+   [the migration guard](#the-migration-guard) over the new file.
 
-### 1. Update Your Models
+3. **Read the script** in `alembic/versions/`. Autogenerate can't tell a
+   rename from a drop plus an add, and it doesn't know your table is
+   large. Check that `downgrade()` reverses `upgrade()`.
+4. **Apply it** with `just migrate-up`, and commit the script with the
+   model change.
 
-Modify your SQLModel classes in `app/modules/*/models.py`:
+SQLModel `str` columns render as `sqlmodel.sql.sqltypes.AutoString`; the
+`render_item` hook in `alembic/env.py` adds that import for you.
 
-```python
-# app/modules/user/models.py
-class User(SQLModel, table=True):
-    __tablename__ = "users"
+### Commands
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # Uniqueness is enforced case-insensitively via a functional index
-    # in __table_args__ (see the model file), not a column-level unique=True.
-    email: str = Field(index=True, max_length=255)
-    full_name: str | None = Field(default=None, max_length=255)
-    is_active: bool = Field(default=True)
-    # NEW: Add a phone number field
-    phone: str | None = Field(default=None, max_length=20)
-```
+| Command | Does |
+| :--- | :--- |
+| `just migrate-gen "msg"` | `alembic revision --autogenerate`, then the guard |
+| `just migrate-up` | `alembic upgrade head` |
+| `just migrate-down` | `alembic downgrade -1` |
+| `just migrate-check` | Upgrade, then `alembic check`; fails on model drift |
+| `just reset-db` | Recreate the database and apply every migration |
+| `uv run alembic history` / `current` | Show the chain, or the database's revision |
 
-### 2. Generate Migration Script
+`just migrate-check` runs inside `just check`, so a model change with no
+migration, down to a changed index or server default, fails the gate.
 
-Use the `just migrate-gen` command with a descriptive message:
+### Registering models
 
-```bash
-just migrate-gen "add phone field to users table"
-```
-
-This runs `alembic revision --autogenerate -m "message"` and creates a new
-migration file in `alembic/versions/`:
-
-```
-alembic/versions/abc123def456_add_phone_field_to_users_table.py
-```
-
-Immediately afterwards, `migrate-gen` runs the **migration guard**
-(`scripts/migration_guard.py`), which scans the new script and flags any
-operation that is unsafe to apply to a live, populated database. See
-[The migration guard](#the-migration-guard) below for what it catches and
-how to respond.
-
-### 3. Review the Generated SQL
-
-**Always review the generated migration** before applying it:
-
-```python
-# alembic/versions/abc123def456_add_phone_field_to_users_table.py
-def upgrade() -> None:
-    op.add_column("users", sa.Column("phone", sa.String(length=20)))
-
-
-def downgrade() -> None:
-    op.drop_column("users", "phone")
-```
-
-Common issues to check:
-
-- Data loss operations (e.g., dropping columns with data)
-- Missing NOT NULL constraints on new columns
-- Index creation on large tables (consider `CONCURRENTLY`)
-- Foreign key constraints
-
-!!! note "SQLModel string columns"
-    SQLModel `str` fields render as
-    `sqlmodel.sql.sqltypes.AutoString(...)`. The `render_item` hook in
-    [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py)
-    automatically adds the matching `import sqlmodel.sql.sqltypes` to any
-    migration that needs it, so generated scripts apply cleanly. You do
-    not need to add this import by hand.
-
-### 4. Apply the Migration
-
-```bash
-just migrate-up
-```
-
-This runs `alembic upgrade head` to apply all pending migrations.
-
-### 5. Commit to Git
-
-```bash
-git add alembic/versions/abc123def456_*.py
-git commit -m "feat(user): add phone field to user model"
-```
-
----
-
-## Alembic Commands
-
-All commands are wrapped in the [`justfile`](https://github.com/balakmran/quoin-api/blob/main/justfile):
-
-| Command                  | Alembic Equivalent                         | Description                  |
-| :----------------------- | :----------------------------------------- | :--------------------------- |
-| `just migrate-gen "msg"` | `alembic revision --autogenerate -m "msg"` | Generate migration           |
-| `just migrate-up`        | `alembic upgrade head`                     | Apply all pending migrations |
-| `just migrate-down`      | `alembic downgrade -1`                     | Rollback last migration      |
-| `just migrate-check`     | `alembic upgrade head && alembic check`    | Fail if a model change has no migration |
-| `just reset-db`          | (stop, restart, apply)                     | Reset database completely    |
-
-`just migrate-check` runs as part of `just check` (and so gates every
-PR): it upgrades the database to `head` and then asks Alembic to
-autogenerate against the current models. Any difference — a column,
-index, server default, or `nullable` change made in `models.py` without
-a matching migration — fails the build with the pending operations
-Alembic would have generated. The migration-backed test schema (see
-[Testing](testing.md)) catches a *missing column* already; `alembic
-check` catches the finer-grained drift that a full-table comparison
-misses, such as an index or a default added to an existing column.
-
-!!! note
-    `migrate-history` and `migrate-current` are not wrapped in `just`.
-    Run Alembic directly for these:
-
-    ```bash
-    uv run alembic history         # Show migration history
-    uv run alembic current         # Show current revision
-    ```
-
----
-
-## Configuration
-
-Alembic configuration is stored in [`alembic.ini`](https://github.com/balakmran/quoin-api/blob/main/alembic.ini)
-and [`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py).
-
-### Database URL
-
-The database URL is automatically loaded from environment variables via
-`Settings.DATABASE_URL`:
-
-```python
-# alembic/env.py
-from app.core.config import settings
-
-config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
-```
-
-### SQLModel Metadata
-
-Alembic discovers every table registered on `SQLModel.metadata`.
-`alembic/env.py` imports `app/db/base.py`, which is where each module's
-model is imported:
-
-```python
-# app/db/base.py
-from sqlmodel import SQLModel  # noqa
-
-# Import models here
-from app.modules.user.models import User  # noqa
-```
-
-`just new <module>` registers the router but not the model, so add the
-import here yourself (see
+Alembic sees only tables on `SQLModel.metadata`. `alembic/env.py`
+imports `app/db/base.py`, and that file imports each module's models.
+`just new <module>` does not add the import; add it yourself (see
 [Creating a Module](creating-a-module.md#10-import-the-model-for-migrations)).
-
----
-
-## Best Practices
-
-### Naming Migrations
-
-Use descriptive names that explain **what** changed:
-
-```bash
-# Good — names the change
-just migrate-gen "add email verification fields"
-just migrate-gen "create orders table"
-just migrate-gen "add index on user email"
-
-# Bad — tells a later reader nothing
-just migrate-gen "update database"
-just migrate-gen "changes"
-```
-
-### Handling Data Migrations
-
-For operations that require data transformation, use **two-step migrations**:
-
-**Step 1**: Add new column as nullable
-
-```python
-def upgrade() -> None:
-    op.add_column(
-        "users", sa.Column("email_verified", sa.Boolean(), nullable=True)
-    )
-```
-
-**Step 2**: Backfill data and add NOT NULL constraint
-
-```python
-def upgrade() -> None:
-    # Backfill data
-    op.execute(
-        "UPDATE users SET email_verified = false WHERE email_verified IS NULL"
-    )
-    # Add constraint
-    op.alter_column("users", "email_verified", nullable=False)
-```
-
-### Complex Migrations
-
-For complex changes, manually edit the generated migration:
-
-```python
-def upgrade() -> None:
-    # Create new table
-    op.create_table(
-        "user_profiles",
-        sa.Column("id", sa.UUID(), primary_key=True),
-        sa.Column("user_id", sa.UUID(), nullable=False),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-    )
-
-    # Migrate data from old structure
-    op.execute("""
-        INSERT INTO user_profiles (id, user_id, ...)
-        SELECT gen_random_uuid(), id, ... FROM users
-    """)
-```
-
----
+The database URL comes from `settings.DATABASE_URL`.
 
 ## Zero-Downtime Migrations
 
-In production the new application version and the old one overlap: during a
-rolling deploy, both run against the **same database** for a window of
-seconds to minutes. A migration is zero-downtime only if the schema is
-compatible with *both* versions throughout that window. The single rule
-that follows from this:
+During a rolling deploy the old and new app versions run against the
+**same database** for seconds to minutes, so the schema must suit both.
 
 !!! danger "The overlap rule"
     A migration must never break the application version that is **still
     running**. Anything that drops, renames, narrows, or hard-constrains a
     column the old code still touches will cause errors mid-deploy.
 
-The discipline that satisfies the rule is **expand/contract** (also called
-parallel-change).
-
 ### The expand/contract pattern
 
-Split every breaking schema change across **multiple deploys** so the
-database is always compatible with the code on either side of a rollout:
+Split every breaking change across **several deploys**, so the database
+always suits the code on both sides of a rollout:
 
 ```mermaid
 graph LR
@@ -355,21 +147,17 @@ def upgrade() -> None:
     )
 ```
 
-!!! warning "CONCURRENTLY needs a non-transactional migration"
-    `CREATE INDEX CONCURRENTLY` cannot run inside a transaction. Set
-    `# revision = ...` aside and disable the per-migration transaction for
-    that script (`op.get_context().autocommit_block()` or run it as a
-    standalone migration), or the build will error.
+
+`CREATE INDEX CONCURRENTLY` can't run inside a transaction, so wrap the
+call in `with op.get_context().autocommit_block():`, or the migration
+errors.
 
 ### The migration guard
 
-`just migrate-gen` runs `scripts/migration_guard.py` against the script it
-just generated and prints **advisory** flags for unsafe operations. It is
-non-blocking — it never stops the workflow; it surfaces what to review.
-
-It parses the migration's AST — so multi-line calls are matched as whole
-statements, and operations nested inside an `op.batch_alter_table(...)`
-block are caught too — and flags:
+`just migrate-gen` runs `scripts/migration_guard.py` on the new script
+and prints advisory flags; it never blocks. It reads the script's AST,
+so multi-line calls and operations inside `op.batch_alter_table(...)`
+are caught too.
 
 | Operation | Why it's flagged |
 | :-------- | :--------------- |
@@ -380,129 +168,58 @@ block are caught too — and flags:
 | `add_column(..., nullable=False)` without a real `server_default` | Fails on a populated table |
 | `create_index` / `drop_index` without `postgresql_concurrently=True` | Takes a blocking lock |
 | `op.execute(...)` with a `DELETE FROM`, `TRUNCATE`, or `DROP <object>` statement | Destructive raw SQL |
-| `op.execute(...)` with an `UPDATE ... SET` and no `WHERE` | Rewrites every row, even rows already correct; bounds nothing on a large table |
+| `op.execute(...)` with an `UPDATE ... SET` and no `WHERE` | Rewrites every row on a large table |
 
-Operation rows match calls on `op` and on the variable bound by a
-`batch_alter_table` block (conventionally `batch_op`).
+The safe forms aren't flagged: a real `server_default` (an explicit
+`server_default=None` still is), `postgresql_concurrently=True`, and
+`existing_nullable=False` on a type change. Commented-out code and SQL
+keywords inside string data are ignored.
 
-It deliberately does **not** flag the safe escape hatches: a column added
-with a real `server_default` (an explicit `server_default=None` is treated
-as *no* default and is still flagged), an index built
-`postgresql_concurrently=True`, or Alembic's `existing_nullable=False`
-context on a type change. Commented-out operations — and `DROP` / `DELETE` /
-`TRUNCATE` appearing only inside string data, such as `'Drop-off point'` —
-are ignored.
-
-A flag is a prompt, not a verdict. If you intend the change and have a
-maintenance window (or the table is small and empty), proceed. Otherwise
-split it into an expand/contract sequence using the recipes above. You can
-re-run the guard manually on any script:
+A flag is a prompt, not a verdict. On a small or empty table, or with a
+maintenance window, go ahead; otherwise split the change using the
+recipes above. Re-run the guard on any script with:
 
 ```bash
 uv run python scripts/migration_guard.py alembic/versions/<file>.py
 ```
 
----
-
 ## Production Deployments
 
-The image already contains `alembic/` and `alembic.ini` but does not run
-them on start.
-
-### Option 1: Separate Migration Job (recommended)
-
-Run migrations as a one-off job from the same image before rolling out
-the new version. Only one process migrates, however many replicas start
-afterwards:
+The image contains `alembic/` and `alembic.ini` but doesn't run them on
+start. Run them as a one-off job from the same image before rolling out,
+so only one process migrates however many replicas follow:
 
 ```bash
-# Kubernetes Job
 kubectl run migrations --image=quoin-api:latest --command -- alembic upgrade head
-
-# Docker
 docker run --rm --env-file production.env quoin-api:latest alembic upgrade head
 ```
 
-### Option 2: Run Migrations on Container Start
+Running `alembic upgrade head` in the container's start command is
+simpler for a single instance, but every replica races to migrate.
 
-Simpler for a single instance, but every replica races to migrate:
-
-```dockerfile
-CMD ["sh", "-c", "alembic upgrade head && fastapi run app/main.py --host 0.0.0.0 --port 8000"]
-```
-
----
-
-## Rollback Strategy
-
-### Rolling Back Migrations
-
-```bash
-# Rollback last migration
-just migrate-down
-
-# Rollback to specific revision
-uv run alembic downgrade abc123def456
-```
-
-### Testing Rollbacks
-
-Always test that `downgrade()` works:
-
-```bash
-# Test upgrade/downgrade cycle
-just migrate-up
-just migrate-down
-just migrate-up
-```
-
----
+To roll back, `just migrate-down` steps back once and
+`uv run alembic downgrade <revision>` goes to a given revision. The test
+suite runs every `downgrade()` at teardown, so a rollback that doesn't
+work fails `just check` first.
 
 ## Testing
 
-You don't write tests for your migrations. The suite already runs them:
-`initialize_db` builds the test schema by applying the full chain with
-`alembic upgrade head`, and tears it down with `downgrade base`.
-
-Two classes of bug fall out of that for free. A model change with no
-matching migration fails the whole suite, because the schema the tests
-run against is built from the migrations and won't have your column. And
-a down-migration that doesn't reverse its up-migration fails in teardown
-— the half of every script that is otherwise never executed until the
-day you need it at 3am.
-
-`just check` also runs `alembic check`, which compares your models
-against the migration chain and fails on drift before anything reaches
-CI.
+You don't write tests for your migrations; the suite runs them.
+`initialize_db` builds the test schema with `alembic upgrade head` and
+tears it down with `downgrade base`. So a model change with no migration
+fails the suite, and so does a `downgrade()` that doesn't reverse its
+`upgrade()`. `just check` adds `alembic check` for finer drift.
 
 What's left to you is the **data** a migration moves. A schema-only
-migration needs no test; one with a backfill, a type change, or a
-computed default does. Seed rows in the old shape, run the upgrade, and
-assert the new shape — including the rows that were `NULL`, empty, or
-already correct, which is where backfills go wrong.
-
-`just migrate-gen` runs `scripts/migration_guard.py` over the generated
-script automatically and flags what is unsafe against a live table:
-dropped columns and tables, `SET NOT NULL` on an existing column, a
-`NOT NULL` column added without a server default, `CREATE INDEX` without
-`CONCURRENTLY`, and `UPDATE` without a `WHERE`. A flag is a prompt to
-split the change across releases, not an error — but review it before
-you apply, since none of it will hurt on an empty dev database and all
-of it will in production.
+migration needs no test; a backfill, type change, or computed default
+does. Seed rows in the old shape, run the upgrade, and assert the new
+shape, including rows that were `NULL`, empty, or already correct.
 
 ## Troubleshooting
 
 ### "Target database is not up to date"
 
-```
-FAILED: Target database is not up to date.
-```
-
-**Solution**: Apply pending migrations first:
-
-```bash
-just migrate-up
-```
+The database is behind the code. Run `just migrate-up`.
 
 ### "Can't locate revision" or multiple heads
 
@@ -521,48 +238,19 @@ migration that a shared database has applied.
 
 ### Autogenerate Doesn't Detect Changes
 
-Common causes:
-
-1. **Model not imported** in `app/db/base.py`
-2. **Schema change not saved** — ensure you've saved the model file before
-   running autogenerate
-3. **SQLModel metadata not set** as target_metadata
-
-**Solution**: Add the import to [`app/db/base.py`](https://github.com/balakmran/quoin-api/blob/main/app/db/base.py):
-
-```python
-from app.modules.user.models import User  # noqa
-from app.modules.product.models import Product  # noqa
-```
+The model isn't imported in `app/db/base.py`, so it isn't on
+`SQLModel.metadata`. Add the import (see
+[Registering models](#registering-models)).
 
 ### "NameError: name 'sqlmodel' is not defined"
 
-A migration that adds or alters a SQLModel `str` column references
-`sqlmodel.sql.sqltypes.AutoString(...)` and fails on `just migrate-up`.
-
-**Solution**: This is handled automatically by the `render_item` hook in
-[`alembic/env.py`](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py),
-which emits the required `import sqlmodel.sql.sqltypes`. If you hit this,
-your `env.py` predates the hook — re-add it, or add the import to the
-affected migration by hand.
-
----
-
-## Quick Reference
-
-| Task                         | Command                        |
-| ---------------------------- | ------------------------------ |
-| Generate migration           | `just migrate-gen "message"`   |
-| Apply migrations             | `just migrate-up`              |
-| Rollback one step            | `just migrate-down`            |
-| View history                 | `uv run alembic history`       |
-| View current revision        | `uv run alembic current`       |
-| Stamp head (without running) | `uv run alembic stamp head`    |
-
----
+Your `alembic/env.py` predates the `render_item` hook that adds
+`import sqlmodel.sql.sqltypes`. Restore the hook, or add the import to
+the affected migration by hand.
 
 ## See Also
 
+- [Creating a Module](creating-a-module.md) — where a new model comes
+  from
+- [Deployment](deployment.md) — rolling out alongside a migration
 - [Alembic Documentation](https://alembic.sqlalchemy.org/)
-- [SQLModel Documentation](https://sqlmodel.tiangolo.com/)
-- [alembic/env.py](https://github.com/balakmran/quoin-api/blob/main/alembic/env.py) — Migration configuration
