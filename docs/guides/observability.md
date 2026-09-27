@@ -579,6 +579,11 @@ misconfigured exporter can't take the app down tests your code.
 QUOIN_LOG_LEVEL=WARNING  # Only warnings and errors
 ```
 
+### Tracing Slows Requests
+
+A slow or unreachable OTLP collector is the usual cause in production.
+Locally, turn tracing off with `QUOIN_OTEL_ENABLED=False`.
+
 ---
 
 ## See Also
