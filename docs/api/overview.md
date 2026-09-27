@@ -162,5 +162,7 @@ async with httpx.AsyncClient(headers=headers) as client:
 - [Architecture Overview](../architecture/overview.md) — How components
   fit together
 - [Conventions](conventions.md) — Routing and versioning rules
+- [Configuration](../guides/configuration.md) — Every `QUOIN_` setting
+  and its default
 - [Error Handling](../guides/error-handling.md) — Exception patterns
 - [Testing](../guides/testing.md) — How to test the API
