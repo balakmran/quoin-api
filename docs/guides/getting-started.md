@@ -119,15 +119,32 @@ Understanding the project layout will help you navigate the codebase.
 
 ## What's Next?
 
-Now that the app is running, here are the logical next steps:
+Replace the `user` example with your first real feature. Each step is
+one command and one guide:
 
-| Task | Guide |
-| :--- | :---- |
-| Add a new feature module | [Creating a Module](creating-a-module.md) |
-| Change environment settings | [Configuration](configuration.md) |
-| Add a database column | [Database Migrations](database-migrations.md) |
-| Write tests | [Testing](testing.md) |
-| Explore the live API | [localhost:8000/docs](http://localhost:8000/docs) |
-| Work with Claude Code | [AI-Assisted Development](ai-setup.md) |
-| Fix something that won't start | [Troubleshooting](troubleshooting.md) |
-| Take a later template release | [Staying Current](staying-current.md) |
+1. **Scaffold a module.** `just new product` creates every layer and
+   registers the routes; fill them in with
+   [Creating a Module](creating-a-module.md).
+2. **Give it a table.** Add fields to `models.py`, import the model in
+   `app/db/base.py`, then `just migrate-gen "add products"` and
+   `just migrate-up`. See [Database Migrations](database-migrations.md).
+3. **Protect its routes.** Add `require_roles("products.read")` to each
+   route; a route without it is open to any caller. See
+   [Authentication](authentication.md).
+4. **Test it.** Drive the routes with `admin_client` against the real
+   database. See [Testing](testing.md).
+5. **Pass the gate.** `just check` runs what CI runs. See
+   [Quality Checks](quality-checks.md).
+6. **Ship it.** Build the image and run migrations as a job. See
+   [Deployment](deployment.md).
+
+Using Claude Code? Ask it to "add a product module" and the
+`api-new-module` skill walks you through steps 1 to 5; see
+[AI-Assisted Development](ai-setup.md).
+
+Along the way:
+
+- [Configuration](configuration.md) — every `QUOIN_` setting
+- [Troubleshooting](troubleshooting.md) — when something won't start
+- [Staying Current](staying-current.md) — taking a later template
+  release
