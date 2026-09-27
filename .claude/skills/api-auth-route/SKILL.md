@@ -1,6 +1,10 @@
 ---
 name: api-auth-route
-description: Use this skill whenever the user wants to add authentication or role-based access control to a QuoinAPI endpoint, change which roles are required for an endpoint, protect a new route, expose a route as public, or generally touch the auth surface of routes in `app/modules/*/routes.py`. Triggers include phrases like "protect this endpoint", "add RBAC", "require the X role", "this endpoint should be admin-only", "let read-only users hit this", "make this route public", "who is the caller in this endpoint", or any request that implies a `require_roles(...)` change. Do NOT use for changing the authentication mechanism itself (JWKS, token validation), adding new core security primitives (`app/core/security.py`), or OAuth provider configuration.
+description: Use when adding, changing, or removing role-based access on
+  QuoinAPI routes — protecting a route with `require_roles(...)`, changing
+  which roles it needs, making a route public, or using the caller's identity
+  inside a handler. Not for the authentication mechanism itself (JWKS, token
+  validation, `app/core/security.py`) or OAuth provider configuration.
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 

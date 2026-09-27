@@ -1,13 +1,9 @@
 ---
 name: api-coverage
-description: Use this skill whenever the user wants to raise or close test
-  coverage on existing QuoinAPI code — driving a module to 100%, filling the
-  gaps in a coverage report, or covering specific missing lines/branches.
-  Triggers include "make coverage 100%", "get this to 100%", "fill the
-  coverage gaps", "cover the missing lines", "improve coverage", "why is this
-  line uncovered", or pasting a `pytest --cov` / coverage table with a
-  `Missing` column. Do NOT use for scaffolding a brand-new module's test suite
-  from scratch (that is `api-write-tests`) or for configuring pytest itself.
+description: Use when raising test coverage on existing QuoinAPI code —
+  closing the gaps in a coverage report, covering specific missing lines or
+  branches, or explaining why a line is uncovered. Not for a new module's
+  first test suite (`api-write-tests`) or pytest configuration.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -21,8 +17,7 @@ mechanics; this skill is about the loop and the judgement calls.
 
 ## Prerequisites
 
-Postgres must be running. `just test` now auto-starts it (via `_db-check`), so
-just run the suite — no separate `just db` step needed.
+Postgres must be running; `just test` starts it if it isn't.
 
 ## The loop
 

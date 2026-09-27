@@ -1,6 +1,10 @@
 ---
 name: api-new-module
-description: Use this skill whenever the user wants to add a new feature module, domain, or resource to the QuoinAPI codebase. Triggers include phrases like "add a product module", "scaffold an orders feature", "create a new resource for X", "set up a payments module", "I want to add a new domain for Y", or any request that implies creating a fresh `app/modules/<name>/` package with its own model, schemas, service, repository, routes, and tests. Do NOT use for adding fields/columns to an existing model (that is a migration task), editing an existing module, or adding a single new endpoint to a module that already exists — only for greenfield modules where the directory doesn't yet exist.
+description: Use when creating a new QuoinAPI feature module — a new domain or
+  resource that needs its own `app/modules/<name>/` package with model,
+  schemas, service, repository, routes, and tests. Not for changing an
+  existing module, adding a column (`api-db-migration`), or adding one
+  endpoint to an existing module (`api-add-endpoint`).
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
@@ -16,7 +20,7 @@ A QuoinAPI feature is a self-contained DDD module under `app/modules/<name>/` wi
 
 ## Workflow
 
-Work top-to-bottom. Each step has a reason — don't skip layers, and don't leave a step half-done before moving on.
+Work top-to-bottom; each layer builds on the one before it.
 
 ### 1. Scaffold the skeleton
 
@@ -122,7 +126,7 @@ Coverage must reach **100%** — `just check` fails below it. Cover the happy pa
 just check
 ```
 
-This runs format → lint → typecheck → test. Fix anything that fails before reporting the task complete. Don't skip this — the project's contract is that `just check` is green at every commit.
+This runs format → lint → typecheck → test; the task is done when it is green.
 
 ## Conventions to keep in mind throughout
 

@@ -1,6 +1,10 @@
 ---
 name: api-add-endpoint
-description: Use this skill whenever the user wants to add a single new endpoint (route) to an existing QuoinAPI module — a new operation on a resource that already has its own `app/modules/<name>/` package. Triggers include phrases like "add an endpoint to the user module", "add a GET /users/by-email route", "expose a search endpoint on products", "add a deactivate action to users", "add a bulk-create route", or any request to add one route plus the service/repository/schema plumbing behind it. Do NOT use for scaffolding a brand-new module whose directory doesn't exist yet (that is `api-new-module`), changing only the auth/`require_roles` on an existing route (that is `api-auth-route`), or altering the DB schema/columns (that is `api-db-migration`).
+description: Use when adding one new route to a QuoinAPI module that already
+  exists under `app/modules/<name>/`, together with the schema, repository,
+  and service code behind it. Not for a module that doesn't exist yet
+  (`api-new-module`), changing only a route's roles (`api-auth-route`), or a
+  schema or column change (`api-db-migration`).
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 
@@ -24,7 +28,6 @@ the surrounding code's shape exactly — naming, docstring style, the
 - Decide whether the operation needs a DB schema change (a new column, a new
   index to support a query). If it does, that is a separate
   `api-db-migration` task — do it first, then come back here.
-- Make sure the DB is up (`just db`) so tests can run.
 
 ## Workflow
 
