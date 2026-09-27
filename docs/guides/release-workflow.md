@@ -1,7 +1,8 @@
 # Release Workflow
 
-This guide covers version management, release tagging, and the changelog
-process.
+Cut a release in five steps: curate the changelog, bump the version,
+date the changelog heading, merge, and run `just tag`, which also
+publishes the GitHub release.
 
 ## Semantic Versioning
 
@@ -10,8 +11,6 @@ We follow [Semantic Versioning (SemVer)](https://semver.org/) for all releases:
 - **MAJOR** version (1.0.0 → 2.0.0) - Breaking changes
 - **MINOR** version (1.0.0 → 1.1.0) - New features (backward compatible)
 - **PATCH** version (1.0.0 → 1.0.1) - Bug fixes (backward compatible)
-
----
 
 ## Release Workflow Diagram
 
@@ -28,8 +27,6 @@ graph TD
     F --> G[Copier Update Check<br/>automatic]
 %% /template-only
 ```
-
----
 
 ## Release Process
 
@@ -50,8 +47,6 @@ Before bumping the version, document your changes in `CHANGELOG.md`:
 ```
 
 Follow the [Keep a Changelog](https://keepachangelog.com/) format.
-
----
 
 ### 2. Bump Version
 
@@ -75,8 +70,6 @@ This command automatically:
 
 It refuses to run if the two files disagree. For release candidates, see
 [Pre-releases](#pre-releases).
-
----
 
 ### 3. Update Changelog Version
 
@@ -105,8 +98,6 @@ git add CHANGELOG.md
 git commit -m "docs: update changelog for v1.2.0"
 ```
 
----
-
 ### 4. Create Release Tag
 
 After merging the version bump to `main`, create and push a Git tag:
@@ -129,8 +120,6 @@ This command:
 Both halves are idempotent, so re-running after a partial failure is
 safe: an existing tag is not recreated, and an existing release is left
 alone rather than aborting the run.
-
----
 
 ### 5. GitHub Release
 
@@ -162,8 +151,6 @@ The tag itself (not the GitHub Release) is what `copier copy`,
 
 View tags at:
 [https://github.com/balakmran/quoin-api/tags](https://github.com/balakmran/quoin-api/tags)
-
----
 
 <!-- template-only -->
 
@@ -197,8 +184,6 @@ You can run the same check locally before tagging:
 just verify-template-update v0.8.0 v0.9.0 --check
 ```
 
----
-
 <!-- /template-only -->
 
 ## Conventional Commits
@@ -224,8 +209,6 @@ git commit -m "fix(db): resolve connection pool timeout"
 git commit -m "docs: update deployment guide"
 ```
 
----
-
 ## Release Checklist
 
 Before creating a release:
@@ -242,8 +225,6 @@ Before creating a release:
       [above](#6-copier-update-verification-automatic))
 <!-- /template-only -->
 - [ ] Documentation is deployed
-
----
 
 ## Hotfix Releases
 
@@ -273,8 +254,6 @@ For critical bug fixes that need immediate release:
    ```bash
    just tag
    ```
-
----
 
 ## Pre-releases
 
@@ -311,8 +290,6 @@ finals:
 | `v1.0.1` | `v1.0.0`, `v0.16.0` |
 
 <!-- /template-only -->
-
----
 
 ## See Also
 
