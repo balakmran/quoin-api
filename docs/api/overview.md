@@ -107,26 +107,6 @@ Available in non-production environments:
 
 ---
 
-## Module Index
-
-| Module                     | Description          | Reference                         |
-| :------------------------- | :------------------- | :-------------------------------- |
-| `app.core.config`           | Application settings | [Core](core.md#configuration)     |
-| `app.core.exceptions`       | Domain exceptions    | [Core](core.md#exceptions)        |
-| `app.core.security`         | Auth and RBAC        | [Core](core.md#security)          |
-| `app.core.middlewares`      | Middleware stack     | [Core](core.md#middlewares)       |
-| `app.core.lifecycle`        | Shutdown drain       | [Core](core.md#lifecycle)         |
-| `app.core.pagination`       | Page and PageParams  | [Core](core.md#pagination)        |
-| `app.core.versioning`       | Deprecation helper   | [Core](core.md#versioning)        |
-| `app.core.openapi`          | Schema and tags      | [Core](core.md#openapi)           |
-| `app.modules.user.models`   | User database model  | [User](user.md#models)            |
-| `app.modules.user.schemas`  | User API schemas     | [User](user.md#schemas)           |
-| `app.modules.user.service`  | User business logic  | [User](user.md#service)           |
-| `app.modules.user.routes`   | User endpoints       | [User](user.md#routes)            |
-| `app.modules.system.routes` | Probes, landing page | [System](system.md#routes)        |
-
----
-
 ## Usage Examples
 
 ### Create a User

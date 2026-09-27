@@ -73,19 +73,14 @@ tokens are validated and how to protect your own routes.
 
 ## Common Recipes
 
-`just` is the task runner. The commands you'll reach for most:
+`just` runs every task. Quick Start and [What's Next?](#whats-next)
+show the everyday commands; these fill the gaps:
 
 | Command | What it does |
 | :--- | :--- |
-| `just setup` | Install deps and wire commit hooks — run once |
-| `just dev` | Start Postgres, mock OAuth, apply migrations, and run the server |
 | `just db` / `just oauth` | Start only Postgres, or only the mock OAuth server |
-| `just new <module>` | Scaffold and register a complete DDD module |
-| `just check` | Run format → lint → typecheck → migration check → test in one gate |
-| `just migrate-gen "<msg>"` | Generate an Alembic migration from your model changes |
-| `just token` | Mint a signed JWT against the local mock OAuth server |
-
-!!! tip "Run `just --list` for the full menu."
+| `just token --roles="..."` | Mint a signed JWT from the mock OAuth server |
+| `just --list` | Show every recipe |
 
 ## Project Structure
 
