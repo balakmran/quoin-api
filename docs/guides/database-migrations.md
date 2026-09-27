@@ -504,17 +504,20 @@ FAILED: Target database is not up to date.
 just migrate-up
 ```
 
-### "Can't locate revision identified by 'xyz'"
+### "Can't locate revision" or multiple heads
 
-**Solution**: The migration history is out of sync. Check:
+Two branches each added a migration off the same parent, or the database
+is stamped with a revision this checkout doesn't have. Compare:
 
 ```bash
-# What migrations exist in code?
-ls alembic/versions/
-
-# What revision is the database at?
+uv run alembic heads    # more than one line means two heads
 uv run alembic current
 ```
+
+For two heads, point one migration's `down_revision` at the other if it
+hasn't been applied anywhere; otherwise join them with
+`uv run alembic merge -m "merge heads" <rev1> <rev2>`. Never delete a
+migration that a shared database has applied.
 
 ### Autogenerate Doesn't Detect Changes
 

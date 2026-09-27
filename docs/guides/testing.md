@@ -526,33 +526,27 @@ enforce the identical gate.
 
 ## Debugging Failed Tests
 
-Run pytest through `uv run` so it uses the project environment. Start
-the database first with `just db`; `just test` does it for you.
-
-### Verbose Output
+Run pytest through `uv run`, with Postgres up (`just db`; `just test`
+starts it for you):
 
 ```bash
-uv run pytest -vv
+uv run pytest -vv          # verbose
+uv run pytest -s           # show print output
+uv run pytest --pdb        # drop into the debugger on failure
+uv run pytest --lf         # re-run only the last failures
 ```
 
-### Show Print Statements
+### Common failures
 
-```bash
-uv run pytest -s
-```
-
-### Drop into Debugger
-
-```bash
-uv run pytest --pdb
-```
-
-### Re-run Failed Tests
-
-```bash
-uv run pytest --lf  # last failed
-uv run pytest --ff  # failed first
-```
+- **`Event loop is closed`** — an async resource was built at module
+  level or in a sync fixture, so it sits on another loop. Declare tests
+  and fixtures as plain `async def` and take the shared fixtures instead
+  of building your own engine.
+- **`fixture '...' not found`** — the shared fixtures are `db_session`,
+  `client`, `read_client`, and `admin_client` in `tests/conftest.py`;
+  define anything else in the nearest `conftest.py`.
+- **State leaks between tests** — the test wrote through a session other
+  than `db_session`, so its SAVEPOINT rollback didn't cover it.
 
 ---
 
