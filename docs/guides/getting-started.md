@@ -1,37 +1,45 @@
 # Getting Started
 
-Clone the project, start the stack, and make your first authenticated
-request.
+Start the stack and make your first authenticated request.
 
 ## Prerequisites
 
-Ensure you have the following tools installed:
+[Git](https://git-scm.com/), [uv](https://docs.astral.sh/uv/) (it
+installs Python 3.12+ for you), [just](https://github.com/casey/just),
+and [Docker](https://www.docker.com/) for Postgres and the mock OAuth
+server.
 
-- **[Git](https://git-scm.com/)**: Version control system.
-- **[Python 3.12+](https://www.python.org/downloads/)**: The programming
-  language used.
-- **[uv](https://github.com/astral-sh/uv)**: A fast Python package
-  installer and manager.
-- **[just](https://github.com/casey/just)**: A handy command runner for
-  project tasks.
-- **[Docker](https://www.docker.com/)**: Required for running the
-  database and services.
+<!-- template-only -->
+
+## Create Your Project
+
+QuoinAPI is a [Copier](https://copier.readthedocs.io/) template: you
+generate your own project from it rather than cloning it.
+
+```bash
+uvx copier copy --trust gh:balakmran/quoin-api my-api
+cd my-api
+git init    # the commit hooks need a repository
+```
+
+Copier asks for a project name, settings prefix, and author details,
+then rewrites the project to match. Keep the name to 30 characters or
+fewer. `--trust` lets the post-generation script run; read
+`scripts/copier_setup.py.jinja` first if you want to see what it does.
+
+To work on the template itself instead, see
+[Contributing](../project/contributing.md).
+
+<!-- /template-only -->
 
 ## Quick Start
 
+From the project root:
+
 ```bash
-# 1. Clone the Repository
-git clone https://github.com/balakmran/quoin-api.git
-cd quoin-api
-
-# 2. Configure Environment
-cp .env.example .env
-
-# 3. Setup Project (installs deps & git hooks)
-just setup
-
-# 4. Start DB + mock OAuth, Apply Migrations, and Run the Server
-just dev
+cp .env.example .env   # development settings
+just setup             # install dependencies and git hooks
+just dev               # start Postgres + mock OAuth, migrate, serve
 ```
 
 Visit [http://localhost:8000](http://localhost:8000) — the home page
@@ -122,3 +130,4 @@ Now that the app is running, here are the logical next steps:
 | Explore the live API | [localhost:8000/docs](http://localhost:8000/docs) |
 | Work with Claude Code | [AI-Assisted Development](ai-setup.md) |
 | Fix something that won't start | [Troubleshooting](troubleshooting.md) |
+| Take a later template release | [Staying Current](staying-current.md) |
