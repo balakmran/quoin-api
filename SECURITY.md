@@ -105,6 +105,6 @@ The controls this project ships, and how they are configured:
 - [Dependency Scanning](docs/guides/dependency-scanning.md) —
   `just audit` for on-demand CVE scanning of the locked tree;
   Dependabot and GitHub-native secret scanning; SHA-pinned Actions;
-  digest-pinned build tooling.
+  version-pinned build tooling.
 - [Authentication guide](docs/guides/authentication.md) — OIDC/JWT
   validation and `require_roles` RBAC.
