@@ -12,6 +12,7 @@ these assertions against a workflow the template no longer maintains.
 """
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -32,6 +33,10 @@ TAGS = (
     "v1.0.1",
 )
 
+# Git hooks export GIT_DIR and friends; inherited, they point every
+# git call at this repo instead of the throwaway one.
+GIT_ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
 pytestmark = pytest.mark.skipif(
     not SETUP_TEMPLATE.is_file(),
     reason="only the template repository maintains the update check",
@@ -51,14 +56,15 @@ def tagged_repo(tmp_path_factory: pytest.TempPathFactory) -> Path:
         "-c",
         "commit.gpgsign=false",
     ]
-    subprocess.run([*git, "init", "-q"], cwd=repo, check=True)
+    subprocess.run([*git, "init", "-q"], cwd=repo, check=True, env=GIT_ENV)
     subprocess.run(
         [*git, "commit", "-q", "--allow-empty", "--no-verify", "-m", "x"],
         cwd=repo,
         check=True,
+        env=GIT_ENV,
     )
     for tag in TAGS:
-        subprocess.run([*git, "tag", tag], cwd=repo, check=True)
+        subprocess.run([*git, "tag", tag], cwd=repo, check=True, env=GIT_ENV)
     return repo
 
 
@@ -96,6 +102,7 @@ def test_update_check_verifies_from_two_baselines(
     result = subprocess.run(
         ["bash", "-c", script],
         cwd=tagged_repo,
+        env=GIT_ENV,
         capture_output=True,
         text=True,
         check=True,
