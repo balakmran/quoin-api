@@ -30,7 +30,7 @@ def _workflows() -> list[Path]:
 
 WORKFLOWS = _workflows()
 
-_UV_IMAGE = re.compile(r"ghcr\.io/astral-sh/uv:(\S+?)@sha256:[0-9a-f]{64}")
+_UV_IMAGE = re.compile(r"ghcr\.io/astral-sh/uv:(\S+)")
 _SETUP_UV = re.compile(
     r"uses: astral-sh/setup-uv@\S+.*\n\s+with:\n(?:\s+#.*\n)*"
     r"\s+version: \"([^\"]+)\""
@@ -40,7 +40,7 @@ _SETUP_UV = re.compile(
 def _dockerfile_uv_version() -> str:
     """Return the uv version the Dockerfile copies its binary from."""
     match = _UV_IMAGE.search(DOCKERFILE.read_text(encoding="utf-8"))
-    assert match is not None, "Dockerfile has no digest-pinned uv image"
+    assert match is not None, "Dockerfile has no version-pinned uv image"
     return match.group(1)
 
 
@@ -53,16 +53,3 @@ def test_workflows_install_the_dockerfile_uv(workflow: Path) -> None:
 
     assert len(versions) == uses, f"{workflow.name}: setup-uv without version"
     assert set(versions) <= {_dockerfile_uv_version()}
-
-
-def test_dockerfile_base_images_are_digest_pinned() -> None:
-    """Every `FROM` names an immutable digest, not only a mutable tag."""
-    from_lines = [
-        line
-        for line in DOCKERFILE.read_text(encoding="utf-8").splitlines()
-        if line.startswith("FROM ")
-    ]
-
-    assert from_lines
-    for line in from_lines:
-        assert re.search(r"@sha256:[0-9a-f]{64}", line), line

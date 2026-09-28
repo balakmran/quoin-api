@@ -137,9 +137,9 @@ will be installed — rather than the declared ranges.
 ### What it does not cover
 
 `uv audit` scans Python packages only. The **OS packages in the
-container base image** (`python:3.14-slim-bookworm`) are outside its
-scope, and Dependabot's `docker` ecosystem bumps the pinned tag and
-digest without scanning the resulting image. Nothing in this repo closes
+container base image** (`python:3.14-slim`) are outside its scope, and
+Dependabot's `docker` ecosystem bumps the pinned tags without scanning
+the resulting image. Nothing in this repo closes
 that gap by design — the template does not build or publish an image, so
 image scanning belongs in whatever pipeline does. If you publish a
 container, add an image scanner (Trivy, Grype, or your registry's built-in

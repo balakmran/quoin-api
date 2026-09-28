@@ -9,6 +9,8 @@
   overview is a map. Configuration moves to Reference, and AI-Assisted
   Development and Troubleshooting to Getting Started, which now opens
   with `copier copy` rather than a clone. Update-safe.
+- **Docker**: the base image is `python:3.14-slim` (current Debian,
+  now trixie) and images are pinned by tag only, without digests.
 
 ## [1.0.0] - 2026-09-22
 

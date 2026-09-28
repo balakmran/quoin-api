@@ -25,10 +25,9 @@ docker build -t quoin-api:latest .
 
 The [`Dockerfile`](https://github.com/balakmran/quoin-api/blob/main/Dockerfile)
 is a two-stage build: `uv sync --no-dev --frozen` in a builder, then a
-slim final image with the virtualenv, `app/`, and the Alembic files. Base
-images are pinned by tag and digest. It runs as the non-root `appuser`
-(uid 1001), starts with `fastapi run`, and has a `HEALTHCHECK` that polls
-`/health`.
+slim final image with the virtualenv, `app/`, and the Alembic files. It
+runs as the non-root `appuser` (uid 1001), starts with `fastapi run`, and
+has a `HEALTHCHECK` that polls `/health`.
 
 The image ships no `.env`; settings come from the container
 environment:
