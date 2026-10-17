@@ -1,6 +1,6 @@
 import contextlib
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,7 +13,7 @@ from app.main import create_app
 
 
 @contextlib.contextmanager
-def _preserved_logging_config() -> Iterator[None]:
+def _preserved_logging_config() -> Generator[None]:
     """Restore global logging state on exit.
 
     ``create_app()`` calls ``setup_logging()``, which reconfigures
