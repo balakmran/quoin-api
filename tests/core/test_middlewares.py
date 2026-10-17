@@ -1,7 +1,7 @@
 import contextlib
 import json
 import uuid
-from collections.abc import AsyncIterator, Iterable, Iterator, MutableMapping
+from collections.abc import AsyncIterator, Generator, Iterable, MutableMapping
 from typing import Any
 from unittest.mock import patch
 
@@ -1356,7 +1356,7 @@ def access_log_app() -> FastAPI:
 @contextlib.contextmanager
 def _capture_access_logs(
     processors: Iterable[Any] = (),
-) -> Iterator[list[MutableMapping[str, Any]]]:
+) -> Generator[list[MutableMapping[str, Any]]]:
     """Capture events from the middlewares module logger.
 
     ``capture_logs`` swaps the processor chain, but the module-level
