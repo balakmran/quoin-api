@@ -3,7 +3,15 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import httpx2
+import pytest
 import structlog
+from opentelemetry.instrumentation.dependencies import (
+    get_dependency_conflicts,
+)
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from structlog.testing import capture_logs
@@ -270,3 +278,19 @@ class TestInstrumentSqlalchemyEngine:
             )
             # Should not propagate — app startup must not abort.
             instrument_sqlalchemy_engine(mock_engine)
+
+
+@pytest.mark.parametrize(
+    "instrumentor_cls",
+    [FastAPIInstrumentor, HTTPX2ClientInstrumentor, SQLAlchemyInstrumentor],
+)
+def test_instrumentor_supports_installed_version(
+    instrumentor_cls: type[BaseInstrumentor],
+):
+    """Each instrumentor accepts the installed library version.
+
+    An out-of-range version makes ``instrument()`` log and return
+    without raising, so spans vanish while every mocked test passes.
+    """
+    deps = instrumentor_cls().instrumentation_dependencies()
+    assert get_dependency_conflicts(deps) is None
