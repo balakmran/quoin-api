@@ -11,6 +11,9 @@
   with `copier copy` rather than a clone. Update-safe.
 - **Docker**: the base image is `python:3.14-slim` (current Debian,
   now trixie) and images are pinned by tag only, without digests.
+- **Dependencies**: FastAPI 0.143.3, SQLModel 0.0.48, ruff 0.17.1,
+  ty 0.0.89, prek 0.5.4, zensical 0.0.71. SQLAlchemy is held below
+  2.1 until the OTel SQLAlchemy instrumentor supports it.
 
 ## [1.0.0] - 2026-09-22
 
