@@ -2126,7 +2126,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "purgatory", specifier = ">=3.0.1" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.14.0" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15.1" },
     { name = "sqlalchemy", specifier = ">=2.0.54,<2.1" },
     { name = "sqlmodel", specifier = "==0.0.48" },
     { name = "stamina", specifier = ">=26.1.0" },
