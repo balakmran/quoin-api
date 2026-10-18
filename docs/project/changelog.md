@@ -12,8 +12,10 @@
 - **Docker**: the base image is `python:3.14-slim` (current Debian,
   now trixie) and images are pinned by tag only, without digests.
 - **Dependencies**: FastAPI 0.143.3, SQLModel 0.0.48, ruff 0.17.1,
-  ty 0.0.89, prek 0.5.4, zensical 0.0.71. SQLAlchemy is held below
+  ty 0.0.89, prek 0.5.5, zensical 0.0.71. SQLAlchemy is held below
   2.1 until the OTel SQLAlchemy instrumentor supports it.
+- **Tooling**: uv 0.13.1 in the `Dockerfile` and every workflow, and
+  `mock-oauth2-server` 6.1.1. Upgrade a local uv with `uv self update`.
 
 ## [1.0.0] - 2026-09-22
 

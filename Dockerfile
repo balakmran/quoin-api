@@ -2,7 +2,7 @@
 FROM python:3.14-slim AS builder
 
 # The workflows install this same uv version (see test_tool_pins.py).
-COPY --from=ghcr.io/astral-sh/uv:0.12.17 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /bin/uv
 
 WORKDIR /app
 
