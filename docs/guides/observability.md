@@ -104,11 +104,16 @@ are skipped. Turn the access log off with
 [`app/core/telemetry.py`](https://github.com/balakmran/quoin-api/blob/main/app/core/telemetry.py)
 instruments three things when `QUOIN_OTEL_ENABLED=True` (the default):
 
-- **HTTP requests** — `setup_opentelemetry(app)`, at app creation
+- **HTTP requests** — `setup_opentelemetry(app)`, at app creation, via
+  `FastAPIInstrumentor`
 - **Database queries** — `instrument_sqlalchemy_engine(engine)`, in the
   lifespan once the engine exists
 - **Outbound HTTP** — the shared `ResilientHTTPClient`, via
   `instrument_http_client`
+
+FastAPI's own built-in telemetry is turned off (`FASTAPI_TELEMETRY` in
+`telemetry.py`), so request spans come from one source, and
+`FASTAPI_OTEL_AUTO_CONFIGURE` has no effect.
 
 Every span carries `service.name`, `service.version`, and
 `deployment.environment.name` (from `QUOIN_ENV`). The standard
@@ -154,10 +159,6 @@ Spans export over OTLP, so any compatible backend works. Point
 - **Production** — send to Grafana Tempo, Jaeger, or, preferably, an
   [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/),
   which adds batching, retries, sampling, and fan-out.
-
-Leave `FASTAPI_OTEL_AUTO_CONFIGURE` unset. When it's `true`, FastAPI
-adds a second OTLP exporter to the same provider, so every span is
-exported twice.
 
 !!! warning "Production with no endpoint configured"
     Production does not fall back to stdout. With tracing on and no

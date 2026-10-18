@@ -566,6 +566,14 @@ logger.info(
 **Configuration:** Toggleable via the `QUOIN_OTEL_ENABLED` environment
 variable.
 
+**Request spans from the contrib instrumentor (2026-10):** FastAPI
+0.142 added built-in telemetry. QuoinAPI turns it off and keeps
+`FastAPIInstrumentor`. The built-in version changed behaviour in each
+of its first releases, and every generated project would inherit those
+changes. Database and outbound HTTP spans still need their contrib
+instrumentors whichever source produces the request span. Revisit once
+the built-in has settled.
+
 ---
 
 ### Environment-Based Configuration
