@@ -4,7 +4,9 @@
 exporter by environment: OTLP when an endpoint is configured, console
 in development and test, none in production. The database engine and
 the shared outbound HTTP client are instrumented separately in the
-lifespan, once they exist.
+lifespan, once they exist. FastAPI's own built-in telemetry is switched
+off (``FASTAPI_TELEMETRY``); ``FastAPIInstrumentor`` produces the
+request spans instead.
 
 Instrumentation failures are swallowed rather than allowed to abort
 startup — a misconfigured collector should cost traces, not the
@@ -17,6 +19,7 @@ from collections.abc import Sequence
 import httpx2
 import structlog
 from fastapi import FastAPI
+from fastapi.telemetry import TelemetryConfig
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
@@ -37,6 +40,15 @@ from app.core import metadata
 from app.core.config import Environment, settings
 
 logger = structlog.get_logger(__name__)
+
+# Off so FastAPIInstrumentor alone owns request spans and
+# FASTAPI_OTEL_AUTO_CONFIGURE can't add a second exporter.
+FASTAPI_TELEMETRY: TelemetryConfig = {
+    "tracing": False,
+    "metrics": False,
+    "logs": False,
+    "auto_configure": False,
+}
 
 
 class SafeConsoleSpanExporter(ConsoleSpanExporter):

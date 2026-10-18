@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 import httpx2
 import pytest
 import structlog
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from opentelemetry.instrumentation.dependencies import (
     get_dependency_conflicts,
 )
@@ -13,12 +15,20 @@ from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    ConsoleSpanExporter,
+    SimpleSpanProcessor,
+)
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 from structlog.testing import capture_logs
 
 from app.core import metadata, telemetry
 from app.core.config import Environment, settings
 from app.core.telemetry import (
+    FASTAPI_TELEMETRY,
     SafeConsoleSpanExporter,
     instrument_http_client,
     instrument_sqlalchemy_engine,
@@ -294,3 +304,19 @@ def test_instrumentor_supports_installed_version(
     """
     deps = instrumentor_cls().instrumentation_dependencies()
     assert get_dependency_conflicts(deps) is None
+
+
+def test_fastapi_builtin_telemetry_is_off():
+    """FastAPI's built-in telemetry records nothing, even given a provider."""
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    app = FastAPI(telemetry={**FASTAPI_TELEMETRY, "tracer_provider": provider})
+
+    @app.get("/ping")
+    def ping() -> dict[str, str]:
+        return {"status": "ok"}
+
+    TestClient(app).get("/ping")
+
+    assert exporter.get_finished_spans() == ()

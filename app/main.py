@@ -13,7 +13,11 @@ from app.core.lifecycle import Lifecycle
 from app.core.logging import setup_logging
 from app.core.middlewares import configure_middlewares
 from app.core.openapi import OPENAPI_PARAMETERS, set_openapi_generator
-from app.core.telemetry import instrument_sqlalchemy_engine, setup_opentelemetry
+from app.core.telemetry import (
+    FASTAPI_TELEMETRY,
+    instrument_sqlalchemy_engine,
+    setup_opentelemetry,
+)
 from app.db.session import create_db_engine, create_session_factory
 from app.http.client import create_http_client
 
@@ -82,7 +86,9 @@ def create_app() -> FastAPI:
             finally:
                 await app.state.engine.dispose()
 
-    app = FastAPI(lifespan=lifespan, **OPENAPI_PARAMETERS)
+    app = FastAPI(
+        lifespan=lifespan, telemetry=FASTAPI_TELEMETRY, **OPENAPI_PARAMETERS
+    )
     app.state.lifecycle = Lifecycle()
     set_openapi_generator(app)
     add_exception_handlers(app)

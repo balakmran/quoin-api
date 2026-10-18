@@ -5,10 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import structlog
-from fastapi import status
+from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from app.core.config import Environment, settings
+from app.core.telemetry import FASTAPI_TELEMETRY
 from app.main import create_app
 
 
@@ -55,6 +56,17 @@ def test_create_app_calls_validate_production_settings(
     with _preserved_logging_config():
         with pytest.raises(RuntimeError, match="QUOIN_OAUTH_JWKS_URI"):
             create_app()
+
+
+def test_create_app_turns_off_fastapi_builtin_telemetry() -> None:
+    """create_app() passes FASTAPI_TELEMETRY to the FastAPI constructor."""
+    with (
+        _preserved_logging_config(),
+        patch("app.main.FastAPI", wraps=FastAPI) as fastapi_cls,
+    ):
+        create_app()
+
+    assert fastapi_cls.call_args.kwargs["telemetry"] is FASTAPI_TELEMETRY
 
 
 @pytest.fixture(autouse=True)
