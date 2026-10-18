@@ -29,7 +29,7 @@ dependencies = [
     "PyJWT[crypto]>=2.15.1",
     # opentelemetry-instrumentation-sqlalchemy 0.66b1 refuses 2.1 and
     # silently drops DB spans; lift once a contrib release supports it.
-    "sqlalchemy>=2.0.54,<2.1",
+    "sqlalchemy>=2.0.54,<2.2",
     "sqlmodel==0.0.48",
     "stamina>=26.1.0",
     "structlog>=26.1.0",
