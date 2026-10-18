@@ -14,6 +14,8 @@
 - **Dependencies**: FastAPI 0.143.3, SQLModel 0.0.48, ruff 0.17.1,
   ty 0.0.89, prek 0.5.5, zensical 0.0.71. SQLAlchemy is held below
   2.1 until the OTel SQLAlchemy instrumentor supports it.
+- **Security**: PyJWT floor raised to 2.15.1 for GHSA-42vr-xj54-vc7v
+  and GHSA-x33g-cr3x-6449. Run `uv lock --upgrade-package pyjwt`.
 - **Tooling**: uv 0.13.1 in the `Dockerfile` and every workflow, and
   `mock-oauth2-server` 6.1.1. Upgrade a local uv with `uv self update`.
 

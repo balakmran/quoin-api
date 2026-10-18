@@ -26,7 +26,7 @@ dependencies = [
     "psycopg[binary]==3.3.6",
     "purgatory>=3.0.1",
     "pydantic-settings>=2.15.0",
-    "PyJWT[crypto]>=2.14.0",
+    "PyJWT[crypto]>=2.15.1",
     # opentelemetry-instrumentation-sqlalchemy 0.66b1 refuses 2.1 and
     # silently drops DB spans; lift once a contrib release supports it.
     "sqlalchemy>=2.0.54,<2.1",
