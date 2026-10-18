@@ -1,6 +1,6 @@
 # Soft Delete
 
-`DELETE /api/v1/users/{id}` does not remove the row. It stamps a
+`DELETE /api/v1/users/{user_id}` does not remove the row. It stamps a
 `deleted_at` timestamp — a **tombstone** — and every subsequent read
 excludes tombstoned rows. The `user` module is the reference
 implementation; mirror it when a resource needs recoverable deletes or an

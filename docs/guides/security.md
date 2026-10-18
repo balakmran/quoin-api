@@ -332,8 +332,8 @@ RequestIDMiddleware
 AccessLogMiddleware        ← inside RequestID, so every line has request_id
 TrustedHostMiddleware      ← validates Host before CORS can short-circuit
 CORSMiddleware
-TimeoutMiddleware          ← reject oversize before the timeout clock ticks
-RequestSizeLimitMiddleware
+TimeoutMiddleware          ← also bounds a slow upload the size check reads
+RequestSizeLimitMiddleware ← rejects oversize before any handler runs
 InFlightRequestMiddleware
 UnhandledErrorMiddleware   ← innermost, closest to the router
 ```

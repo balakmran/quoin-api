@@ -692,8 +692,8 @@ def configure_middlewares(app: FastAPI) -> None:
     headers; a bad-Host 400 from TrustedHost does not get CORS headers
     (it isn't part of a legitimate CORS negotiation), but it does get
     the outer SecurityHeaders/RequestID treatment. Within that, Timeout
-    wraps SizeLimit so oversize bodies are still rejected before the
-    timeout clock ticks into downstream work.
+    wraps SizeLimit: an oversize body is rejected before any handler
+    runs, and a slow upload is still bounded by the timeout.
 
     UnhandledErrorMiddleware and the in-flight counter are added first
     of all, so they sit innermost — closest to the router — and bracket

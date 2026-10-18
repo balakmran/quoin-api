@@ -155,6 +155,10 @@ Spans export over OTLP, so any compatible backend works. Point
   [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/),
   which adds batching, retries, sampling, and fan-out.
 
+Leave `FASTAPI_OTEL_AUTO_CONFIGURE` unset. When it's `true`, FastAPI
+adds a second OTLP exporter to the same provider, so every span is
+exported twice.
+
 !!! warning "Production with no endpoint configured"
     Production does not fall back to stdout. With tracing on and no
     endpoint, it logs one `otel_enabled_without_exporter` warning at
@@ -188,8 +192,9 @@ whole process. For per-request fields such as `request_id`, assert the
 key is present rather than pinning its value.
 
 For tracing, test the setup, not the spans. `tests/core/test_telemetry.py`
-checks exporter choice, resource attributes, and that an instrumentation
-failure can't crash startup.
+checks exporter choice, resource attributes, that an instrumentation
+failure can't crash startup, and that each instrumentor supports the
+installed library version.
 
 ## Troubleshooting
 
@@ -207,6 +212,9 @@ failure can't crash startup.
   `otel_enabled_without_exporter` at startup.
 - Only **database** spans missing: `instrument_sqlalchemy_engine` must
   run in the lifespan, after the engine exists.
+- Spans from one library missing: its version is outside what the
+  instrumentor supports. `instrument()` then logs an error and does
+  nothing, without raising.
 
 ### Too Many Logs
 
