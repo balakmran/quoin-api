@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM python:3.14-slim AS builder
+FROM python:3.15-slim AS builder
 
 # The workflows install this same uv version (see test_tool_pins.py).
 COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /bin/uv
@@ -13,7 +13,7 @@ COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --no-dev --frozen
 
 # Stage 2: Final
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 WORKDIR /app
 
